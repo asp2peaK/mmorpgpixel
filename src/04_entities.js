@@ -164,7 +164,8 @@ function updateProjs(dt) {
         if (ob && ob !== O.LAMP && p.kind !== 'wave' && p.kind !== 'whirl') { projImpact(p, null); dead = true; }
         else {
           if (p.kind === 'whirl' && p.el === 'wind' && W.fire[ti] > 0) RX.whirlFire && RX.whirlFire(p);
-          if (p.trail) RX.tile(tx + .5, ty + .5, p.el, p.src, { trail: 1, dmg: p.dmg });
+          if (p.trail) RX.tile(tx + .5, ty + .5, p.el, p.src, { trail: 1, dmg: p.dmg, dur: p.pud });
+          if (RX.projTile) RX.projTile(p);
         }
       }
     }

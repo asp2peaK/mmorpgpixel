@@ -76,7 +76,7 @@ function genWorld() {
   }
   // Водяные духи — у озёр Чащи
   for (let cy = 0; cy * 6 < MH; cy++) for (let cx = 0; cx * 6 < MW; cx++) {
-    if (hash2(cx, cy, SEED + 14) > .55) continue; let done = false;
+    if (hash2(cx, cy, SEED + 14) > .2) continue; let done = false;
     for (let y = cy * 6; y < cy * 6 + 6 && !done; y++) for (let x = cx * 6; x < cx * 6 + 6 && !done; x++) {
       if (x < 4 || y < 4 || x >= MW - 4 || y >= MH - 4) continue;
       if (W.g[y * MW + x] === T.SHALLOW && zoneAt(x, y) === 'thicket') { W.spawns.push({ x: x + .5, y: y + .5, type: 'water', lvl: clamp(3 + Math.floor((x - 80) / 14), 3, 6), n: 1, list: [], t: 0 }); done = true; }

@@ -587,7 +587,7 @@ function genWorld() {
   }
   // Водяные духи — у озёр Чащи
   for (let cy = 0; cy * 6 < MH; cy++) for (let cx = 0; cx * 6 < MW; cx++) {
-    if (hash2(cx, cy, SEED + 14) > .55) continue; let done = false;
+    if (hash2(cx, cy, SEED + 14) > .2) continue; let done = false;
     for (let y = cy * 6; y < cy * 6 + 6 && !done; y++) for (let x = cx * 6; x < cx * 6 + 6 && !done; x++) {
       if (x < 4 || y < 4 || x >= MW - 4 || y >= MH - 4) continue;
       if (W.g[y * MW + x] === T.SHALLOW && zoneAt(x, y) === 'thicket') { W.spawns.push({ x: x + .5, y: y + .5, type: 'water', lvl: clamp(3 + Math.floor((x - 80) / 14), 3, 6), n: 1, list: [], t: 0 }); done = true; }
@@ -816,7 +816,8 @@ function updateProjs(dt) {
         if (ob && ob !== O.LAMP && p.kind !== 'wave' && p.kind !== 'whirl') { projImpact(p, null); dead = true; }
         else {
           if (p.kind === 'whirl' && p.el === 'wind' && W.fire[ti] > 0) RX.whirlFire && RX.whirlFire(p);
-          if (p.trail) RX.tile(tx + .5, ty + .5, p.el, p.src, { trail: 1, dmg: p.dmg });
+          if (p.trail) RX.tile(tx + .5, ty + .5, p.el, p.src, { trail: 1, dmg: p.dmg, dur: p.pud });
+          if (RX.projTile) RX.projTile(p);
         }
       }
     }
@@ -867,6 +868,441 @@ function updatePickups(dt) {
     }
   }
 }
+
+// ===== 05_abilities.js =====
+// Способности. Ни одна не знает, кто её кастует: игрок, моб, Тень или (в будущем) другой игрок.
+// cast(c, x): c — любой кастер {x,y,team,atk}; x = {dx,dy — направление, tx,ty — точка, stars, el — стихия, mult}
+const EL = {
+  phys: { n: 'Удар', c: '#e8e8f0' },
+  beast: { n: 'Зверь', c: '#d8c8b0', adj: ['Звериный', 'Звериная', 'Звериное', 'Звериные'] },
+  fire: { n: 'Огонь', c: '#ff7a2a', adj: ['Огненный', 'Огненная', 'Огненное', 'Огненные'] },
+  water: { n: 'Вода', c: '#4aa8ff', adj: ['Водяной', 'Водяная', 'Водяное', 'Водяные'] },
+  storm: { n: 'Молния', c: '#ffe95a', adj: ['Грозовой', 'Грозовая', 'Грозовое', 'Грозовые'] },
+  wind: { n: 'Ветер', c: '#b8f0e0', adj: ['Вихревой', 'Вихревая', 'Вихревое', 'Вихревые'] },
+  poison: { n: 'Яд', c: '#a6e23c', adj: ['Ядовитый', 'Ядовитая', 'Ядовитое', 'Ядовитые'] },
+  nature: { n: 'Трава', c: '#6fae4a', adj: ['Терновый', 'Терновая', 'Терновое', 'Терновые'] },
+  bone: { n: 'Кость', c: '#e8e4d0', adj: ['Костяной', 'Костяная', 'Костяное', 'Костяные'] },
+  slime: { n: 'Слизь', c: '#6fe0b0', adj: ['Слизистый', 'Слизистая', 'Слизистое', 'Слизистые'] },
+  ash: { n: 'Пепел', c: '#ff5a3a', adj: ['Пепельный', 'Пепельная', 'Пепельное', 'Пепельные'] }
+};
+const ELSFX = { fire: 'fire', ash: 'fire', water: 'water', storm: 'zap', wind: 'wind', poison: 'poison', nature: 'roots', bone: 'arrow', slime: 'shield', beast: 'dash', phys: 'swing' };
+const elSfx = el => Sfx.play(ELSFX[el] || 'swing');
+function areaDmg(src, team, x, y, r, dmg, el, o) {
+  let n = 0;
+  for (const e of G.ents) {
+    if (e.dead || e.team === team || dist(x, y, e.x, e.y) > r + e.r) continue;
+    let kb = null; if (o && o.kb) { const d = norm(e.x - x, e.y - y); kb = [d[0] * o.kb, d[1] * o.kb]; }
+    if (dmg > 0) damage(e, dmg, src, { el, kb }); if (o && o.st && !e.dead) addSt(e, o.st[0], o.st[1]); n++;
+  }
+  return n;
+}
+// Цепная молния от цели к цели
+function chainFrom(src, from, dmg, max, team, el, hitSet) {
+  let px = from.x, py = from.y; const hit = hitSet || {}; hit[from.id] = 1; el = el || 'storm';
+  for (let n = 0; n < max; n++) {
+    let best = null, bd = 3.8;
+    for (const e of G.ents) if (!e.dead && e.team !== team && !hit[e.id]) { const d = dist(px, py, e.x, e.y); if (d < bd) { bd = d; best = e; } }
+    if (!best) break; hit[best.id] = 1; fxBolt(px, py, best.x, best.y, EL[el].c); damage(best, dmg, src, { el }); px = best.x; py = best.y;
+  }
+}
+function doDash(c, x, k, len, force) {
+  let dx = x.dx, dy = x.dy; if (!dx && !dy) { dx = c.dirx; dy = c.diry; }
+  c.dash = { dx, dy, t: .2, spd: 4.2 * len / .2, dmg: c.atk * k * x.mult, el: x.el, hit: {}, lt: -1, force, color: EL[x.el].c };
+  c.inv = Math.max(c.inv, .2); Sfx.play('dash'); burst(c.x, c.y, EL[x.el].c, 8, 3);
+}
+function doArrows(c, x, k, chain) {
+  const a0 = Math.atan2(x.dy, x.dx);
+  for (let i = 0; i < 5; i++) { const a = a0 + (i - 2) * .14; spawnProj({ kind: 'arrow', x: c.x + Math.cos(a) * .4, y: c.y + Math.sin(a) * .4, vx: Math.cos(a) * 13, vy: Math.sin(a) * 13, r: .28, life: .62, team: c.team, src: c, dmg: c.atk * k * x.mult, el: x.el, color: EL[x.el].c, pierce: x.stars >= 3, chain }); }
+  Sfx.play('arrow');
+}
+function doWhirl(c, x, k, big) {
+  spawnProj({ kind: 'whirl', x: c.x + x.dx * .6, y: c.y + x.dy * .6, vx: x.dx * 4.6, vy: x.dy * 4.6, r: big ? 1.5 : 1.15, life: big ? 3.2 : 2.4, team: c.team, src: c, dmg: c.atk * k * x.mult, el: x.el, color: EL[x.el].c, pierce: true, rehit: .5, toss: true, trail: true });
+  Sfx.play('wind');
+}
+function clampPt(c, x, r) { const d = dist(c.x, c.y, x.tx, x.ty); return d > r ? [c.x + (x.tx - c.x) / d * r, c.y + (x.ty - c.y) / d * r] : [x.tx, x.ty]; }
+
+const AB = {
+  // --- базовые ---
+  bite: { noun: 'укус', g: 0, cd: 1.5, k: .9, ai: { range: 1.5, windup: .42, tele: 'arc', len: 1.8, ang: .9 }, cast(c, x) { fxSlash(c.x, c.y, x.dx, x.dy, 1.5, 1.8, EL[x.el].c); Sfx.play('swing'); for (const e of G.ents) { if (e.dead || !hostile(c, e)) continue; const d = dist(c.x, c.y, e.x, e.y); if (d < 1.8 + e.r && (d < .5 || ((e.x - c.x) * x.dx + (e.y - c.y) * x.dy) / d > .3)) damage(e, c.atk * this.k * x.mult, c, { el: x.el === 'phys' ? null : x.el, kb: [x.dx * 5, x.dy * 5] }); } } },
+  dash: { noun: 'рывок', g: 0, cd: 4, k: 1.4, ai: { range: 5, min: 1.6, windup: .55, tele: 'line', len: 4.6, w: .9 }, cast(c, x) { doDash(c, x, this.k, 1); } },
+  ball: { noun: 'шар', g: 0, cd: 3.5, k: 1.5, ai: { range: 7, windup: .6, tele: 'line', len: 7, w: .5 }, cast(c, x) { const n = x.stars >= 3 ? 3 : 1, a0 = Math.atan2(x.dy, x.dx); for (let i = 0; i < n; i++) { const a = a0 + (i - (n - 1) / 2) * .28; spawnProj({ kind: 'ball', x: c.x + Math.cos(a) * .5, y: c.y + Math.sin(a) * .5, vx: Math.cos(a) * 9, vy: Math.sin(a) * 9, r: .38, life: .85, team: c.team, src: c, dmg: c.atk * this.k * x.mult * (n > 1 ? .75 : 1), el: x.el, color: EL[x.el].c, aoe: 1.3 }); } elSfx(x.el); } },
+  wave: { noun: 'волна', g: 1, cd: 6, k: 1.1, ai: { range: 5, windup: .7, tele: 'line', len: 5.6, w: 2.2 }, cast(c, x) { spawnProj({ kind: 'wave', x: c.x + x.dx * .5, y: c.y + x.dy * .5, vx: x.dx * 7, vy: x.dy * 7, r: x.stars >= 3 ? 1.6 : 1.1, life: .75, team: c.team, src: c, dmg: c.atk * this.k * x.mult, el: x.el, color: EL[x.el].c, pierce: true, kb: 13, trail: true, pud: x.stars >= 3 ? 18 : 10 }); elSfx(x.el === 'water' ? 'water' : x.el); Sfx.play('water'); } },
+  chain: { noun: 'молния', g: 1, cd: 5, k: 1.2, ai: { range: 6, windup: .65, tele: 'cone', len: 6.3, ang: .42 }, cast(c, x) {
+      const dmg = c.atk * this.k * x.mult, col = EL[x.el].c; let first = null, bd = 6.5;
+      for (const e of G.ents) { if (e.dead || !hostile(c, e)) continue; const d = dist(c.x, c.y, e.x, e.y); if (d < bd && (d < .6 || ((e.x - c.x) * x.dx + (e.y - c.y) * x.dy) / d > .82)) { bd = d; first = e; } }
+      elSfx(x.el); Sfx.play('zap');
+      if (!first) { const ex = c.x + x.dx * 4.5, ey = c.y + x.dy * 4.5; fxBolt(c.x, c.y, ex, ey, col, 10, 0); burst(ex, ey, col, 5, 2); RX.tile(ex, ey, x.el, c, { impact: 1, dmg }); return; }
+      fxBolt(c.x, c.y, first.x, first.y, col); const hs = {}; hs[first.id] = 1; damage(first, dmg, c, { el: x.el }); chainFrom(c, first, dmg * .85, (x.stars >= 3 ? 6 : 3) - 1, c.team, x.el, hs); RX.tile(first.x, first.y, x.el, c, { impact: 1, dmg });
+    } },
+  whirl: { noun: 'вихрь', g: 0, cd: 7, k: .7, ai: { range: 6, windup: .7, tele: 'line', len: 7, w: 1.8 }, cast(c, x) { doWhirl(c, x, this.k, x.stars >= 3); } },
+  cloud: { noun: 'облако', g: 2, cd: 8, k: .45, maxRange: 5.5, ai: { range: 5.5, windup: .8, tele: 'circle', r: 2 }, cast(c, x) { const p = clampPt(c, x, 5.5); addZone({ kind: 'cloud', x: p[0], y: p[1], r: x.stars >= 3 ? 2.7 : 2, life: 6, tick: .5, team: c.team, src: c, dmg: c.atk * this.k * x.mult, el: x.el }); elSfx(x.el); } },
+  roots: { noun: 'корни', g: 3, cd: 7, k: 1.1, ai: { range: 6, windup: .7, tele: 'line', len: 6.5, w: 1 }, cast(c, x) { addZone({ kind: 'rootline', x: c.x, y: c.y, dx: x.dx, dy: x.dy, len: x.stars >= 3 ? 8.5 : 6.5, prog: .6, done: .6, pts: [], hit: {}, life: 1.6, team: c.team, src: c, dmg: c.atk * this.k * x.mult, el: x.el, rootT: x.stars >= 3 ? 3 : 2 }); Sfx.play('roots'); } },
+  arrows: { noun: 'стрелы', g: 3, cd: 5, k: .6, ai: { range: 8, windup: .7, tele: 'cone', len: 8, ang: .34 }, cast(c, x) { doArrows(c, x, this.k, false); } },
+  shield: { noun: 'щит', g: 0, cd: 12, k: 0, ai: { range: 99, windup: .35, tele: 'self', cond: 'hurt' }, cast(c, x) { c.shield = Math.round(c.maxHp * (.3 + .1 * (x.stars - 1)) * Math.min(1.5, x.mult)); c.shieldMax = c.shield; c.shieldT = 6; c.shieldEl = (x.el === 'slime' && x.stars < 3) ? null : x.el; c.shieldDmg = c.atk * .5; Sfx.play('shield'); fxRing(c.x, c.y, .2, 1.4, EL[x.el].c, .35); } },
+  ashstorm: { noun: 'буря', g: 1, cd: 22, k: 1.3, maxRange: 6, ai: { range: 8, windup: 1.3, tele: 'circle', r: 5 }, cast(c, x) { const p = clampPt(c, x, 8); addZone({ kind: 'ashstorm', x: p[0], y: p[1], r: 5, life: 2.7, tick: x.stars >= 3 ? .15 : .22, team: c.team, src: c, dmg: c.atk * this.k * x.mult, el: x.el }); Sfx.play('howl'); shake(4); } },
+  // --- уникальные химеры ---
+  blazedash: { noun: 'рывок', g: 0, cd: 4.5, k: 1.7, ai: { range: 6, min: 1.6, windup: .55, tele: 'line', len: 5.4, w: 1 }, cast(c, x) { doDash(c, x, this.k, 1.18, 3.5 + x.stars * .5); Sfx.play('fire'); } },
+  thundercloud: { noun: 'туча', g: 1, cd: 16, k: .8, ai: { range: 6, windup: .5, tele: 'self' }, cast(c, x) { addZone({ kind: 'thundercloud', x: c.x, y: c.y, follow: c, r: 4.6, life: 8 + (x.stars - 1) * 1.5, tick: .7, team: c.team, src: c, dmg: c.atk * this.k * x.mult, el: 'storm' }); Sfx.play('zap'); } },
+  firewhirl: { noun: 'смерч', g: 0, cd: 8, k: 1.1, ai: { range: 6, windup: .7, tele: 'line', len: 7, w: 2 }, cast(c, x) { doWhirl(c, x, this.k, true); Sfx.play('fire'); } },
+  rotbomb: { noun: 'бомба', g: 1, cd: 9, k: 1.2, maxRange: 6, ai: { range: 6, windup: .6, tele: 'circle', r: 1.8 }, cast(c, x) { const p = clampPt(c, x, 6); addZone({ kind: 'blast', x: p[0], y: p[1], r: 1.8, life: .55, max: .55, lob: [c.x, c.y], team: c.team, src: c, dmg: c.atk * this.k * x.mult, el: 'poison', after: 'rot' }); Sfx.play('poison'); } },
+  swamp: { noun: 'топь', g: 1, cd: 11, k: .35, maxRange: 5.5, ai: { range: 5.5, windup: .7, tele: 'circle', r: 2.8 }, cast(c, x) { const p = clampPt(c, x, 5.5); addZone({ kind: 'swamp', x: p[0], y: p[1], r: 2.8 + (x.stars - 1) * .3, life: 8, tick: .5, team: c.team, src: c, dmg: c.atk * this.k * x.mult, el: 'nature' }); Sfx.play('water'); Sfx.play('roots'); } },
+  thunderarrows: { noun: 'стрелы', g: 3, cd: 6, k: .7, ai: { range: 8, windup: .7, tele: 'cone', len: 8, ang: .34 }, cast(c, x) { doArrows(c, x, this.k, true); Sfx.play('zap'); } },
+  healbubble: { noun: 'пузырь', g: 0, cd: 18, k: 0, ai: { range: 99, windup: .4, tele: 'self', cond: 'hurt' }, cast(c, x) { addZone({ kind: 'heal', x: c.x, y: c.y, r: 2.3, life: 6, tick: .5, team: c.team, src: c, pct: .035 + .01 * (x.stars - 1) }); Sfx.play('water'); Sfx.play('shield'); } },
+  pack: { noun: 'стая', g: 1, cd: 18, k: .6, ai: { range: 7, windup: .5, tele: 'self' }, cast(c, x) {
+      const n = x.stars >= 3 ? 4 : 3;
+      for (let i = 0; i < n; i++) { const a = Math.atan2(x.dy, x.dx) + (i - (n - 1) / 2) * .9; let sx = c.x + Math.cos(a) * 1.2, sy = c.y + Math.sin(a) * 1.2; if (blocked(sx, sy)) { sx = c.x; sy = c.y; } const w = mkMob('spirit', sx, sy, 1, { team: c.team, owner: c, lifeT: 6, ghost: true, target: null }); w.atk = c.atk * this.k * x.mult; w.maxHp = w.hp = Math.round(c.maxHp * .4); burst(sx, sy, '#a8f0ff', 8, 3); }
+      Sfx.play('howl');
+    } },
+  sporeforest: { noun: 'лес', g: 0, cd: 12, k: .4, maxRange: 5.5, ai: { range: 5.5, windup: .8, tele: 'circle', r: 2.6 }, cast(c, x) { const p = clampPt(c, x, 5.5); addZone({ kind: 'spore', x: p[0], y: p[1], r: 2.6 + (x.stars - 1) * .3, life: 7, tick: .5, team: c.team, src: c, dmg: c.atk * this.k * x.mult, el: 'poison', rooted: {} }); Sfx.play('roots'); Sfx.play('poison'); } },
+  geyser: { noun: 'гейзер', g: 0, cd: 9, k: 2.2, maxRange: 6, ai: { range: 6, windup: .5, tele: 'circle', r: 1.9 }, cast(c, x) { const p = clampPt(c, x, 6); addZone({ kind: 'blast', x: p[0], y: p[1], r: 1.9, life: .7, max: .7, team: c.team, src: c, dmg: c.atk * this.k * x.mult, el: 'water', stun: 1, after: 'steam' }); Sfx.play('steam'); } }
+};
+function castAb(c, a, aim) { AB[a.ab].cast(c, { dx: aim.dx, dy: aim.dy, tx: aim.tx, ty: aim.ty, stars: a.stars || 1, el: a.el, mult: a.mult || 1 }); }
+function castSoul(c, def, stars, dx, dy, tx, ty) { AB[def.ab].cast(c, { dx, dy, tx, ty, stars, el: def.el, mult: (def.mult || 1) * (1 + .25 * (stars - 1)) }); }
+
+// ---------- Виды зон ----------
+const zoneCol = z => EL[z.el] ? EL[z.el].c : '#ffffff';
+ZK.cloud = {
+  tick(z) { areaDmg(z.src, z.team, z.x, z.y, z.r, z.dmg, z.el); if (z.el !== 'poison' && z.el !== 'wind' && z.el !== 'beast' && z.el !== 'bone' && z.el !== 'slime') RX.tile(z.x + rand(-z.r, z.r) * .6, z.y + rand(-z.r, z.r) * .6, z.el, z.src, { trail: 1, dmg: z.dmg }); if (z.el === 'poison' && RX.cloudCheck) RX.cloudCheck(z); },
+  update(z, dt) {
+    if (chance(dt * 22)) { const a = rand(TAU), r = Math.sqrt(rand()) * z.r; part(z.x + Math.cos(a) * r, z.y + Math.sin(a) * r, rand(2, 12), rand(-.3, .3), rand(-.3, .3), rand(2, 8), rand(.6, 1.2), zoneCol(z), 2, -2); }
+    if (z.fuse !== undefined) { z.fuse -= dt; if (z.fuse <= 0 && !z.blown) { z.blown = true; z.life = 0; if (RX.explode) RX.explode(z.x, z.y, 2.5, z.fuseDmg, z.src); else { areaDmg(z.src, z.team, z.x, z.y, 2.5, z.fuseDmg, 'fire', { kb: 10 }); fxRing(z.x, z.y, .3, 2.5, '#ffb02e'); Sfx.play('boom'); shake(6); } } }
+  },
+  draw(b, z) { isoEllipse(b, z.x, z.y, z.r, zoneCol(z), .16 + .05 * Math.sin(G.time * 5), zoneCol(z)); }
+};
+ZK.rootline = {
+  update(z, dt) {
+    z.prog = Math.min(z.len, z.prog + 24 * dt);
+    while (z.done + .7 <= z.prog) {
+      z.done += .7; const x = z.x + z.dx * z.done, y = z.y + z.dy * z.done, ob = W.o[tIdx(x, y)];
+      if (x < 2 || y < 2 || x > MW - 2 || y > MH - 2 || (ob && ob !== O.LAMP)) { z.len = z.done; break; }
+      z.pts.push([x, y, G.time]); burst(x, y, ['#7a5230', '#7ac84a'], 3, 2, { z: 2 });
+      for (const e of G.ents) if (!e.dead && e.team !== z.team && !z.hit[e.id] && dist(x, y, e.x, e.y) < .85 + e.r) { z.hit[e.id] = 1; damage(e, z.dmg, z.src, { el: z.el }); addSt(e, 'root', z.rootT); }
+      if (z.el !== 'nature') RX.tile(x, y, z.el, z.src, { trail: 1, dmg: z.dmg });
+    }
+  },
+  draw(b, z) {
+    for (const p of z.pts) { const s = w2s(p[0], p[1]), h = Math.min(9, (G.time - p[2]) * 60) * clamp(z.life * 3, 0, 1); b.fillStyle = '#4a2e18'; b.fillRect(s[0] - 3, s[1] - h * .6, 2, h * .6 + 1); b.fillRect(s[0] + 2, s[1] - h * .8, 2, h * .8 + 1); b.fillStyle = '#7a5230'; b.fillRect(s[0] - 1, s[1] - h, 2, h + 1); b.fillStyle = zoneCol(z); b.fillRect(s[0] - 1, s[1] - h - 1, 2, 2); }
+  }
+};
+// Отложенный удар по области (гейзер, бомба, удары пепельной бури) — с телеграфом
+ZK.blast = {
+  draw(b, z) {
+    const pr = clamp(1 - z.life / z.max, 0, 1), col = (G.me && z.team !== G.me.team) ? '#ff3030' : zoneCol(z);
+    isoEllipse(b, z.x, z.y, z.r, col, .14, col); isoEllipse(b, z.x, z.y, z.r * pr, col, .26);
+    if (z.lob) { const x = lerp(z.lob[0], z.x, pr), y = lerp(z.lob[1], z.y, pr), s = w2s(x, y), h = Math.sin(pr * Math.PI) * 26 + 8; b.fillStyle = '#3a5a1a'; b.fillRect(s[0] - 2, s[1] - h - 2, 5, 5); b.fillStyle = '#a6e23c'; b.fillRect(s[0] - 1, s[1] - h - 1, 3, 3); }
+    else if (z.sky) { const s = w2s(z.x, z.y), h = (1 - pr) * 90; b.fillStyle = '#ff5a1a'; b.fillRect(s[0] - 2 + h * .3, s[1] - h - 4, 4, 5); b.fillStyle = '#ffd870'; b.fillRect(s[0] - 1 + h * .3, s[1] - h - 3, 2, 3); }
+  },
+  end(z) {
+    const col = zoneCol(z); areaDmg(z.src, z.team, z.x, z.y, z.r, z.dmg, z.el, { kb: 7, st: z.stun ? ['stun', z.stun] : null });
+    fxRing(z.x, z.y, .2, z.r, col, .3); burst(z.x, z.y, [col, '#ffffff'], 16, 5, { glow: z.el === 'ash' || z.el === 'fire', up: 1.6 });
+    if (G.me && dist(z.x, z.y, G.me.x, G.me.y) < 9) { shake(z.sky ? 2.5 : 4); Sfx.play(z.el === 'water' ? 'water' : 'boom'); }
+    RX.tile(z.x, z.y, z.el, z.src, { impact: 1, dmg: z.dmg, force: z.force });
+    if (z.el === 'water') for (const d of [[1, 0], [-1, 0], [0, 1], [0, -1]]) RX.tile(z.x + d[0], z.y + d[1], 'water', z.src, { trail: 1 });
+    if (z.after === 'rot') addZone({ kind: 'cloud', x: z.x, y: z.y, r: 2.1, life: 3, tick: .5, team: z.team, src: z.src, dmg: z.dmg * .25, el: 'poison', fuse: 1.1, fuseDmg: z.dmg * 1.6 });
+    else if (z.after === 'steam' && RX.steam) RX.steam(z.x, z.y, z.src);
+  }
+};
+ZK.ashstorm = {
+  tick(z) { const a = rand(TAU), r = Math.sqrt(rand()) * z.r; addZone({ kind: 'blast', x: z.x + Math.cos(a) * r, y: z.y + Math.sin(a) * r, r: 1.4, life: .7, max: .7, sky: true, team: z.team, src: z.src, dmg: z.dmg, el: z.el, force: 2 }); },
+  draw(b, z) { isoEllipse(b, z.x, z.y, z.r, zoneCol(z), .06, zoneCol(z)); }
+};
+ZK.thundercloud = {
+  tick(z) {
+    let best = null, bd = z.r; for (const e of G.ents) if (!e.dead && e.team !== z.team) { const d = dist(z.x, z.y, e.x, e.y); if (d < bd) { bd = d; best = e; } }
+    if (!best) return; addSt(best, 'wet', 3); fxBolt(z.x, z.y, best.x, best.y, '#ffe95a', 30, 6); Sfx.play('zap'); damage(best, z.dmg, z.src, { el: 'storm' });
+  },
+  update(z, dt) { if (chance(dt * 30)) part(z.x + rand(-1, 1), z.y + rand(-1, 1), 28, 0, 0, -60, .45, '#7ac0f0', 1, 0); },
+  top(b, z) { const s = w2s(z.x, z.y), y = s[1] - 40 + Math.sin(G.time * 3) * 1.5, f = z.life < 1.5 && Math.floor(G.time * 10) % 2; if (f) return; b.fillStyle = '#3a3a4c'; b.fillRect(s[0] - 13, y + 3, 26, 6); b.fillRect(s[0] - 9, y, 10, 5); b.fillRect(s[0] + 1, y + 1, 9, 4); b.fillStyle = '#5a5a70'; b.fillRect(s[0] - 8, y + 1, 8, 2); b.fillRect(s[0] + 2, y + 2, 6, 1); b.fillStyle = '#ffe95a'; if (z.tt < .12) b.fillRect(s[0] - 13, y + 8, 26, 1); },
+  topD: .3
+};
+ZK.swamp = {
+  init(z) { for (let j = -3; j <= 3; j++) for (let i = -3; i <= 3; i++) if (Math.hypot(i, j) < z.r - .3) addPuddle(tIdx(z.x + i, z.y + j), z.life); },
+  tick(z) { for (const e of G.ents) if (!e.dead && e.team !== z.team && !e.fly && dist(z.x, z.y, e.x, e.y) < z.r + e.r) { addSt(e, 'slow', 1.2); addSt(e, 'wet', 2); damage(e, z.dmg, z.src, { el: null, color: '#6fae4a' }); } },
+  update(z, dt) { if (chance(dt * 10)) { const a = rand(TAU), r = Math.sqrt(rand()) * z.r; part(z.x + Math.cos(a) * r, z.y + Math.sin(a) * r, 1, 0, 0, 14, .6, pick(['#4a6a2a', '#6fae4a']), 2, 0); } },
+  draw(b, z) { isoEllipse(b, z.x, z.y, z.r, '#3a5a2a', .4 * clamp(z.life, 0, 1), '#6fae4a'); }
+};
+ZK.heal = {
+  tick(z) { for (const e of G.ents) if (!e.dead && e.team === z.team && dist(z.x, z.y, e.x, e.y) < z.r + e.r) { heal(e, e.maxHp * z.pct); delete e.st.burn; delete e.st.poison; delete e.st.bleed; } },
+  update(z, dt) { if (chance(dt * 16)) { const a = rand(TAU), r = Math.sqrt(rand()) * z.r; part(z.x + Math.cos(a) * r, z.y + Math.sin(a) * r, 1, 0, 0, rand(14, 30), .8, pick(['#6aff8a', '#a8f0ff']), 1, -4); } },
+  draw(b, z) { isoEllipse(b, z.x, z.y, z.r, '#6fe0d0', .18 + .05 * Math.sin(G.time * 4), '#a8fff0'); },
+  top(b, z) { const s = w2s(z.x, z.y); b.strokeStyle = '#a8fff0'; b.globalAlpha = .4 * clamp(z.life, 0, 1); b.lineWidth = 1; b.beginPath(); b.ellipse(s[0], s[1], z.r * 22.6, z.r * 20, 0, Math.PI, TAU); b.stroke(); b.globalAlpha = 1; },
+  topD: 2
+};
+ZK.spore = {
+  tick(z) { for (const e of G.ents) if (!e.dead && e.team !== z.team && dist(z.x, z.y, e.x, e.y) < z.r + e.r) { damage(e, z.dmg, z.src, { el: 'poison' }); if (!e.dead && (!z.rooted[e.id] || G.time - z.rooted[e.id] > 3.2)) { z.rooted[e.id] = G.time; addSt(e, 'root', 1.6); } } if (RX.cloudCheck) RX.cloudCheck(z); },
+  update(z, dt) { if (chance(dt * 14)) { const a = rand(TAU), r = Math.sqrt(rand()) * z.r; part(z.x + Math.cos(a) * r, z.y + Math.sin(a) * r, rand(4, 10), rand(-.2, .2), rand(-.2, .2), 6, .9, '#b04ad8', 1, -2); } },
+  draw(b, z) {
+    isoEllipse(b, z.x, z.y, z.r, '#5a7a1a', .22, '#a6e23c'); const g = clamp(z.age * 4, 0, 1) * clamp(z.life * 2, 0, 1);
+    for (let i = 0; i < 9; i++) { const a = i * 2.4 + z.id, r = z.r * (.25 + .7 * hash2(i, z.id, 5)), s = w2s(z.x + Math.cos(a) * r, z.y + Math.sin(a) * r), h = Math.round(6 * g); b.fillStyle = '#f0e8c8'; b.fillRect(s[0] - 1, s[1] - h, 2, h); b.fillStyle = '#8fcc2a'; b.fillRect(s[0] - 3, s[1] - h - 2, 6, 3); b.fillStyle = '#b04ad8'; b.fillRect(s[0] - 1, s[1] - h - 2, 1, 1); }
+  }
+};
+
+// ===== 06_reactions.js =====
+// Реакции стихий. Работают для всех: игрока, мобов, Тени. Подключаются через RX.
+const REACT = {
+  discharge: { n: 'Разряд', d: 'Вода + молния: бьёт всех, кто мокрый или стоит в воде', c: '#ffe95a', els: ['water', 'storm'] },
+  wildfire: { n: 'Пожар', d: 'Огонь + трава: высокая трава горит, огонь расползается сам', c: '#ff7a2a', els: ['fire', 'nature'] },
+  firewhirl: { n: 'Огненный смерч', d: 'Ветер + огонь: вихрь, прошедший через огонь, загорается', c: '#ffb02e', els: ['wind', 'fire'] },
+  steam: { n: 'Пар', d: 'Огонь + вода: облако пара, все внутри слепнут', c: '#e0e8f0', els: ['fire', 'water'] },
+  explosion: { n: 'Взрыв', d: 'Яд + огонь: ядовитое облако взрывается', c: '#ff5a3a', els: ['poison', 'fire'] }
+};
+let rxCd = {}, dischT = -9;
+Bus.on('start', () => { rxCd = {}; dischT = -9; });
+function react(id, x, y) {
+  const p = G.me; if (!p || dist(x, y, p.x, p.y) > 16) return;
+  if (rxCd[id] !== undefined && G.time - rxCd[id] < 1.2) return; rxCd[id] = G.time;
+  const R = REACT[id], first = !G.J.reactions[id]; G.J.reactions[id] = (G.J.reactions[id] || 0) + 1;
+  floatText(x, y, R.n + '!', R.c, 8);
+  if (first) { banner('НОВАЯ РЕАКЦИЯ: ' + R.n.toUpperCase(), R.d, R.c); Bus.emit('newReaction', id); }
+}
+const entInWater = e => !e.fly && isWaterTile(tIdx(e.x, e.y));
+function discharge(x, y, src, amt) {
+  if (G.time - dischT < .45) return false; dischT = G.time;
+  const team = src ? src.team : 0, dmg = Math.max(8, amt * 1.3); let n = 0;
+  for (const e of G.ents) {
+    if (e.dead || dist(x, y, e.x, e.y) > 5.5 || !(e.st.wet || entInWater(e))) continue;
+    fxBolt(x, y, e.x, e.y, '#ffe95a'); delete e.st.wet; n++;
+    damage(e, dmg * (e.team === team ? .5 : 1), src, { noReact: 1, color: '#ffe95a' }); if (!e.dead) addSt(e, 'stun', .6);
+  }
+  for (let k = 0; k < 14; k++) { const tx = x + rand(-4, 4), ty = y + rand(-4, 4); if (tx > 1 && ty > 1 && tx < MW - 1 && ty < MH - 1 && isWaterTile(tIdx(tx, ty))) { burst(tx, ty, ['#ffe95a', '#ffffff'], 3, 2, { z: 2, glow: 1 }); if (chance(.4)) fxBolt(x, y, tx, ty, '#fff8b0', 4, 1); } }
+  fxRing(x, y, .3, 5, '#ffe95a', .3); Sfx.play('zap'); shake(3); react('discharge', x, y); return true;
+}
+function explode(x, y, r, dmg, src) {
+  const team = src ? src.team : 0;
+  for (const e of G.ents) { if (e.dead) continue; const d = dist(x, y, e.x, e.y); if (d > r + e.r) continue; const n = norm(e.x - x, e.y - y); damage(e, dmg * (e.team === team ? .5 : 1), src, { noReact: 1, color: '#ff9a3a', kb: [n[0] * 14, n[1] * 14] }); if (!e.dead) addSt(e, 'burn', 2.5, Math.max(2, dmg * .15), src); }
+  for (let j = -3; j <= 3; j++) for (let i = -3; i <= 3; i++) if (Math.hypot(i, j) < r - .4 && chance(.7)) { const tx = x + i, ty = y + j; if (tx > 1 && ty > 1 && tx < MW - 1 && ty < MH - 1) ignite(tIdx(tx, ty), 1.5); }
+  fxRing(x, y, .3, r, '#ffb02e', .35); fxRing(x, y, .2, r * .6, '#ffffff', .2); burst(x, y, ['#ffb02e', '#ff5a1a', '#fff3a0', '#a6e23c'], 34, 8, { glow: 1, up: 2 });
+  Sfx.play('boom'); if (G.me && dist(x, y, G.me.x, G.me.y) < 12) { shake(8); G.hitstop = Math.max(G.hitstop, .05); } react('explosion', x, y);
+}
+function steam(x, y, src) {
+  for (const z of G.zones) if (z.kind === 'steam' && dist(x, y, z.x, z.y) < 1.8) { z.life = Math.max(z.life, 4); return; }
+  addZone({ kind: 'steam', x, y, r: 2.2, life: 5, tick: .4, team: 0, src }); Sfx.play('steam'); burst(x, y, '#e0e8f0', 14, 3, { grav: -10, size: 2 }); react('steam', x, y);
+}
+ZK.steam = {
+  tick(z) {
+    for (const e of G.ents) if (!e.dead && dist(z.x, z.y, e.x, e.y) < z.r + e.r) { addSt(e, 'blind', 1); delete e.st.burn; if (e.ai && e.st.blind && dist(e.x, e.y, e.target ? e.target.x : 1e9, e.target ? e.target.y : 1e9) > 1.8) e.target = null; }
+    for (let j = -2; j <= 2; j++) for (let i = -2; i <= 2; i++) if (Math.hypot(i, j) < z.r) extinguish(tIdx(z.x + i, z.y + j));
+  },
+  update(z, dt) { if (chance(dt * 26)) { const a = rand(TAU), r = Math.sqrt(rand()) * z.r; part(z.x + Math.cos(a) * r, z.y + Math.sin(a) * r, rand(2, 16), rand(-.3, .3), rand(-.3, .3), rand(6, 14), rand(.7, 1.3), pick(['#e0e8f0', '#c0c8d8', '#ffffff']), 2, -3); } },
+  draw(b, z) { isoEllipse(b, z.x, z.y, z.r, '#e0e8f0', .28 * clamp(z.life, 0, 1), '#ffffff'); },
+  top(b, z) { const s = w2s(z.x, z.y); b.globalAlpha = .3 * clamp(z.life, 0, 1); b.fillStyle = '#e8eef8'; for (let i = 0; i < 6; i++) { const a = i * 1.05 + G.time * .4 + z.id; b.beginPath(); b.ellipse(s[0] + Math.cos(a) * z.r * 12, s[1] - 10 + Math.sin(a) * z.r * 5, 16, 9, 0, 0, TAU); b.fill(); } b.globalAlpha = 1; },
+  topD: 1.5
+};
+function blowCloud(z, src) { if (z.blown) return; z.blown = true; z.life = 0; explode(z.x, z.y, z.r + .5, Math.max(14, (z.dmg || 3) * 6), src || z.src); }
+const isFire = el => el === 'fire' || el === 'ash';
+
+RX.hit = (t, el, src, amt) => {
+  if (isFire(el)) {
+    if (t.st.poison) { delete t.st.poison; explode(t.x, t.y, 1.7, Math.max(10, amt * 1.2), src); return true; }
+    if (t.st.wet || entInWater(t)) { delete t.st.wet; steam(t.x, t.y, src); return true; }
+  } else if (el === 'water') { if (t.st.burn) { delete t.st.burn; steam(t.x, t.y, src); } }
+  else if (el === 'storm') { if (t.st.wet || entInWater(t)) { discharge(t.x, t.y, src, amt); return true; } }
+  return false;
+};
+RX.tile = (x, y, el, src, o) => {
+  if (x < 1 || y < 1 || x >= MW - 1 || y >= MH - 1) return; const i = tIdx(x, y); o = o || {};
+  if (isFire(el)) {
+    for (const z of G.zones) if ((z.kind === 'cloud' && z.el === 'poison' || z.kind === 'spore') && dist(x, y, z.x, z.y) < z.r) { blowCloud(z, src); return; }
+    if (isWaterTile(i)) { if (!o.trail || chance(.35)) { steam(x, y, src); if (W.puddle[i] > 0) { W.puddle[i] = 0; W.puddles.delete(i); } } return; }
+    const fl = flammable(i); if (ignite(i, o.force || 0) && fl) react('wildfire', x, y);
+  } else if (el === 'water') { if (extinguish(i)) steam(x, y, src); addPuddle(i, o.dur || 10); }
+  else if (el === 'storm') { if (isWaterTile(i)) discharge(x, y, src, o.dmg || 10); }
+};
+RX.mix = e => { delete e.st.burn; steam(e.x, e.y, null); };
+RX.whirlFire = p => { p.el = 'fire'; p.dmg *= 1.6; p.color = EL.fire.c; Sfx.play('fire'); burst(p.x, p.y, ['#ffb02e', '#ff5a1a'], 16, 4, { glow: 1 }); react('firewhirl', p.x, p.y); };
+RX.projTile = p => { if (!isFire(p.el)) return; for (const z of G.zones) if ((z.kind === 'cloud' && z.el === 'poison' || z.kind === 'spore') && dist(p.x, p.y, z.x, z.y) < z.r) { blowCloud(z, p.src); return; } };
+RX.cloudCheck = z => {
+  if (z.blown) return;
+  for (let j = -3; j <= 3; j++) for (let i = -3; i <= 3; i++) if (Math.hypot(i, j) < z.r && W.fire[tIdx(clamp(z.x + i, 1, MW - 2), clamp(z.y + j, 1, MH - 2))] > 0) { blowCloud(z); return; }
+  for (const e of G.ents) if (!e.dead && e.st.burn && dist(e.x, e.y, z.x, z.y) < z.r) { blowCloud(z, e.st.burn.src); return; }
+};
+RX.explode = explode; RX.steam = steam;
+
+// ===== 07_souls.js =====
+// Души: способность + стихия. Химеры: 10 уникальных рецептов + процедурные (способность первой + стихия второй).
+const SOULS = {
+  wolf: { name: 'Душа волка', mob: 'Волк', ab: 'dash', el: 'beast', abName: 'Рывок', desc: 'Рывок сквозь врагов с уроном. Неуязвимость на время рывка.', s3: 'Два заряда' },
+  imp: { name: 'Душа беса', mob: 'Бес', ab: 'ball', el: 'fire', abName: 'Огненный шар', desc: 'Взрывается, поджигает врагов и траву.', s3: 'Три шара веером' },
+  water: { name: 'Душа водяного духа', mob: 'Водяной дух', ab: 'wave', el: 'water', abName: 'Волна', desc: 'Отталкивает врагов, мочит их и оставляет лужи.', s3: 'Шире волна, лужи дольше' },
+  bat: { name: 'Душа грозовой мыши', mob: 'Грозовая мышь', ab: 'chain', el: 'storm', abName: 'Цепная молния', desc: 'Перескакивает между врагами. Мокрые получают «Разряд».', s3: 'До 6 целей' },
+  falcon: { name: 'Душа ветряного сокола', mob: 'Сокол', ab: 'whirl', el: 'wind', abName: 'Вихрь', desc: 'Летящий вихрь раскидывает врагов. Пройдя через огонь — загорается.', s3: 'Больше и дольше' },
+  shroom: { name: 'Душа ядогриба', mob: 'Ядогриб', ab: 'cloud', el: 'poison', abName: 'Ядовитое облако', desc: 'Облако травит всех внутри. Огонь его взрывает.', s3: 'Больше радиус' },
+  root: { name: 'Душа корня-хваталы', mob: 'Корень', ab: 'roots', el: 'nature', abName: 'Хватка корней', desc: 'Линия корней бьёт и обездвиживает.', s3: 'Длиннее, держит 3 сек' },
+  skel: { name: 'Душа скелета-лучника', mob: 'Скелет', ab: 'arrows', el: 'bone', abName: 'Веер стрел', desc: 'Пять стрел веером. Делают цель хрупкой.', s3: 'Пробивают насквозь' },
+  slime: { name: 'Душа слизня', mob: 'Слизень', ab: 'shield', el: 'slime', abName: 'Щит слизи', desc: 'Щит поглощает урон 6 секунд.', s3: 'Замедляет атакующих' },
+  ashwolf: { name: 'Душа Пепельного Волка', mob: 'Пепельный Волк', ab: 'ashstorm', el: 'ash', abName: 'Пепельная буря', desc: 'Ульта: град горящего пепла по области.', s3: 'Больше ударов', boss: true }
+};
+const CHIMERAS = {
+  ch_blazedash: { name: 'Пылающий рывок', ab: 'blazedash', el: 'fire', els: ['beast', 'fire'], glyph: 'dash', from: ['wolf', 'imp'], desc: 'Рывок оставляет за собой полосу огня.' },
+  ch_thundercloud: { name: 'Грозовая туча', ab: 'thundercloud', el: 'storm', els: ['storm', 'water'], glyph: 'cloud', from: ['bat', 'water'], desc: 'Туча над головой: мочит и бьёт молнией ближайших врагов.' },
+  ch_firewhirl: { name: 'Огненный смерч', ab: 'firewhirl', el: 'fire', els: ['wind', 'fire'], glyph: 'whirl', from: ['falcon', 'imp'], desc: 'Большой огненный вихрь: раскидывает и поджигает всё на пути.' },
+  ch_rotbomb: { name: 'Гнилая бомба', ab: 'rotbomb', el: 'poison', els: ['poison', 'fire'], glyph: 'bomb', from: ['shroom', 'imp'], desc: 'Бомба оставляет ядовитое облако, которое через секунду взрывается.' },
+  ch_swamp: { name: 'Болотная топь', ab: 'swamp', el: 'nature', els: ['nature', 'water'], glyph: 'wave', from: ['root', 'water'], desc: 'Топь замедляет, мочит и ранит врагов.' },
+  ch_thunderarrows: { name: 'Громовые стрелы', ab: 'thunderarrows', el: 'storm', els: ['bone', 'storm'], glyph: 'arrows', from: ['skel', 'bat'], desc: 'Стрелы, от которых молния перескакивает на соседей.' },
+  ch_healbubble: { name: 'Лечащий пузырь', ab: 'healbubble', el: 'water', els: ['slime', 'water'], glyph: 'bubble', from: ['slime', 'water'], desc: 'Пузырь лечит союзников и снимает огонь и яд.' },
+  ch_pack: { name: 'Призрачная стая', ab: 'pack', el: 'beast', els: ['beast', 'wind'], glyph: 'paw', from: ['wolf', 'falcon'], desc: 'Три призрачных волка на 6 секунд.' },
+  ch_sporeforest: { name: 'Споровый лес', ab: 'sporeforest', el: 'poison', els: ['nature', 'poison'], glyph: 'roots', from: ['root', 'shroom'], desc: 'Грибная поляна травит и хватает врагов корнями.' },
+  ch_geyser: { name: 'Паровой гейзер', ab: 'geyser', el: 'water', els: ['fire', 'water'], glyph: 'geyser', from: ['imp', 'water'], desc: 'Гейзер подбрасывает врагов и оставляет облако пара.' }
+};
+const RECIPES = {};
+for (const id in CHIMERAS) RECIPES[CHIMERAS[id].from.slice().sort().join('+')] = id;
+const FUSE_COST = 40;
+const SDEF = {};
+function soulDef(id) {
+  if (SDEF[id]) return SDEF[id]; let d = null;
+  if (SOULS[id]) { const s = SOULS[id]; d = Object.assign({ id, base: true, els: [s.el], icon: makeIcon(id, s.ab, EL[s.el].c) }, s); }
+  else if (CHIMERAS[id]) { const c = CHIMERAS[id]; d = Object.assign({ id, chimera: true, unique: true, abName: c.name, mult: 1.15, s3: 'Сильнее и дольше', icon: makeIcon(id, c.glyph, EL[c.els[0]].c, EL[c.els[1]].c) }, c); }
+  else if (id.slice(0, 2) === 'p_') {
+    const pp = id.split('_'), a = SOULS[pp[1]], b = SOULS[pp[2]]; if (!a || !b) return SDEF[id] = soulDef('wolf');
+    const A = AB[a.ab], nm = EL[b.el].adj[A.g] + ' ' + A.noun;
+    d = { id, chimera: true, name: nm, abName: nm, ab: a.ab, el: b.el, els: [a.el, b.el], mult: 1.3, from: [pp[1], pp[2]], desc: a.abName + ' со стихией «' + EL[b.el].n + '». Урон +30%.', s3: a.s3, icon: makeIcon(id, a.ab, EL[a.el].c, EL[b.el].c) };
+  } else return soulDef('wolf');
+  return SDEF[id] = d;
+}
+const recipeKey = (a, b) => [a, b].sort().join('+');
+// Что получится из a+b (порядок важен только для процедурных)
+function fuseResult(a, b) { return RECIPES[recipeKey(a, b)] || ('p_' + a + '_' + b); }
+function canFuse(p, a, b) { return a && b && a !== b && SOULS[a] && SOULS[b] && p.souls[a] >= 1 && p.souls[b] >= 1 && p.gold >= FUSE_COST; }
+function fuse(p, a, b) {
+  if (!canFuse(p, a, b)) return null;
+  const id = fuseResult(a, b), isNew = !G.J.recipes[a + '>' + b] && !(CHIMERAS[id] && G.J.recipes[recipeKey(a, b)]);
+  p.gold -= FUSE_COST; takeSoul(p, a); takeSoul(p, b);
+  G.J.recipes[CHIMERAS[id] ? recipeKey(a, b) : a + '>' + b] = id;
+  giveSoul(p, id, 1, true); Sfx.play('fuse'); Bus.emit('fused', id, isNew);
+  return { id, isNew };
+}
+
+// ===== 08_mobs.js =====
+// Мобы: каждый дерётся СВОЕЙ душой-способностью, с замахом-телеграфом. ИИ целится в ближайшего врага по team.
+const MOBS = {
+  wolf: { name: 'Волк', hp: 38, atk: 7, spd: 3.6, abils: ['dash', 'bite'], el: 'beast', soul: 'wolf', blood: '#c8c8d0' },
+  slime: { name: 'Слизень', hp: 55, atk: 6, spd: 2.2, abils: ['shield', 'bite'], el: 'slime', soul: 'slime', hop: true, blood: '#6fe0a0' },
+  shroom: { name: 'Ядогриб', hp: 34, atk: 6, spd: 1.7, abils: ['cloud'], el: 'poison', soul: 'shroom', keep: 3.6, weak: 'fire', immune: { poison: 1 }, blood: '#8fcc2a' },
+  root: { name: 'Корень-хватала', hp: 70, atk: 8, spd: 0, abils: ['roots', 'bite'], el: 'nature', soul: 'root', weak: 'fire', immune: { root: 1 }, heavy: .2, blood: '#7a5230' },
+  bat: { name: 'Грозовая мышь', hp: 30, atk: 7, spd: 4, abils: ['chain'], el: 'storm', soul: 'bat', fly: true, keep: 4.2, blood: '#7a4ab8' },
+  skel: { name: 'Скелет-лучник', hp: 40, atk: 7, spd: 2.8, abils: ['arrows'], el: 'bone', soul: 'skel', keep: 5.6, immune: { poison: 1, bleed: 1 }, blood: '#f0ecd8' },
+  water: { name: 'Водяной дух', hp: 48, atk: 7, spd: 2.6, abils: ['wave'], el: 'water', soul: 'water', keep: 3.2, weak: 'storm', immune: { burn: 1 }, blood: '#5aa8f0' },
+  imp: { name: 'Огненный бес', hp: 44, atk: 8, spd: 3.2, abils: ['ball'], el: 'fire', soul: 'imp', keep: 4.6, weak: 'water', immune: { burn: 1 }, blood: '#e8502a' },
+  falcon: { name: 'Ветряной сокол', hp: 40, atk: 8, spd: 4.4, abils: ['whirl', 'bite'], el: 'wind', soul: 'falcon', fly: true, keep: 4, blood: '#7ae0c8' },
+  ashwolf: { name: 'Пепельный Волк', hp: 1500, atk: 25, spd: 3.5, abils: [{ ab: 'blazedash', el: 'fire', cdm: 1 }, { ab: 'ashstorm', el: 'ash', cdm: .5 }, { ab: 'bite', el: 'ash', cdm: 1 }], el: 'ash', soul: 'ashwolf', boss: true, r: .7, immune: { burn: 1, blind: 1 }, aggro: 9, leash: 13, blood: '#ff7a1a', scale: 1 },
+  spirit: { name: 'Призрачный волк', spr: 'spirit', hp: 30, atk: 5, spd: 5, abils: [{ ab: 'dash', cdm: .6 }, { ab: 'bite', cdm: .7 }], el: 'beast', aggro: 9, leash: 99, blood: '#a8f0ff' },
+  nemesis: { name: 'Тень', spr: 'nem', hp: 100, atk: 10, spd: 3.6, abils: [], el: 'phys', aggro: 8.5, leash: 14, heavy: .5, blood: '#8a1a2a' }
+};
+function mkMob(type, x, y, lvl, o) {
+  const d = MOBS[type], sc = d.boss || type === 'nemesis' || type === 'spirit';
+  const m = mkEnt({
+    ai: true, type, name: d.name, spr: d.spr || type, x, y, hx: x, hy: y, lvl, team: 2, r: d.r || .32, fly: !!d.fly, hop: !!d.hop, spd: d.spd, weak: d.weak, resist: d.resist, immune: d.immune || {}, heavy: d.heavy, blood: d.blood,
+    maxHp: Math.round(d.hp * (sc ? 1 : 1 + .32 * (lvl - 1))), atk: d.atk * (sc ? 1 : 1 + .2 * (lvl - 1)), state: 'idle', stT: 0, target: null, wu: null, scanT: rand(.3), wt: rand(1, 3), wx: x, wy: y,
+    abils: d.abils.map(a => ({ ab: a.ab || a, el: a.el || d.el, mult: a.mult || 1, stars: 1, cd: rand(.8, 2.5), cdm: a.cdm || 1.5 })), keep: d.keep || 0, aggro: d.aggro || 7.5, leash: d.leash || 15, boss: !!d.boss, scale: d.scale, humanoid: type === 'nemesis', stuck: 0, avoid: 0, strafe: chance(.5) ? 1 : -1, strT: rand(1, 3)
+  }, o);
+  m.hp = m.maxHp; G.ents.push(m); return m;
+}
+function findTarget(m) {
+  let best = null, bd = m.st.blind ? 1.6 : m.aggro;
+  for (const e of G.ents) { if (e.dead || !hostile(m, e) || (e.isPlayer && inTown(e)) || e.inv > 1) continue; const d = dist(m.x, m.y, e.x, e.y); if (d < bd) { bd = d; best = e; } }
+  return best;
+}
+function mobMove(m, dx, dy, sp, dt) {
+  if (m.avoid > 0) { m.avoid -= dt; const px = -dy * m.avoidDir, py = dx * m.avoidDir; dx = dx * .3 + px; dy = dy * .3 + py; const n = norm(dx, dy); dx = n[0]; dy = n[1]; }
+  const ox = m.x, oy = m.y; moveEnt(m, dx * sp * dt, dy * sp * dt); m.moving = true;
+  if (dist(ox, oy, m.x, m.y) < sp * dt * .35) { m.stuck += dt; if (m.stuck > .25) { m.stuck = 0; m.avoid = .7; m.avoidDir = chance(.5) ? 1 : -1; } } else m.stuck = 0;
+  if (m.team !== 1) { const d = dist(m.x, m.y, TOWN.x, TOWN.y); if (d < TOWN.r + .5) { m.x = TOWN.x + (m.x - TOWN.x) / d * (TOWN.r + .5); m.y = TOWN.y + (m.y - TOWN.y) / d * (TOWN.r + .5); m.target = null; } }
+}
+function updateMob(m, dt) {
+  m.moving = false;
+  for (const a of m.abils) a.cd -= dt;
+  if (m.lifeT !== undefined) { m.lifeT -= dt; if (m.lifeT <= 0) { m.dead = true; burst(m.x, m.y, '#a8f0ff', 10, 3); return; } }
+  if (m.st.stun || m.dash || m.toss > 0) return;
+  let t = m.target;
+  if (t && (t.dead || (t.isPlayer && inTown(t)) || (!m.owner && dist(m.x, m.y, m.hx, m.hy) > m.leash * 1.4))) { t = m.target = null; m.state = 'idle'; m.wu = null; }
+  if (!t) { m.scanT -= dt; if (m.scanT <= 0) { m.scanT = .3; t = m.target = findTarget(m); if (t) { m.state = 'chase'; Bus.emit('aggro', m, t); } } }
+  if (m.onUpdate) m.onUpdate(m, dt);
+  if (m.state === 'windup' && m.wu) {
+    const wu = m.wu; wu.t -= dt; const f = wu.dx - wu.dy; if (Math.abs(f) > .15) m.face = f > 0 ? 1 : -1;
+    if (wu.t <= 0) { m.wu = null; m.state = 'recover'; m.stT = m.enraged ? .25 : .45; castAb(m, wu.a, wu); wu.a.cd = AB[wu.a.ab].cd * wu.a.cdm * (m.enraged ? .6 : 1) + rand(.4); }
+    return;
+  }
+  if (m.state === 'recover') { m.stT -= dt; if (m.stT <= 0) m.state = 'chase'; return; }
+  const slow = (m.st.slow ? .5 : 1) * (m.st.root ? 0 : 1) * (m.enraged ? 1.3 : 1);
+  if (!t) {
+    if (m.owner) { const d = dist(m.x, m.y, m.owner.x, m.owner.y); if (d > 2.5) { const n = norm(m.owner.x - m.x, m.owner.y - m.y); mobMove(m, n[0], n[1], m.spd * slow, dt); m.face = n[0] - n[1] > 0 ? 1 : -1; } return; }
+    const dh = dist(m.x, m.y, m.hx, m.hy);
+    if (dh > 5) { const n = norm(m.hx - m.x, m.hy - m.y); mobMove(m, n[0], n[1], m.spd * slow, dt); m.face = n[0] - n[1] > 0 ? 1 : -1; if (m.hp < m.maxHp) m.hp = Math.min(m.maxHp, m.hp + m.maxHp * .2 * dt); if (m.boss && m.enraged && m.hp >= m.maxHp) m.enraged = false; }
+    else if (m.spd > 0) {
+      if (m.hp < m.maxHp) m.hp = Math.min(m.maxHp, m.hp + m.maxHp * .05 * dt);
+      m.wt -= dt; if (m.wt <= 0) { m.wt = rand(2, 5); m.wx = m.hx + rand(-3, 3); m.wy = m.hy + rand(-3, 3); }
+      if (dist(m.x, m.y, m.wx, m.wy) > .4 && m.wt > 1) { const n = norm(m.wx - m.x, m.wy - m.y); mobMove(m, n[0], n[1], m.spd * .35 * slow, dt); m.face = n[0] - n[1] > 0 ? 1 : -1; }
+    }
+    return;
+  }
+  const d = dist(m.x, m.y, t.x, t.y), n = norm(t.x - m.x, t.y - m.y), f = n[0] - n[1]; if (Math.abs(f) > .15) m.face = f > 0 ? 1 : -1;
+  m.dirx = n[0]; m.diry = n[1];
+  if (!m.st.blind || d < 1.8) for (const a of m.abils) {
+    if (a.cd > 0) continue; const A = AB[a.ab].ai;
+    if (d > A.range || d < (A.min || 0)) continue;
+    if (A.cond === 'hurt' && m.hp > m.maxHp * .7) continue;
+    if (a.ab === 'shield' && m.shield > 0) continue;
+    let dx = n[0], dy = n[1]; if (m.st.blind) { const q = rand(TAU); dx = Math.cos(q); dy = Math.sin(q); }
+    const wt = A.windup * (m.enraged ? .75 : 1); m.state = 'windup'; m.wu = { a, t: wt, total: wt, dx, dy, tx: t.x, ty: t.y }; return;
+  }
+  let mx = 0, my = 0;
+  if (m.keep) {
+    if (d < m.keep - 1) { mx = -n[0]; my = -n[1]; } else if (d > m.keep + .8) { mx = n[0]; my = n[1]; }
+    else { m.strT -= dt; if (m.strT <= 0) { m.strT = rand(1, 3); m.strafe = -m.strafe; } mx = -n[1] * m.strafe * .6; my = n[0] * m.strafe * .6; }
+  } else if (d > 1.05) { mx = n[0]; my = n[1]; }
+  if ((mx || my) && m.spd > 0) mobMove(m, mx, my, m.spd * slow, dt);
+}
+// Мобы не слипаются
+function separateMobs() {
+  const L = G.ents;
+  for (let i = 0; i < L.length; i++) { const a = L[i]; if (!a.ai || a.dead || a.dash || a.spd === 0) continue; for (let j = i + 1; j < L.length; j++) { const c = L[j]; if (!c.ai || c.dead || c.dash) continue; const dx = c.x - a.x, dy = c.y - a.y; if (Math.abs(dx) > 1 || Math.abs(dy) > 1) continue; const d = Math.hypot(dx, dy), mn = a.r + c.r; if (d < mn && d > .001) { const p = (mn - d) / d * .5; if (!blk(a.x - dx * p, a.y - dy * p, a.r * .8, a.fly)) { a.x -= dx * p; a.y -= dy * p; } if (c.spd !== 0 && !blk(c.x + dx * p, c.y + dy * p, c.r * .8, c.fly)) { c.x += dx * p; c.y += dy * p; } } } }
+}
+// Спавнер: мобы возрождаются, когда игрок далеко
+let spawnT = 0;
+function updateSpawner(dt) {
+  separateMobs();
+  spawnT -= dt; if (spawnT > 0) return; spawnT = .5;
+  for (const s of W.spawns) {
+    for (let i = s.list.length - 1; i >= 0; i--) if (s.list[i].dead) s.list.splice(i, 1);
+    if (s.list.length) { s.armed = true; continue; }
+    if (s.armed) { s.armed = false; s.t = s.boss ? 100 : rand(35, 55); }
+    if (s.t > 0) { s.t -= .5; continue; }
+    let near = false; for (const p of G.players) if (dist(p.x, p.y, s.x, s.y) < (G.time < 1 ? 0 : 13)) near = true;
+    if (near) continue;
+    for (let i = 0; i < s.n; i++) {
+      let x = s.x + (i ? rand(-1.2, 1.2) : 0), y = s.y + (i ? rand(-1.2, 1.2) : 0); if (blocked(x, y, MOBS[s.type].fly)) { x = s.x; y = s.y; }
+      const m = mkMob(s.type, x, y, s.lvl); s.list.push(m);
+      if (s.boss) setupBoss(m);
+    }
+  }
+}
+G.systems.push(updateSpawner);
+
+// ---------- Босс: Пепельный Волк ----------
+function setupBoss(m) {
+  m.onUpdate = (b) => {
+    if (!b.enraged && b.target && b.hp <= b.maxHp * .5) {
+      b.enraged = true; banner('ПЕПЕЛЬНЫЙ ВОЛК В ЯРОСТИ', 'Он призывает бесов!', '#ff5a3a'); Sfx.play('howl'); shake(8); fxRing(b.x, b.y, .5, 6, '#ff5a3a', .6);
+      for (let i = 0; i < 3; i++) { const a = i * TAU / 3 + rand(.5), x = b.x + Math.cos(a) * 3, y = b.y + Math.sin(a) * 3; const im = mkMob('imp', blocked(x, y) ? b.x : x, blocked(x, y) ? b.y : y, 8, { summoned: true }); im.target = b.target; im.hx = LAIR.x; im.hy = LAIR.y; burst(im.x, im.y, ['#ff7a2a', '#ffe04a'], 14, 4, { glow: 1 }); }
+    }
+    if (!b.target && b.hp >= b.maxHp) b.enraged = false;
+  };
+}
+function activeBoss() { for (const e of G.ents) if (e.boss && !e.dead && G.me && dist(e.x, e.y, G.me.x, G.me.y) < 15) return e; return null; }
+
+// ---------- Смерть моба: опыт, золото, душа ----------
+Bus.on('mobDeath', (m, src) => {
+  if (m.owner || m.type === 'spirit') return;
+  let p = ownerOf(src); if (!p || !p.isPlayer) p = m.lastHitBy; if (!p || !p.isPlayer) { let bd = 20; p = null; for (const q of G.players) { const d = dist(q.x, q.y, m.x, m.y); if (d < bd) { bd = d; p = q; } } }
+  if (!p) return;
+  if (m.isNemesis) { Bus.emit('nemesisDeath', m, p); return; }
+  G.J.kills++;
+  gainXp(p, m.boss ? 400 : 5 + 5 * m.lvl);
+  const g = m.boss ? 250 : randi(2, 4) * m.lvl; for (let i = 0, n = m.boss ? 10 : 1 + (g > 12 ? 1 : 0); i < n; i++) dropPickup('gold', m.x, m.y, Math.ceil(g / n));
+  const soul = MOBS[m.type].soul;
+  if (soul && !m.summoned) { const ch = m.boss ? (G.J.obtained[soul] ? .35 : 1) : (G.J.obtained[soul] ? .15 : .6); if (chance(ch)) dropPickup('soul', m.x, m.y, soul); }
+  if (m.boss) { G.J.bossKills++; banner('ПЕПЕЛЬНЫЙ ВОЛК ПОВЕРЖЕН', 'Шепчущий лес свободен... пока что', '#ffd870'); Sfx.play('levelup'); shake(10); for (let i = 0; i < 5; i++) fxRing(m.x, m.y, .5, 4 + i * 1.5, '#ff7a2a', .5 + i * .15); Bus.emit('bossDeath', m, p); }
+});
 
 // ===== 10_player.js =====
 // Игрок. Управляется через «намерение» (intent) — локальный ввод или, в будущем, сеть.
@@ -1044,6 +1480,68 @@ const Input = (() => {
   return { init, intent, endFrame, clear, buttons, joy, held };
 })();
 const NO_INTENT = { mx: 0, my: 0, ax: 0, ay: 0, atk: false, roll: false, cast: [false, false, false, false], potion: false, interact: false };
+
+// ===== 12_hud.js =====
+// HUD: HP, опыт, золото, зелья, слоты душ, миникарта, полоса босса, баннеры и подсказки
+let zoneShown = '', zoneT = 0, hint = null;
+function setHint(id, s, dur) { if (G.J.hints[id]) return; G.J.hints[id] = 1; hint = { s, t: dur || 7 }; }
+function bar(b, x, y, w, h, f, col, bg) { b.fillStyle = '#0b0810'; b.fillRect(x - 1, y - 1, w + 2, h + 2); b.fillStyle = bg || '#2a2030'; b.fillRect(x, y, w, h); b.fillStyle = col; b.fillRect(x, y, Math.round(w * clamp(f, 0, 1)), h); }
+function mmPos(cx, cy, p, x, y, lim) { let mx = (x - p.x) - (y - p.y), my = ((x - p.x) + (y - p.y)) * .5; const k = Math.max(Math.abs(mx) / lim, Math.abs(my) / lim); if (k > 1) { mx /= k; my /= k; } return [Math.round(cx + mx), Math.round(cy + my), k > 1]; }
+function drawHud(b) {
+  const p = G.me; if (!p || !G.started) return; const dtf = 1 / 60;
+  // слепота (Пар): темнеет обзор
+  if (p.st.blind && !p.dead) { const g = b.createRadialGradient(V.w / 2, V.h / 2, 22, V.w / 2, V.h / 2, 90); g.addColorStop(0, 'rgba(210,210,220,0)'); g.addColorStop(1, 'rgba(210,210,220,.93)'); b.fillStyle = g; b.fillRect(0, 0, V.w, V.h); }
+  if (p.hp < p.maxHp * .3 && !p.dead) { b.globalAlpha = .12 + .1 * Math.sin(G.time * 7); b.fillStyle = '#ff2020'; b.fillRect(0, 0, V.w, 5); b.fillRect(0, V.h - 5, V.w, 5); b.fillRect(0, 0, 5, V.h); b.fillRect(V.w - 5, 0, 5, V.h); b.globalAlpha = 1; }
+  // левый верх
+  b.globalAlpha = .6; b.fillStyle = '#0b0810'; b.fillRect(2, 2, 96, 37); b.globalAlpha = 1;
+  txt(p.name, 5, 3, '#fff', 6); txt('Ур. ' + p.lvl, 95, 3, '#ffd870', 6, 'right');
+  bar(b, 5, 13, 90, 6, p.hp / p.maxHp, p.hp < p.maxHp * .3 ? '#ff4a4a' : '#d83a4a');
+  if (p.shield > 0) { b.fillStyle = '#6fe0b0'; b.fillRect(5, 13, Math.round(90 * clamp(p.shield / (p.shieldMax || 1), 0, 1)), 2); }
+  txt(Math.ceil(p.hp) + ' / ' + p.maxHp, 50, 12.5, '#fff', 5, 'center');
+  bar(b, 5, 22, 90, 2, p.lvl >= MAXLVL ? 1 : p.xp / xpNext(p.lvl), '#8a6aff');
+  b.fillStyle = '#8a5a10'; b.fillRect(5, 28, 6, 6); b.fillStyle = '#ffd870'; b.fillRect(6, 28, 4, 6); b.fillRect(5, 29, 6, 4); txt(String(p.gold), 13, 27, '#ffd870', 6);
+  drawGlyph(b, 'potion', 54, 31, '#ff6a7a'); txt('×' + p.potions, 60, 27, '#fff', 6);
+  if (!V.touch) txt('Q', 80, 28, '#9a8ab0', 5);
+  // слоты душ (на ПК — снизу по центру; на телефоне это кнопки справа)
+  if (!V.touch) {
+    const x0 = Math.round(V.w / 2 - 44);
+    for (let s = 0; s < 4; s++) { const x = x0 + s * 23, y = V.h - 25; b.globalAlpha = .7; b.fillStyle = '#0b0810'; b.fillRect(x - 2, y - 2, 20, 23); b.globalAlpha = 1; b.fillStyle = '#3a2a5a'; b.fillRect(x - 1, y - 1, 18, 18); b.fillStyle = '#120c1c'; b.fillRect(x, y, 16, 16); drawSlotIcon(b, p, s, x, y); txt(String(s + 1), x - 1, y - 8, '#c9a0ff', 5); }
+  }
+  // миникарта
+  const ms = 58, mx = V.w - ms - 4, my = 4, cx = mx + ms / 2, cy = my + ms / 2;
+  if (W.mapDirty) renderMap();
+  b.fillStyle = '#0b0810'; b.fillRect(mx - 2, my - 2, ms + 4, ms + 4); b.fillStyle = '#6a4a9a'; b.fillRect(mx - 1, my - 1, ms + 2, ms + 2); b.fillStyle = '#120c1c'; b.fillRect(mx, my, ms, ms);
+  b.save(); b.beginPath(); b.rect(mx, my, ms, ms); b.clip(); b.imageSmoothingEnabled = false; b.transform(1, .5, -1, .5, cx, cy); b.drawImage(W.map, -p.x, -p.y); b.restore();
+  const mk = (x, y, c, s, blink) => { const q = mmPos(cx, cy, p, x, y, ms / 2 - 3); if (blink && Math.floor(G.time * 4) % 2) return; b.fillStyle = '#0b0810'; b.fillRect(q[0] - s, q[1] - s, s * 2 + 1, s * 2 + 1); b.fillStyle = c; b.fillRect(q[0] - s + 1, q[1] - s + 1, s * 2 - 1, s * 2 - 1); };
+  for (const e of G.ents) if (e.ai && !e.dead && !e.boss && !e.isNemesis && e.team !== p.team && dist(e.x, e.y, p.x, p.y) < 22) { const q = mmPos(cx, cy, p, e.x, e.y, ms / 2 - 2); if (!q[2]) { b.fillStyle = '#ff5a5a'; b.fillRect(q[0], q[1], 1, 1); } }
+  mk(TOWN.x, TOWN.y, '#c9a0ff', 2); mk(LAIR.x, LAIR.y, '#ff7a1a', 2);
+  if (G.nemesis && !G.nemesis.dead) mk(G.nemesis.x, G.nemesis.y, '#ff2a4a', 2, true);
+  b.fillStyle = '#fff'; b.fillRect(cx - 1, cy - 1, 3, 3);
+  const z = zoneAt(p.x, p.y); if (z !== zoneShown) { zoneShown = z; zoneT = 4; }
+  txt(ZNAME[z], V.w - 4, my + ms + 3, '#d8d0e0', 5, 'right');
+  if (zoneT > 0) { zoneT -= dtf; const a = clamp(zoneT, 0, 1) * clamp((4 - zoneT) * 2, 0, 1); txt(ZNAME[z], V.w / 2, 30, '#fff', 11, 'center', a); if (ZLVL[z]) txt(ZLVL[z], V.w / 2, 44, '#ffd870', 6, 'center', a); }
+  // босс
+  const boss = activeBoss();
+  if (boss && boss.target) { const w = Math.min(170, V.w - 150), x = Math.round(V.w / 2 - w / 2); bar(b, x, 14, w, 5, boss.hp / boss.maxHp, boss.enraged ? '#ff5a1a' : '#c82a3a'); b.fillStyle = '#ffd870'; b.fillRect(x + Math.round(w / 2), 13, 1, 7); txt(boss.name + (boss.enraged ? ' — ЯРОСТЬ' : ''), V.w / 2, 4, '#ffb090', 6.5, 'center'); }
+  // баннер
+  const B = G.banner; if (B) { const a = clamp(B.t * 2, 0, 1) * clamp((B.max - B.t) * 4, 0, 1), y = Math.round(V.h * .24); b.globalAlpha = .55 * a; b.fillStyle = '#0b0810'; b.fillRect(0, y - 4, V.w, 34); b.globalAlpha = a; b.fillStyle = B.color; b.fillRect(0, y - 4, V.w, 1); b.fillRect(0, y + 29, V.w, 1); b.globalAlpha = 1; txt(B.title, V.w / 2, y, B.color, 12, 'center', a); txt(B.sub, V.w / 2, y + 17, '#fff', 6.5, 'center', a); }
+  // подсказки новичку
+  if (!hint && !p.dead) {
+    const H = G.J.hints;
+    if (!H.move) setHint('move', V.touch ? 'Джойстик слева — движение. Кнопка с мечом — удар (комбо из 3)' : 'WASD — движение. ЛКМ — удар (комбо из 3 ударов)', 9);
+    else if (!H.roll && p.moved > 2.5) setHint('roll', V.touch ? 'Кнопка-круг — перекат с неуязвимостью. Красные зоны — уворачивайся!' : 'ПРОБЕЛ — перекат с неуязвимостью. Красные зоны — уворачивайся!', 8);
+    else if (!H.soul && H.roll && p.moved > 7) setHint('soul', V.touch ? 'Кнопки с иконками — твои души. Сейчас у тебя душа волка: рывок' : 'Клавиши 1–4 — души. Сейчас у тебя душа волка: рывок (1)', 8);
+    else if (!H.drop && H.soul && !inTown(p)) setHint('drop', 'С мобов падают души — их способности. Дубликаты усиливают душу: ★2 за 3 копии, ★3 за 6', 9);
+    else if (!H.potion && p.hp < p.maxHp * .45 && p.potions > 0) setHint('potion', V.touch ? 'Мало здоровья! Кнопка с зельем лечит' : 'Мало здоровья! Q — выпить зелье', 6);
+    else if (!H.altar && Object.keys(p.souls).length >= 2) setHint('altar', 'Две души! На Алтаре в городе их можно слить в химеру. Рецепты скрыты — экспериментируй', 10);
+    else if (!H.react && Object.keys(p.souls).length >= 3) setHint('react', 'Стихии вступают в реакции: огонь жжёт траву, молния бьёт по мокрым, огонь взрывает яд...', 10);
+  }
+  if (hint) { hint.t -= dtf; const a = clamp(hint.t, 0, 1), y = V.h - (V.touch ? 16 : 44), w = Math.min(V.w - 8, hint.s.length * 3.3 + 12); b.globalAlpha = .7 * a; b.fillStyle = '#0b0810'; b.fillRect(Math.round(V.w / 2 - w / 2), y - 2, Math.round(w), 11); b.globalAlpha = 1; txt(hint.s, V.w / 2, y, '#ffe9a0', 5.5, 'center', a); if (hint.t <= 0) hint = null; }
+  // «E — использовать»
+  const n = !p.dead && nearInteract(p); if (n) { const s = w2s(p.x, p.y); txt((V.touch ? '' : 'E — ') + n.label, s[0], s[1] - 36, '#ffd870', 6.5, 'center'); }
+  if (p.dead) { b.globalAlpha = .6; b.fillStyle = '#1a0408'; b.fillRect(0, 0, V.w, V.h); b.globalAlpha = 1; txt('ТЫ ПОГИБ', V.w / 2, V.h / 2 - 22, '#ff4a5a', 16, 'center'); txt(G.deathMsg || 'Возрождение в городе...', V.w / 2, V.h / 2 + 2, '#fff', 7, 'center'); if (G.deathMsg2) txt(G.deathMsg2, V.w / 2, V.h / 2 + 14, '#ffb0b8', 6, 'center'); }
+}
+G.hud.push(drawHud);
 
 // ===== 14_render.js =====
 // Рендер: низкое разрешение -> целочисленное масштабирование без сглаживания. Текст — поверх в полном разрешении.
