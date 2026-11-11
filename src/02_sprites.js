@@ -321,7 +321,7 @@ function genFlame(seed) {
 const FLAME = [0, 1, 2, 3].map(genFlame);
 function genGlow(w, h, rgb) {
   const c = mkCanvas(w, h), x = c.getContext('2d'), g = x.createRadialGradient(w / 2, h / 2, 0, w / 2, h / 2, w / 2);
-  g.addColorStop(0, 'rgba(' + rgb + ',.34)'); g.addColorStop(1, 'rgba(' + rgb + ',0)');
+  g.addColorStop(0, 'rgba(' + rgb + ',.13)'); g.addColorStop(1, 'rgba(' + rgb + ',0)');
   x.save(); x.translate(0, h / 2); x.scale(1, h / w); x.translate(0, -w / 2); x.fillStyle = g; x.fillRect(0, 0, w, w); x.restore(); return c;
 }
 const GLOW = { fire: genGlow(64, 40, '255,140,40'), storm: genGlow(48, 30, '255,240,120'), soul: genGlow(40, 26, '190,120,255') };

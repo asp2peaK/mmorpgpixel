@@ -9,7 +9,8 @@ function nearestPlayerDist(e) { let d = 1e9; for (const p of G.players) { const 
 function update(dt) {
   G.time += dt;
   const I = Input.intent(G.me);
-  if (I.menu) Bus.emit('menuKey'); if (I.esc) Bus.emit('escKey');
+  if (performance.now() < (G.noKeyUntil || 0)) { I.menu = I.interact = false; }
+  if (I.menu) Bus.emit('menuKey');
   for (const e of G.ents) {
     if (e.isPlayer) { if (!e.dead) updateEntCommon(e, dt); updatePlayer(e, dt, e === G.me ? I : (e.intent || NO_INTENT)); continue; }
     if (e.dead || nearestPlayerDist(e) > 30) continue;
@@ -51,4 +52,5 @@ function boot() {
   requestAnimationFrame(frame);
 }
 window.__G = G; // для отладки и автотестов
+G.dbg = { Menus, saveGame, loadSave, spawnNemesis, castSoul, soulDef, mkMob, giveSoul, addSt, damage, fuse, SOULS, CHIMERAS, T, O, tIdx, getW: () => W, ignite, addPuddle, kill, gainXp, zoneAt };
 boot();

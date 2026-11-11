@@ -19,7 +19,8 @@ function mkMob(type, x, y, lvl, o) {
     ai: true, type, name: d.name, spr: d.spr || type, x, y, hx: x, hy: y, lvl, team: 2, r: d.r || .32, fly: !!d.fly, hop: !!d.hop, spd: d.spd, weak: d.weak, resist: d.resist, immune: d.immune || {}, heavy: d.heavy, blood: d.blood,
     maxHp: Math.round(d.hp * (sc ? 1 : 1 + .32 * (lvl - 1))), atk: d.atk * (sc ? 1 : 1 + .2 * (lvl - 1)), state: 'idle', stT: 0, target: null, wu: null, scanT: rand(.3), wt: rand(1, 3), wx: x, wy: y,
     abils: d.abils.map(a => ({ ab: a.ab || a, el: a.el || d.el, mult: a.mult || 1, stars: 1, cd: rand(.8, 2.5), cdm: a.cdm || 1.5 })), keep: d.keep || 0, aggro: d.aggro || 7.5, leash: d.leash || 15, boss: !!d.boss, scale: d.scale, humanoid: type === 'nemesis', stuck: 0, avoid: 0, strafe: chance(.5) ? 1 : -1, strT: rand(1, 3)
-  }, o);
+  });
+  if (o) Object.assign(m, o);
   m.hp = m.maxHp; G.ents.push(m); return m;
 }
 function findTarget(m) {
