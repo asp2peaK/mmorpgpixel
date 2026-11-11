@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+<title>Пожиратель Душ</title>
+<style>
+html,body{margin:0;height:100%;background:#0b0810;overflow:hidden;touch-action:none;-webkit-user-select:none;user-select:none;-webkit-tap-highlight-color:transparent;font-family:"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;color:#e8e0f0}
+#c{position:fixed;left:0;top:0;width:100vw;height:100vh;image-rendering:pixelated;image-rendering:crisp-edges;display:block}
+#ui{position:fixed;inset:0;display:none;align-items:center;justify-content:center;background:rgba(8,5,14,.72);z-index:5;padding:8px;box-sizing:border-box}
+#ui.on{display:flex}
+.panel{background:#1a1424;border:3px solid #6a4a9a;box-shadow:0 0 0 3px #0b0810,0 0 40px rgba(140,90,255,.25);width:min(640px,100%);max-height:100%;overflow:auto;box-sizing:border-box;padding:14px;font-size:15px}
+.panel h1{margin:0 0 4px;font-size:28px;letter-spacing:2px;color:#c9a0ff;text-shadow:2px 2px 0 #3a1a6a;text-align:center}
+.panel h2{margin:0 0 10px;font-size:19px;color:#c9a0ff}
+.panel h3{margin:12px 0 6px;font-size:15px;color:#ffd870}
+.sub{color:#9a8ab0;font-size:13px;text-align:center;margin-bottom:10px}
+.row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.btn{background:#3a2a5a;border:2px solid #8a6aca;color:#fff;padding:9px 14px;font:inherit;font-weight:700;cursor:pointer;border-radius:0}
+.btn:hover{background:#4c3878}.btn:active{background:#2a1e42}
+.btn.gold{background:#6a4a10;border-color:#ffd870}.btn.red{background:#5a1a22;border-color:#ff6a6a}
+.btn[disabled]{opacity:.4;cursor:default}
+.tabs{display:flex;gap:4px;margin-bottom:10px}.tabs .btn{flex:1;padding:8px 4px}.tabs .btn.act{background:#8a6aca;color:#0b0810}
+.x{float:right;margin:-4px -4px 0 8px;padding:4px 10px}
+input.name{background:#0b0810;border:2px solid #8a6aca;color:#fff;font:inherit;font-size:18px;padding:8px;width:100%;box-sizing:border-box;text-align:center;-webkit-user-select:text;user-select:text}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(132px,1fr));gap:6px}
+.soul{display:flex;gap:6px;align-items:center;background:#241a34;border:2px solid #3a2a5a;padding:5px;cursor:pointer;min-height:44px}
+.soul.sel{border-color:#ffd870;background:#3a2a4a}.soul.dim{opacity:.45}
+.soul img,.slot img,.big img{image-rendering:pixelated;width:32px;height:32px;flex:none}
+.soul b{display:block;font-size:13px;line-height:1.15}.soul small{color:#ffd870;font-size:12px}
+.slots{display:flex;gap:6px;margin-bottom:10px}
+.slot{flex:1;background:#120c1c;border:2px solid #4a3a6a;min-height:58px;text-align:center;padding:4px;font-size:11px;cursor:pointer;position:relative}
+.slot i{position:absolute;left:3px;top:1px;color:#9a8ab0;font-style:normal}
+.det{background:#120c1c;border:2px solid #3a2a5a;padding:8px;margin-top:8px;font-size:14px;line-height:1.4}
+.det .el{display:inline-block;padding:0 6px;color:#0b0810;font-weight:700}
+.q{color:#6a5a80}.ok{color:#8fe08a}.bad{color:#ff7a7a}.gd{color:#ffd870}
+.big{display:flex;align-items:center;justify-content:center;gap:12px;font-size:22px;margin:10px 0}
+.big img{width:48px;height:48px}
+ul.j{margin:0;padding:0;list-style:none}ul.j li{padding:4px 0;border-bottom:1px solid #2a2038;font-size:14px}
+.help{font-size:13px;color:#b0a0c8;line-height:1.5;margin-top:10px}
+kbd{background:#3a2a5a;padding:0 5px;border:1px solid #8a6aca;font:inherit;font-size:12px}
+</style>
+</head>
+<body>
+<canvas id="c"></canvas>
+<div id="ui"></div>
+<script>
+(function(){
+'use strict';
+/*__JS__*/
+})();
+</script>
+</body>
+</html>
