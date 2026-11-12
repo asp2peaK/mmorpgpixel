@@ -30,7 +30,9 @@ function drawTele(b, m) {
 
 function drawObj(b, i, j, o, k) {
   const sx = (i - j) * 16 - G.cam.sx, sy = (i + j) * 8 - G.cam.sy + 12;
+  if (o === O.ELDER || o === O.MERCH || o === O.SMITH) { const mk = Quests.mark(o === O.ELDER ? 'elder' : o === O.MERCH ? 'merch' : 'smith'); if (mk) txt(mk, sx, sy - 36 - Math.abs(Math.sin(G.time * 3)) * 3, mk === '?' ? '#8fd07a' : '#ffd870', 11, 'center'); }
   switch (o) {
+    case O.ELDER: drawSpr(b, 'elder_i', sx, sy - 2, true); break;
     case O.TREE: drawSpr(b, 'tree' + W.zi[k] + '_' + ((i * 3 + j * 5) % 3), sx, sy + 1); break;
     case O.DEAD: drawSpr(b, 'dead' + ((i + j) & 1), sx, sy + 1); break;
     case O.ROCK: drawSpr(b, 'rock' + ((i ^ j) & 1), sx, sy + 2); break;

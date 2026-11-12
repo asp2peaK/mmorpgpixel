@@ -77,6 +77,14 @@ const Menus = (() => {
     else h += '<div class="det q">Осколков: <span style="color:#8ad0ff">◆ ' + (p.shards | 0) + '</span>. Кузнец в городе куёт и зачаровывает вещи. Продать вещи можно у торговца в городе. При смерти Тень снимает с тебя самую ценную надетую вещь — убей её, чтобы вернуть.</div>';
     return h;
   }
+  // ---------- Диалог ----------
+  const PORT = {};
+  function openDialog(d) { st = { kind: 'dialog', d, i: 0 }; drawDialog(); }
+  function drawDialog() {
+    const d = st.d, last = st.i >= d.lines.length - 1, pu = PORT[d.spr] || (PORT[d.spr] = scaled(SPR[d.spr + '_i'].c, 6).toDataURL());
+    show('<h2>' + esc(d.name) + '</h2><div class="row" style="align-items:flex-start;flex-wrap:nowrap"><img src="' + pu + '" style="image-rendering:pixelated;width:84px;flex:none;background:#07060a;border:2px solid #3a3024;padding:6px"><div class="det" style="flex:1;margin:0;min-height:96px;font-size:15px;line-height:1.6">«' + esc(d.lines[st.i]) + '»</div></div><div class="row" style="margin-top:10px;justify-content:space-between"><span class="q">' + (st.i + 1) + ' / ' + d.lines.length + '</span><button class="btn ' + (last ? 'gold' : '') + '" data-a="dnext">' + (last ? (d.last || 'Закончить') : 'Дальше ▸') + (V.touch ? '' : ' <small style="opacity:.6">[E]</small>') + '</button></div>');
+  }
+  function dialogNext() { const d = st.d; if (st.i < d.lines.length - 1) { st.i++; return drawDialog(); } const nx = d.end && d.end(); if (nx) { st = { kind: 'dialog', d: nx, i: 0 }; return drawDialog(); } close(); }
   // ---------- Кузнец ----------
   function openSmith() { if (!G.started || G.me.dead) return; st = { kind: 'smith', tab: 'forge', isel: null, esel: null, msg: '' }; drawSmith(); }
   function drawSmith() {
@@ -115,7 +123,7 @@ const Menus = (() => {
     return h;
   }
   function tabJournal(p) {
-    const J = G.J; let h = '<h3>Реакции стихий (' + Object.keys(J.reactions).length + '/5)</h3><ul class="j">';
+    const J = G.J; let h = '<h3>Задания</h3><ul class="j">' + (QORDER.filter(id => Quests.S()[id]).map(id => { const q = QUESTS[id], s = Quests.S()[id]; return '<li>' + (s.st === 'turned' ? '<span class="q">✔ ' + q.title + '</span>' : '<b style="color:' + (q.main ? '#ff8a8a' : '#e0c060') + '">' + (q.main ? '◆ ' : '◇ ') + q.title + '</b> — ' + (Quests.isDone(id) ? '<span class="ok">вернись: ' + NPCS[q.giver].name + '</span>' : q.obj.map((o, i) => o.s + (o.n > 1 ? ' ' + Math.min(o.n, Quests.prog(id, i)) + '/' + o.n : '')).join(' · '))) + '</li>'; }).join('') || '<li class="q">Поговори со Старейшиной в городе</li>') + '</ul><h3>Реакции стихий (' + Object.keys(J.reactions).length + '/5)</h3><ul class="j">';
     for (const id in REACT) { const R = REACT[id], n = J.reactions[id]; h += n ? '<li><b style="color:' + R.c + '">' + R.n + '</b> ×' + n + ' — ' + R.d + '</li>' : '<li class="q">??? — ' + R.els.map(e => EL[e].n).join(' + ') + '</li>'; }
     const found = {}; for (const k in J.recipes) found[J.recipes[k]] = k;
     const uq = Object.keys(CHIMERAS), fu = uq.filter(id => found[id]);
@@ -139,6 +147,7 @@ const Menus = (() => {
   function act(a, v) {
     const p = G.me;
     if (a === 'close') return close();
+    if (a === 'dnext') return dialogNext();
     if (a === 'cont') return begin(loadSave());
     if (a === 'look') { const q = v.split(':'); st.look[q[0]] = +q[1]; return title(); }
     if (a === 'new') { if (loadSave() && !st.confirm) { st.confirm = true; const b = document.getElementById('newb'); b.textContent = 'Точно? Нажми ещё раз — сохранение сотрётся'; b.classList.add('red'); return; } return begin(null); }
@@ -172,6 +181,7 @@ const Menus = (() => {
   window.addEventListener('keydown', e => {
     if (!st) return;
     if (st.kind === 'title') { if (e.code === 'Enter') { const s = loadSave(); if (s && !(document.getElementById('nm').value.trim())) begin(s); else if (!s) begin(null); } return; }
+    if (st.kind === 'dialog') { if (e.code === 'KeyE' || e.code === 'Space' || e.code === 'Enter') { e.preventDefault(); Sfx.play('ui'); dialogNext(); } else if (e.code === 'Escape') close(); return; }
     const hk = { KeyI: 'gear', KeyK: 'souls', KeyJ: 'journal', KeyM: 'map' }[e.code];
     if (hk && st.kind === 'altar') { e.preventDefault(); if (st.tab === hk) close(); else { st.tab = hk; st.res = null; drawAltar(); } return; }
     if (e.code === 'Escape' || e.code === 'Tab' || e.code === 'KeyE') { e.preventDefault(); close(); }
@@ -179,6 +189,7 @@ const Menus = (() => {
   Bus.on('menuKey', (t) => openAltar(false, t || lastTab));
   Bus.on('interact', (p, n) => {
     if (p !== G.me) return;
+    const gv = n.o === O.ELDER ? 'elder' : n.o === O.MERCH ? 'merch' : n.o === O.SMITH ? 'smith' : null, dl = gv && Quests.talk(gv); if (dl) return openDialog(dl);
     if (n.o === O.ALTAR) openAltar(true); else if (n.o === O.MERCH) openShop(); else if (n.o === O.SMITH) openSmith();
     else if (n.o === O.STONE) { p.hp = p.maxHp; p.st = {}; floatText(p.x, p.y, 'Силы восстановлены. Игра сохранена', '#5af0ff', 7); Sfx.play('potion'); fxRing(n.x, n.y, .3, 2.5, '#5af0ff', .5); if (typeof saveGame === 'function') saveGame(); }
   });
