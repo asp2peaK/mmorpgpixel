@@ -1,6 +1,6 @@
 // Мир: генерация карты шумом, зоны, огонь/лужи/зарастание, точки спавна
 const MW = 210, MH = 170, MIDY = 85.5;
-const O = { NONE: 0, TREE: 1, DEAD: 2, ROCK: 3, ALTAR: 4, STONE: 5, MERCH: 6, HOUSE: 7, CRATE: 8, LAMP: 9, BLOCK: 10, TOMB: 11, TOTEM: 12, STAKE: 13 };
+const O = { NONE: 0, TREE: 1, DEAD: 2, ROCK: 3, ALTAR: 4, STONE: 5, MERCH: 6, HOUSE: 7, CRATE: 8, LAMP: 9, BLOCK: 10, TOMB: 11, TOTEM: 12, STAKE: 13, SMITH: 14, ANVIL: 15 };
 const TOWN = { x: 14.5, y: MIDY, r: 11 }, LAIR = { x: 196.5, y: MIDY, r: 8.5 };
 const ZNAME = { town: 'Город', edge: 'Опушка', thicket: 'Чаща', scorch: 'Выжженная поляна', bog: 'Гнилые топи', grave: 'Костяной погост', lair: 'Логово Пепельного Волка' };
 const ZLVL = { town: '', edge: 'ур. 1–3', thicket: 'ур. 3–6', scorch: 'ур. 6–9', bog: 'ур. 4–7', grave: 'ур. 5–8', lair: 'босс, ур. 10' };
@@ -75,7 +75,7 @@ function genWorld() {
   }
   // Город
   const put = (x, y, o) => { W.o[(y + 35) * MW + x] = o; };
-  put(14, 50, O.STONE); put(10, 46, O.ALTAR); put(18, 45, O.MERCH); put(19, 46, O.CRATE);
+  put(14, 50, O.STONE); put(10, 46, O.ALTAR); put(18, 45, O.MERCH); put(9, 51, O.SMITH); put(10, 52, O.ANVIL); put(19, 46, O.CRATE);
   put(7, 53, O.HOUSE); put(6, 53, O.BLOCK); put(7, 52, O.BLOCK); put(6, 52, O.BLOCK);
   put(21, 54, O.HOUSE); put(20, 54, O.BLOCK); put(21, 53, O.BLOCK); put(20, 53, O.BLOCK);
   put(12, 53, O.LAMP); put(17, 49, O.LAMP); put(11, 48, O.LAMP);

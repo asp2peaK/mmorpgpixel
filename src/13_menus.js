@@ -50,21 +50,44 @@ const Menus = (() => {
     } else h += '<div class="det q">Выбери душу, затем нажми на слот. Дубликаты усиливают душу: ★2 — 3 копии, ★3 — 6 копий.</div>';
     return h;
   }
-  function icard(it, cls) { return '<div class="soul ' + (cls || '') + '" data-a="isel" data-v="' + it.uid + '" style="border-color:' + RANKS[it.rank].c + '"><img src="' + iconUrl(itemIcon(it)) + '"><div><b style="color:' + RANKS[it.rank].c + '">' + esc(it.name) + '</b><small>ур. ' + it.lvl + ' · ' + AFF[it.base[0]].n + ' +' + it.base[1] + AFF[it.base[0]].u + '</small></div></div>'; }
+  function icard(it, cls) { return '<div class="soul ' + (cls || '') + '" data-a="isel" data-v="' + it.uid + '" style="border-color:' + RANKS[it.rank].c + '"><img src="' + iconUrl(itemIcon(it)) + '"><div><b style="color:' + RANKS[it.rank].c + '">' + esc(itemName(it)) + (it.ench ? ' <span style="color:' + EL[soulDef(it.ench).el].c + '">✦</span>' : '') + '</b><small>ур. ' + it.lvl + ' · ' + AFF[it.base[0]].n + ' +' + baseVal(it) + AFF[it.base[0]].u + '</small></div></div>'; }
   const findItem = (p, uid) => p.bag.find(i => i.uid === uid) || ISLOTS.map(s => p.equip[s]).find(i => i && i.uid === uid);
-  function idet(it, title) { return '<div class="det"><span class="q">' + title + '</span><br><b style="font-size:16px;color:' + RANKS[it.rank].c + '">' + esc(it.name) + '</b><br>' + RANKS[it.rank].n + ' · ' + ISLOT_N[it.slot] + ' · ур. ' + it.lvl + '<br>' + itemLines(it).join('<br>') + '</div>'; }
+  function idet(it, title) { return '<div class="det"><span class="q">' + title + '</span><br><b style="font-size:16px;color:' + RANKS[it.rank].c + '">' + esc(itemName(it)) + '</b><br>' + RANKS[it.rank].n + ' · ' + ISLOT_N[it.slot] + ' · ур. ' + it.lvl + '<br>' + itemLines(it).join('<br>') + '</div>'; }
   function tabGear(p, shop) {
-    const g = p.gs; let h = '<div class="slots">' + ISLOTS.map(s => { const it = p.equip[s]; return '<div class="slot" data-a="isel" data-v="' + (it ? it.uid : '') + '" style="' + (it ? 'border-color:' + RANKS[it.rank].c : '') + '"><i>' + ISLOT_N[s] + '</i><br>' + (it ? '<img src="' + iconUrl(itemIcon(it)) + '"><br><span style="color:' + RANKS[it.rank].c + '">' + esc(it.name) + '</span>' : '<span class="q">пусто</span>') + '</div>'; }).join('') + '</div>';
+    const g = p.gs; let h = '<div class="slots">' + ISLOTS.map(s => { const it = p.equip[s]; return '<div class="slot" data-a="isel" data-v="' + (it ? it.uid : '') + '" style="' + (it ? 'border-color:' + RANKS[it.rank].c : '') + '"><i>' + ISLOT_N[s] + '</i><br>' + (it ? '<img src="' + iconUrl(itemIcon(it)) + '"><br><span style="color:' + RANKS[it.rank].c + '">' + esc(itemName(it)) + '</span>' : '<span class="q">пусто</span>') + '</div>'; }).join('') + '</div>';
     h += '<div class="det" style="margin:0 0 8px">Здоровье <b>' + p.maxHp + '</b> · Урон <b>' + Math.round(p.atk) + '</b> · Крит <b>' + Math.round(p.crit * 100) + '%</b> · Скорость <b>+' + Math.min(30, g.spd) + '%</b> · Перезарядка <b>−' + Math.min(40, g.cdr) + '%</b> · Урон душ <b>+' + g.soul + '%</b>' + Object.keys(g.el).map(e => ' · ' + EL[e].n + ' <b>+' + g.el[e] + '%</b>').join('') + '</div>';
     h += '<h3>Сумка (' + p.bag.length + '/' + BAG_MAX + ')</h3><div class="grid" style="grid-template-columns:repeat(auto-fill,minmax(180px,1fr))">' + (p.bag.length ? p.bag.slice().sort((a, b) => itemScore(b) - itemScore(a)).map(it => icard(it, st.isel === it.uid ? 'sel' : '')).join('') : '<span class="q">Пусто. Предметы падают с врагов — чаще с проклятых и вожаков.</span>') + '</div>';
     const it = st.isel && findItem(p, st.isel);
     if (it) {
       const worn = p.equip[it.slot] === it; h += idet(it, worn ? 'Надето' : 'В сумке'); if (!worn && p.equip[it.slot]) h += idet(p.equip[it.slot], 'Сейчас надето');
-      h += '<div class="row" style="margin-top:8px">' + (worn ? '<button class="btn" data-a="iun" data-v="' + it.slot + '"' + (p.bag.length >= BAG_MAX ? ' disabled' : '') + '>Снять</button>' : '<button class="btn gold" data-a="ieq">Надеть</button>') + (shop && !worn ? '<button class="btn" data-a="isell">Продать за ' + itemPrice(it) + '</button>' : '') + '</div>';
+      h += '<div class="row" style="margin-top:8px">' + (worn ? '<button class="btn" data-a="iun" data-v="' + it.slot + '"' + (p.bag.length >= BAG_MAX ? ' disabled' : '') + '>Снять</button>' : '<button class="btn gold" data-a="ieq">Надеть</button>') + (shop && !worn ? '<button class="btn" data-a="isell">Продать за ' + itemPrice(it) + '</button>' : '') + (!worn ? '<button class="btn red" data-a="ibreak">Разобрать (+' + shardsOf(it) + ' ◆)</button>' : '') + '</div>';
     }
     if (shop) { const junk = p.bag.filter(i => i.rank === 0); if (junk.length) h += '<button class="btn" style="width:100%;margin-top:8px" data-a="ijunk">Продать всё обычное (' + junk.length + ' шт. за ' + junk.reduce((a, i) => a + itemPrice(i), 0) + ')</button>'; }
-    else h += '<div class="det q">Продать вещи можно у торговца в городе. При смерти Тень снимает с тебя самую ценную надетую вещь — убей её, чтобы вернуть.</div>';
+    else h += '<div class="det q">Осколков: <span style="color:#8ad0ff">◆ ' + (p.shards | 0) + '</span>. Кузнец в городе куёт и зачаровывает вещи. Продать вещи можно у торговца в городе. При смерти Тень снимает с тебя самую ценную надетую вещь — убей её, чтобы вернуть.</div>';
     return h;
+  }
+  // ---------- Кузнец ----------
+  function openSmith() { if (!G.started || G.me.dead) return; st = { kind: 'smith', tab: 'forge', isel: null, esel: null, msg: '' }; drawSmith(); }
+  function drawSmith() {
+    const p = G.me, all = ISLOTS.map(s => p.equip[s]).filter(Boolean).concat(p.bag.slice().sort((a, b) => itemScore(b) - itemScore(a)));
+    let h = '<button class="btn x" data-a="close">✕</button><h2>Кузнец <span class="gd" style="font-size:14px">● ' + p.gold + '</span> <span style="font-size:14px;color:#8ad0ff">◆ ' + (p.shards | 0) + '</span></h2>';
+    h += '<div class="tabs">' + [['forge', 'Ковка'], ['ench', 'Зачарование']].map(x => '<button class="btn ' + (st.tab === x[0] ? 'act' : '') + '" data-a="stab" data-v="' + x[0] + '">' + x[1] + '</button>').join('') + '</div>';
+    h += '<div class="grid" style="grid-template-columns:repeat(auto-fill,minmax(180px,1fr));max-height:190px;overflow:auto">' + (all.length ? all.map(it => icard(it, st.isel === it.uid ? 'sel' : '')).join('') : '<span class="q">«Принеси железо — поговорим.» У тебя нет вещей.</span>') + '</div>';
+    const it = st.isel && findItem(p, st.isel);
+    if (st.msg) h += '<div class="det" style="font-size:16px">' + st.msg + '</div>';
+    if (!it) h += '<div class="det q">' + (st.tab === 'forge' ? 'Ковка усиливает основное свойство вещи: +10% за уровень, до +10. Нужны золото и осколки (◆) — их дают проклятые, вожаки, боссы и разбор вещей. С +4 ковка может провалиться, а с +7 провал ещё и ослабляет вещь.' : 'Зачарование вплавляет душу в вещь и даёт ей стихию. Тратит одну копию души и ' + ENCH_COST + ' золота. Новое зачарование заменяет старое.') + '</div>';
+    else if (st.tab === 'forge') {
+      const pl = it.plus | 0;
+      if (pl >= 10) h += idet(it, 'Выбрано') + '<div class="det ok">Предел ковки достигнут.</div>';
+      else { const c = forgeCost(it), ch = FORGE_CH[pl], nx = Math.round(it.base[1] * (1 + .1 * (pl + 1))), can = p.gold >= c.gold && (p.shards | 0) >= c.sh;
+        h += idet(it, 'Выбрано') + '<div class="det">' + AFF[it.base[0]].n + ': <b>' + baseVal(it) + '</b> → <b class="ok">' + nx + '</b>' + AFF[it.base[0]].u + '<br>Цена: <span class="gd">' + c.gold + ' золота</span> и <span style="color:#8ad0ff">' + c.sh + ' ◆</span> · Шанс: <b class="' + (ch >= 80 ? 'ok' : ch >= 40 ? 'gd' : 'bad') + '">' + ch + '%</b>' + (pl >= 6 ? '<br><span class="bad">При провале вещь упадёт до +' + (pl - 1) + '.</span>' : pl >= 3 ? '<br><span class="q">При провале материалы сгорят.</span>' : '') + '</div><button class="btn gold" style="width:100%;margin-top:8px" data-a="forge"' + (can ? '' : ' disabled') + '>Ковать до +' + (pl + 1) + (can ? '' : ' (не хватает)') + '</button>'; }
+    } else {
+      const base = Object.keys(p.souls).filter(id => SOULS[id]); if (st.esel && !p.souls[st.esel]) st.esel = null;
+      h += idet(it, 'Выбрано') + '<h3>Какую душу вплавить</h3><div class="grid">' + (base.length ? base.map(id => card(id, p.souls[id], st.esel === id ? 'sel' : '', 'esel')).join('') : '<span class="q">Нет базовых душ</span>') + '</div>';
+      if (st.esel) { const el = SOULS[st.esel].el; h += '<div class="det">' + elChip(el) + ' ' + enchDesc(it.slot, el) + '.' + (p.souls[st.esel] === 1 ? '<div class="bad">Последняя копия: «' + esc(SOULS[st.esel].name) + '» исчезнет.</div>' : '') + (it.ench ? '<div class="q">Заменит текущее зачарование.</div>' : '') + '</div>'; }
+      h += '<button class="btn gold" style="width:100%;margin-top:8px" data-a="ench"' + (st.esel && p.gold >= ENCH_COST ? '' : ' disabled') + '>Зачаровать за ' + ENCH_COST + ' золота' + (p.gold < ENCH_COST ? ' (не хватает)' : '') + '</button>';
+    }
+    show(h);
   }
   function tabFuse(p) {
     if (!st.atAltar) return '<div class="det">Сливать души можно только у <b>Алтаря душ</b> в городе.</div>';
@@ -114,7 +137,18 @@ const Menus = (() => {
     if (a === 'unf') { if (v === 'a') st.fa = null; else st.fb = null; return drawAltar(); }
     if (a === 'fuse') { const r = fuse(p, st.fa, st.fb); if (r) { st.res = r; st.fa = st.fb = null; } return drawAltar(); }
     if (a === 'again') { st.res = null; return drawAltar(); }
-    const redraw = () => st.kind === 'shop' ? drawShop() : drawAltar();
+    const redraw = () => { if (st.kind !== 'smith') st.msg = ''; return st.kind === 'shop' ? drawShop() : st.kind === 'smith' ? drawSmith() : drawAltar(); };
+    if (a === 'stab') { st.tab = v; st.msg = ''; return drawSmith(); }
+    if (a === 'esel') { st.esel = st.esel === v ? null : v; st.msg = ''; return drawSmith(); }
+    if (a === 'ibreak') { const it = findItem(p, st.isel), i = p.bag.indexOf(it); if (i >= 0) { p.bag.splice(i, 1); p.shards = (p.shards | 0) + shardsOf(it); st.isel = null; Sfx.play('hit'); } return redraw(); }
+    if (a === 'forge') { const it = findItem(p, st.isel); if (!it) return; const pl = it.plus | 0, c = forgeCost(it); if (pl >= 10 || p.gold < c.gold || (p.shards | 0) < c.sh) return;
+      p.gold -= c.gold; p.shards -= c.sh;
+      if (chance(FORGE_CH[pl] / 100)) { it.plus = pl + 1; st.msg = '<span class="ok">Удар молота... Удача! Теперь ' + esc(itemName(it)) + '</span>'; Sfx.play('levelup'); }
+      else if (pl >= 6) { it.plus = pl - 1; st.msg = '<span class="bad">Металл треснул. Вещь ослабла до +' + it.plus + '</span>'; Sfx.play('death'); }
+      else { st.msg = '<span class="bad">Провал. Материалы сгорели в горне</span>'; Sfx.play('deny'); }
+      recalc(p); saveGame(); return drawSmith(); }
+    if (a === 'ench') { const it = findItem(p, st.isel); if (!it || !st.esel || !p.souls[st.esel] || p.gold < ENCH_COST) return; p.gold -= ENCH_COST; it.ench = st.esel; takeSoul(p, st.esel); st.msg = '<span style="color:' + EL[SOULS[it.ench].el].c + '">✦ Душа вплавлена: ' + esc(itemName(it)) + ' теперь несёт стихию «' + EL[SOULS[it.ench].el].n + '»</span>'; st.esel = null; Sfx.play('fuse'); recalc(p); saveGame(); return drawSmith(); }
+    if (a === 'isel' && st.kind === 'smith') { st.isel = st.isel === v || !v ? null : v; st.msg = ''; return drawSmith(); }
     if (a === 'isel') { st.isel = st.isel === v || !v ? null : v; return redraw(); }
     if (a === 'ieq') { const it = findItem(p, st.isel); if (it) equipItem(p, it); return redraw(); }
     if (a === 'iun') { unequipItem(p, v); return redraw(); }
@@ -131,7 +165,7 @@ const Menus = (() => {
   Bus.on('menuKey', () => openAltar(false));
   Bus.on('interact', (p, n) => {
     if (p !== G.me) return;
-    if (n.o === O.ALTAR) openAltar(true); else if (n.o === O.MERCH) openShop();
+    if (n.o === O.ALTAR) openAltar(true); else if (n.o === O.MERCH) openShop(); else if (n.o === O.SMITH) openSmith();
     else { p.hp = p.maxHp; p.st = {}; floatText(p.x, p.y, 'Силы восстановлены. Игра сохранена', '#5af0ff', 7); Sfx.play('potion'); fxRing(n.x, n.y, .3, 2.5, '#5af0ff', .5); if (typeof saveGame === 'function') saveGame(); }
   });
   return { title, openAltar, openShop, close, isOpen };

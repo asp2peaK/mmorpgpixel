@@ -23,19 +23,27 @@ function makeItem(lvl, rank, slot) {
   const nm = INAMES[slot][clamp(Math.floor((lvl - 1) / 3), 0, 3)] + (aff.length ? ' ' + AFF[aff[0][0]].sx : '');
   return { uid: Date.now().toString(36) + (itemUid++), slot, rank, lvl, base, aff, name: nm, curse: rank === 4 };
 }
+// Ковка: +1..+10, каждый уровень даёт +10% к основному свойству. Зачарование: душа даёт предмету стихию.
+const FORGE_CH = [100, 100, 100, 80, 65, 50, 40, 30, 20, 10], ENCH_COST = 60;
+const baseVal = it => Math.round(it.base[1] * (1 + .1 * (it.plus | 0)));
+const itemName = it => it.name + (it.plus ? ' +' + it.plus : '');
+const forgeCost = it => ({ gold: 15 * ((it.plus | 0) + 1) * (it.rank + 1), sh: (it.plus | 0) + 1 });
+const shardsOf = it => (it.rank + 1) * (it.rank + 1) + (it.plus | 0) * 2;
+function enchDesc(slot, el) { const n = EL[el].n; return slot === 'weapon' ? 'Удары мечом бьют стихией «' + n + '»: накладывают её эффект и запускают реакции' : slot === 'armor' ? 'Урон стихии «' + n + '» по тебе вдвое слабее, её эффект на тебя не действует' : slot === 'amulet' ? 'Души стихии «' + n + '» наносят на 25% больше урона' : 'Души стихии «' + n + '» перезаряжаются на 20% быстрее'; }
 function itemLines(it) {
-  const L = ['<b>' + AFF[it.base[0]].n + ' +' + it.base[1] + AFF[it.base[0]].u + '</b>'];
+  const L = ['<b>' + AFF[it.base[0]].n + ' +' + baseVal(it) + AFF[it.base[0]].u + '</b>' + (it.plus ? ' <span class="gd">(ковка +' + it.plus + ')</span>' : '')];
+  if (it.ench) { const el = soulDef(it.ench).el; L.push('<span style="color:' + EL[el].c + '">✦ ' + enchDesc(it.slot, el) + '</span>'); }
   for (const a of it.aff) L.push(AFF[a[0]].n + (a[0] === 'cdr' ? '' : ' +') + a[1] + AFF[a[0]].u);
   if (it.curse) L.push('<span class="bad">Проклятие: −8% здоровья</span>');
   return L;
 }
 const itemPrice = it => Math.round((4 + 2 * it.lvl) * (it.rank + 1) * (it.rank + 1) * .5);
-const itemScore = it => it.rank * 100 + it.lvl;
+const itemScore = it => it.rank * 100 + it.lvl + (it.plus | 0) * 3 + (it.ench ? 5 : 0);
 function itemIcon(it) { return makeIcon('it_' + it.slot + it.rank, 'i_' + it.slot, RANKS[it.rank].c); }
 // Суммарные бонусы надетого
 function gearStats(list) {
   const s = { atk: 0, hp: 0, spd: 0, cdr: 0, crit: 0, soul: 0, pot: 0, el: {}, curse: 0 };
-  for (const it of list) { if (!it) continue; for (const a of [it.base].concat(it.aff)) { const d = AFF[a[0]]; if (d.el) s.el[d.el] = (s.el[d.el] || 0) + a[1]; else s[a[0]] += a[1]; } if (it.curse) s.curse++; }
+  for (const it of list) { if (!it) continue; for (const a of [[it.base[0], baseVal(it)]].concat(it.aff)) { const d = AFF[a[0]]; if (d.el) s.el[d.el] = (s.el[d.el] || 0) + a[1]; else s[a[0]] += a[1]; } if (it.curse) s.curse++; }
   return s;
 }
 function equipItem(p, it) { const i = p.bag.indexOf(it); if (i < 0) return; p.bag.splice(i, 1); const old = p.equip[it.slot]; p.equip[it.slot] = it; if (old) p.bag.push(old); recalc(p); Sfx.play('pickup'); }
@@ -47,5 +55,6 @@ const DROP = { mob: [.09, [70, 24, 5, 1, 0]], elite: [.6, [30, 45, 20, 5, 0]], c
 Bus.on('mobDeath', (m) => {
   if (m.owner || m.type === 'spirit' || m.isNemesis || m.summoned) return; const p = m.lastHitBy || G.me; if (!p || dist(p.x, p.y, m.x, m.y) > 22) return;
   const D = DROP[m.boss ? 'boss' : m.chief ? 'chief' : m.elite ? 'elite' : 'mob'];
+  const sh = m.boss ? 10 : m.chief ? 4 : m.elite ? randi(1, 2) : chance(.06) ? 1 : 0; if (sh) { p.shards = (p.shards || 0) + sh; floatText(m.x, m.y, '+' + sh + ' ◆ осколк' + (sh === 1 ? '' : sh < 5 ? 'а' : 'ов'), '#8ad0ff', 6); }
   for (let i = 0, n = m.boss ? 2 : 1; i < n; i++) if (chance(D[0])) dropItem(m.x, m.y, makeItem(m.lvl, rollRank(D[1])), p);
 });

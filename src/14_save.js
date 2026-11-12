@@ -2,7 +2,7 @@
 const SAVE_KEY = 'soul_eater_save_v1';
 function saveGame() {
   if (!G.started || !G.me) return; const p = G.me, n = G.nemesis && !G.nemesis.dead ? Object.assign({}, G.nemesis.nd, { x: G.nemesis.x, y: G.nemesis.y }) : null;
-  try { localStorage.setItem(SAVE_KEY, JSON.stringify({ v: 1, name: p.name, lvl: p.lvl, xp: p.xp, gold: p.gold, potions: p.potions, souls: p.souls, slots: p.slots, J: G.J, equip: p.equip, bag: p.bag, nem: n, look: p.look || {}, seen: packSeen() })); } catch (e) { }
+  try { localStorage.setItem(SAVE_KEY, JSON.stringify({ v: 1, name: p.name, lvl: p.lvl, xp: p.xp, gold: p.gold, potions: p.potions, souls: p.souls, slots: p.slots, J: G.J, equip: p.equip, bag: p.bag, shards: p.shards | 0, nem: n, look: p.look || {}, seen: packSeen() })); } catch (e) { }
 }
 function packSeen() { let s = ''; const a = W.seen; for (let i = 0; i < a.length; i += 6) { let v = 0; for (let k = 0; k < 6; k++) if (a[i + k]) v |= 1 << k; s += String.fromCharCode(48 + v); } return s; }
 function unpackSeen(s) { if (typeof s !== 'string') return; const a = W.seen; for (let i = 0, j = 0; i < a.length && j < s.length; i += 6, j++) { const v = s.charCodeAt(j) - 48; for (let k = 0; k < 6 && i + k < a.length; k++) a[i + k] = (v >> k) & 1; } W.mapDirty = true; }
@@ -15,7 +15,9 @@ function applySave(p, s) {
   if (!Object.keys(p.souls).length) p.souls.wolf = 1;
   p.slots = [0, 1, 2, 3].map(i => { const id = s.slots && s.slots[i]; return id && p.souls[id] ? id : null; });
   G.J = Object.assign(newJournal(), s.J || {}); for (const k of ['reactions', 'recipes', 'obtained', 'hints']) if (!G.J[k] || typeof G.J[k] !== 'object') G.J[k] = {};
-  const okIt = it => it && ISLOTS.indexOf(it.slot) >= 0 && RANKS[it.rank] && AFF[it.base && it.base[0]] && Array.isArray(it.aff) && it.aff.every(a => AFF[a[0]]);
+  p.shards = Math.max(0, s.shards | 0);
+  const okIt0 = it => { if (it && it.ench && !SOULS[it.ench]) delete it.ench; if (it) it.plus = clamp(it.plus | 0, 0, 10); return true; };
+  const okIt = it => okIt0(it) && it && ISLOTS.indexOf(it.slot) >= 0 && RANKS[it.rank] && AFF[it.base && it.base[0]] && Array.isArray(it.aff) && it.aff.every(a => AFF[a[0]]);
   if (s.equip) for (const k of ISLOTS) p.equip[k] = okIt(s.equip[k]) && s.equip[k].slot === k ? s.equip[k] : null; if (Array.isArray(s.bag)) p.bag = s.bag.filter(okIt).slice(0, BAG_MAX + 8);
   if (s.nem && Array.isArray(s.nem.items)) s.nem.items = s.nem.items.filter(okIt);
   recalc(p); p.hp = p.maxHp; for (let i = 0; i < 4; i++) resetSlot(p, i); unpackSeen(s.seen);

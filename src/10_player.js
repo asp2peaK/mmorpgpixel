@@ -2,13 +2,15 @@
 const MAXLVL = 10, POTION_MAX = 6, POTION_COST = 25;
 const xpNext = l => Math.round(20 * Math.pow(l, 1.7));
 function mkPlayer(name) {
-  const p = mkEnt({ isPlayer: true, humanoid: true, name: name || 'Герой', team: 1, spr: 'hero', r: .3, spd: 4.3, lvl: 1, xp: 0, gold: 0, potions: 2, souls: {}, equip: { weapon: null, armor: null, amulet: null, ring: null }, bag: [], slots: [null, null, null, null], sl: [0, 1, 2, 3].map(() => ({ cd: 0, ch: 1 })), combo: 0, comboT: 0, swing: null, roll: null, rollCd: 0, potCd: 0, respawn: 0, blood: '#ff5a5a', x: TOWN.x, y: TOWN.y + 1.6 });
+  const p = mkEnt({ isPlayer: true, humanoid: true, name: name || 'Герой', team: 1, spr: 'hero', r: .3, spd: 4.3, lvl: 1, xp: 0, gold: 0, potions: 2, souls: {}, shards: 0, equip: { weapon: null, armor: null, amulet: null, ring: null }, bag: [], slots: [null, null, null, null], sl: [0, 1, 2, 3].map(() => ({ cd: 0, ch: 1 })), combo: 0, comboT: 0, swing: null, roll: null, rollCd: 0, potCd: 0, respawn: 0, blood: '#ff5a5a', x: TOWN.x, y: TOWN.y + 1.6 });
   recalc(p); p.hp = p.maxHp; return p;
 }
 function recalc(p) {
   const g = gearStats(ISLOTS.map(s => p.equip[s])); p.gs = g;
   p.maxHp = Math.round((100 + 22 * (p.lvl - 1) + g.hp) * (1 - .08 * g.curse)); p.atk = 10 + 3 * (p.lvl - 1) + g.atk; p.spd = 4.3 * (1 + Math.min(30, g.spd) / 100);
-  p.cdm = 1 - Math.min(40, g.cdr) / 100; p.crit = .1 + g.crit / 100; p.potB = 1 + g.pot / 100; if (p.hp > p.maxHp) p.hp = p.maxHp;
+  p.cdm = 1 - Math.min(40, g.cdr) / 100; p.crit = .1 + g.crit / 100; p.potB = 1 + g.pot / 100;
+  const en = s => p.equip[s] && p.equip[s].ench ? soulDef(p.equip[s].ench).el : null; p.wEl = en('weapon'); p.resist = en('armor'); p.aEl = en('amulet'); p.rEl = en('ring');
+  p.immune = {}; const im = { fire: 'burn', ash: 'burn', poison: 'poison', slime: 'slow', beast: 'bleed', nature: 'root', bone: 'brittle', storm: 'stun' }[p.resist]; if (im) p.immune[im] = 1; if (p.hp > p.maxHp) p.hp = p.maxHp;
 }
 const starsOf = n => n >= 6 ? 3 : n >= 3 ? 2 : n >= 1 ? 1 : 0;
 function maxCharges(def, stars) { return def && def.ab === 'dash' && stars >= 3 ? 2 : 1; }
@@ -40,8 +42,8 @@ function nearInteract(p) {
   let best = null, bd = 2.3;
   for (let j = -2; j <= 2; j++) for (let i = -2; i <= 2; i++) {
     const tx = (p.x | 0) + i, ty = (p.y | 0) + j, o = W.o[ty * MW + tx];
-    if (o !== O.ALTAR && o !== O.MERCH && o !== O.STONE) continue;
-    const d = dist(p.x, p.y, tx + .5, ty + .5); if (d < bd) { bd = d; best = { o, x: tx + .5, y: ty + .5, label: o === O.ALTAR ? 'Алтарь душ' : o === O.MERCH ? 'Торговец' : 'Камень возрождения' }; }
+    if (o !== O.ALTAR && o !== O.MERCH && o !== O.STONE && o !== O.SMITH) continue;
+    const d = dist(p.x, p.y, tx + .5, ty + .5); if (d < bd) { bd = d; best = { o, x: tx + .5, y: ty + .5, label: o === O.ALTAR ? 'Алтарь душ' : o === O.MERCH ? 'Торговец' : o === O.SMITH ? 'Кузнец' : 'Камень возрождения' }; }
   }
   return best;
 }
@@ -55,8 +57,8 @@ function castSlot(p, s, dx, dy, ax, ay) {
   if (sl.ch <= 0) { Sfx.play('deny'); return; }
   const def = soulDef(id), stars = starsOf(p.souls[id]), ab = AB[def.ab], mr = ab.maxRange || 6;
   let tx = ax, ty = ay; const d = dist(p.x, p.y, ax, ay); if (d > mr) { tx = p.x + (ax - p.x) / d * mr; ty = p.y + (ay - p.y) / d * mr; }
-  castSoul(p, def, stars, dx, dy, tx, ty, 1 + (p.gs.soul + (p.gs.el[def.el] || 0)) / 100);
-  sl.ch--; if (sl.cd <= 0) sl.cd = ab.cd * p.cdm; p.swing = null; p.usedSoul = true;
+  castSoul(p, def, stars, dx, dy, tx, ty, 1 + (p.gs.soul + (p.gs.el[def.el] || 0) + (p.aEl === def.el ? 25 : 0)) / 100);
+  sl.ch--; if (sl.cd <= 0) sl.cd = ab.cd * p.cdm * (p.rEl === def.el ? .8 : 1); p.swing = null; p.usedSoul = true;
 }
 const SWING = [{ dur: .24, at: .08, r: 1.6, cos: .2, k: 1, kb: 4 }, { dur: .24, at: .08, r: 1.6, cos: .2, k: 1.1, kb: 4 }, { dur: .4, at: .15, r: 2, cos: -.15, k: 1.9, kb: 12 }];
 function swingHit(p, s) {
@@ -64,7 +66,7 @@ function swingHit(p, s) {
   for (const e of G.ents) {
     if (e.dead || !hostile(p, e)) continue; const d = dist(p.x, p.y, e.x, e.y); if (d > S.r + e.r) continue;
     if (d > .4 && ((e.x - p.x) * s.dx + (e.y - p.y) * s.dy) / d < S.cos) continue;
-    const crit = chance(p.crit); damage(e, p.atk * S.k * rand(.9, 1.1) * (crit ? 1.6 : 1), p, { kb: [s.dx * S.kb, s.dy * S.kb], crit }); any = true;
+    const crit = chance(p.crit); damage(e, p.atk * S.k * rand(.9, 1.1) * (crit ? 1.6 : 1), p, { kb: [s.dx * S.kb, s.dy * S.kb], crit, el: p.wEl || undefined }); any = true;
   }
   if (any) { if (s.n === 3) { G.hitstop = .06; shake(4); } else shake(1.5); }
 }
@@ -75,7 +77,7 @@ function updatePlayer(p, dt, I) {
   for (let s = 0; s < 4; s++) {
     const id = p.slots[s], sl = p.sl[s]; if (!id) continue;
     const def = soulDef(id), mx = maxCharges(def, starsOf(p.souls[id]));
-    if (sl.ch < mx) { sl.cd -= dt; if (sl.cd <= 0) { sl.ch++; sl.cd = sl.ch < mx ? AB[def.ab].cd * p.cdm : 0; } }
+    if (sl.ch < mx) { sl.cd -= dt; if (sl.cd <= 0) { sl.ch++; sl.cd = sl.ch < mx ? AB[def.ab].cd * p.cdm * (p.rEl === def.el ? .8 : 1) : 0; } }
   }
   let a = norm(I.ax - p.x, I.ay - p.y); if (!a[0] && !a[1]) a = [p.dirx, p.diry];
   if (!p.swing && !p.roll && !p.dash) { p.dirx = a[0]; p.diry = a[1]; const f = a[0] - a[1]; if (Math.abs(f) > .15) p.face = f > 0 ? 1 : -1; }
@@ -93,7 +95,7 @@ function updatePlayer(p, dt, I) {
       if (I.atk && !p.swing && !p.dash) {
         const n = p.comboT > 0 ? p.combo % 3 + 1 : 1; p.combo = n; p.swing = { n, t: 0, done: false, dx: a[0], dy: a[1] };
         p.kx += a[0] * (n === 3 ? 6 : 3); p.ky += a[1] * (n === 3 ? 6 : 3);
-        fxSlash(p.x, p.y, a[0], a[1], SWING[n - 1].r, n === 3 ? 2.6 : 1.7, n === 3 ? '#ffe9a0' : '#ffffff'); Sfx.play('swing'); p.attacked = true;
+        fxSlash(p.x, p.y, a[0], a[1], SWING[n - 1].r, n === 3 ? 2.6 : 1.7, p.wEl ? EL[p.wEl].c : n === 3 ? '#ffe9a0' : '#ffffff'); Sfx.play('swing'); p.attacked = true;
       }
       const sp = p.spd * (p.st.slow ? .5 : 1) * (p.swing ? .35 : 1) * (p.st.root ? 0 : 1);
       if ((I.mx || I.my) && sp > 0) { moveEnt(p, I.mx * sp * dt, I.my * sp * dt); p.moving = true; p.moved = (p.moved || 0) + dt; }

@@ -40,6 +40,8 @@ function drawObj(b, i, j, o, k) {
     case O.CRATE: drawSpr(b, 'crate', sx, sy + 1); break;
     case O.LAMP: drawSpr(b, 'lamp', sx, sy - 2); break;
     case O.HOUSE: drawSpr(b, 'house' + (i > 14 ? 1 : 0), sx, sy + 6); break;
+    case O.SMITH: drawSpr(b, 'smith_i', sx, sy - 2); break;
+    case O.ANVIL: drawSpr(b, 'anvil', sx, sy + 1); break;
     case O.TOMB: drawSpr(b, 'tomb', sx, sy); break;
     case O.TOTEM: drawSpr(b, 'totem', sx, sy + 1); break;
     case O.STAKE: drawSpr(b, 'stake', sx, sy + 1); break;
@@ -151,7 +153,7 @@ function render() {
       const ts = TALLSPR[g]; if (ts) b.drawImage(ts[v % 3], sx + (Math.sin(G.time * 2 + i * .7 + j * .9) > .55 ? 1 : 0), sy - 8);
     }
     if (W.fire[k] > 0) { D.push([i + j + 1.2, 3, i, j, W.o[k] === O.TREE ? 1 : 0]); if (sy < V.h + 20) glows.push(sx + 16, sy + 8); }
-    const o = W.o[k]; if (o && o !== O.BLOCK) { D.push([i + j + 1, 0, i, j, o, k]); if (o === O.LAMP || o === O.ALTAR || o === O.STONE) glows.push(sx + 16, sy - 6); else if (o === O.TOTEM) glows.push(sx + 16, sy); }
+    const o = W.o[k]; if (o && o !== O.BLOCK) { D.push([i + j + 1, 0, i, j, o, k]); if (o === O.LAMP || o === O.ALTAR || o === O.STONE || o === O.ANVIL) glows.push(sx + 16, sy - 6); else if (o === O.TOTEM) glows.push(sx + 16, sy); }
   }
   // декали на земле: зоны и телеграфы
   for (const z of G.zones) { const K = ZK[z.kind]; if (K.draw) K.draw(b, z); if (K.top) D.push([z.x + z.y + (z.topD || 0), 5, z]); }

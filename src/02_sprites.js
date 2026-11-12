@@ -246,6 +246,8 @@ function genHouse(ra, rb) {
 }
 reg('house0', genHouse('#b8463a', '#8a2e28')); reg('house1', genHouse('#4a6ab8', '#34508a'));
 
+regHumanoid('smith', { h: '#3a2a20', H: '#2a1c14', s: '#c89870', e: '#1a1014', m: '#5a3a22', c: '#6a4a3a', C: '#4a3226', b: '#8a8a98', p: '#2a2630', B: '#1a1620' });
+reg('anvil', ascii(['.kkkkkkkkk..', 'kKKKKKKKKKkk', '.kKKKKKKKKk.', '...kKKKk....', '...kKKKk....', '..kKKKKKk...', '.kkkkkkkkk..'], { k: '#2a2a34', K: '#6a6a7a' }));
 reg('tomb', ascii(['..ssss..', '.sSSSSs.', '.sSkkSs.', '.sSSSSs.', '.sSkSSs.', '.sSSSSs.', '.sSSSSs.', 'ssssssss'], { s: '#3a3a48', S: '#6a6a7a', k: '#2a2a36' }));
 reg('totem', ascii(['..r..r..', '.rRr.rRr', '..bbbb..', '.bWkkWb.', '.bWWWWb.', '.bkWWkb.', '..bWWb..', '..bbbb..', '...bb...', '...bb...', '..rbbr..', '...bb...', '...bb...', '..bbbb..'], { r: '#8a1a2a', R: '#ff2a4a', b: '#3a2a20', W: '#d8d0b8', k: '#1a1014' }));
 reg('stake', ascii(['..w..', '.wWw.', '.bBb.', '.bBb.', '.bBb.', '.bBb.', '.bBb.', '.bBb.', '.bBb.', 'bbBbb'], { w: '#b8b4a0', W: '#e8e4d0', b: '#2e2018', B: '#4a3626' }));

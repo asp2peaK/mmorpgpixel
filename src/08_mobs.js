@@ -142,6 +142,6 @@ Bus.on('mobDeath', (m, src) => {
 Bus.on('campClear', (s) => {
   const c = W.camps[s.camp], p = G.me; if (!p || dist(p.x, p.y, c.x, c.y) > 25) return;
   c.cleared = true; G.J.camps = (G.J.camps || 0) + 1; const g = 30 * s.lvl; for (let i = 0; i < 8; i++) dropPickup('gold', c.x, c.y + 1, Math.ceil(g / 8));
-  if (p.potions < POTION_MAX) p.potions++;
-  banner('ЛАГЕРЬ ЗАЧИЩЕН', 'Золото, зелье и душа вожака твои. Лагерь восстановится не скоро', '#ff5a6a'); Sfx.play('levelup'); fxRing(c.x, c.y, .5, 6, '#ff2a4a', .7); shake(5);
+  if (p.potions < POTION_MAX) p.potions++; p.shards = (p.shards || 0) + 3;
+  banner('ЛАГЕРЬ ЗАЧИЩЕН', 'Золото, зелье, осколки и душа вожака твои. Лагерь восстановится не скоро', '#ff5a6a'); Sfx.play('levelup'); fxRing(c.x, c.y, .5, 6, '#ff2a4a', .7); shake(5);
 });
