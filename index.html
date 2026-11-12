@@ -81,7 +81,7 @@ const Bus = { h: {}, on(e, f) { (this.h[e] = this.h[e] || []).push(f); }, emit(e
 function w2s(x, y) { return [Math.round(isoX(x, y) - G.cam.sx), Math.round(isoY(x, y) - G.cam.sy)]; }
 function s2w(px, py) { const a = (px + G.cam.sx) / 16, b = (py + G.cam.sy) / 8; return [(a + b) / 2, (b - a) / 2]; }
 function shake(n) { if (n > G.cam.shake) G.cam.shake = n; }
-function newJournal() { return { reactions: {}, recipes: {}, obtained: {}, kills: 0, deaths: 0, nemKills: 0, bossKills: 0, hints: {} }; }
+function newJournal() { return { reactions: {}, recipes: {}, obtained: {}, kills: 0, deaths: 0, nemKills: 0, bossKills: 0, camps: 0, hints: {} }; }
 
 // ===== 01_audio.js =====
 // Звук: всё синтезируется через WebAudio
@@ -179,7 +179,19 @@ const HERO_LEGS = {
   w2: ['..ccc..ccc..', '...ppp.ppp..', '...pp...pp..', '...BB...BB..']
 };
 function regHumanoid(name, pal) { for (const k in HERO_LEGS) reg(name + '_' + k, ascii(HERO_TOP.concat(HERO_LEGS[k]), pal)); }
-regHumanoid('hero', { h: '#5a3a9a', H: '#3a2466', s: '#f0c8a0', e: '#8ff0ff', m: '#c03a4a', c: '#7a52c8', C: '#553a94', b: '#ffd870', p: '#3a3450', B: '#2a2030' });
+// Внешность героя: выбирается при создании персонажа
+const LOOKS = {
+  cloak: [['Пепел', '#4a4658', '#2e2c3a'], ['Кровь', '#8a2a34', '#5a1a22'], ['Сумрак', '#5a3a9a', '#3a2466'], ['Мох', '#3a6a44', '#244a2e'], ['Бездна', '#2a3a6a', '#18244a'], ['Кость', '#b8b0a0', '#8a8474']],
+  skin: [['Бледная', '#e8d0c0'], ['Светлая', '#f0c8a0'], ['Смуглая', '#b88860'], ['Тёмная', '#6a4630'], ['Мертвенная', '#a8b8b0']],
+  eyes: [['Лёд', '#8ff0ff'], ['Янтарь', '#ffc84a'], ['Яд', '#a6e23c'], ['Кровь', '#ff4a4a'], ['Пустота', '#e8e0ff']],
+  scarf: [['Багровый', '#8a2a3a'], ['Ржавый', '#a85a2a'], ['Серый', '#6a6a78'], ['Болотный', '#4a6a3a'], ['Чёрный', '#1e1a24']]
+};
+function shadeHex(h, k) { const v = parseInt(h.slice(1), 16), f = c => Math.max(0, Math.min(255, Math.round(c * k))); return '#' + ((1 << 24) | (f(v >> 16) << 16) | (f((v >> 8) & 255) << 8) | f(v & 255)).toString(16).slice(1); }
+function applyLook(l) {
+  l = l || {}; const c = LOOKS.cloak[l.cloak | 0] || LOOKS.cloak[0], s = LOOKS.skin[l.skin | 0] || LOOKS.skin[0], e = LOOKS.eyes[l.eyes | 0] || LOOKS.eyes[0], m = LOOKS.scarf[l.scarf | 0] || LOOKS.scarf[0];
+  regHumanoid('hero', { h: shadeHex(c[1], .8), H: shadeHex(c[2], .7), s: s[1], e: e[1], m: m[1], c: c[1], C: c[2], b: '#c8a850', p: '#2a2636', B: '#1a1620' });
+}
+applyLook({});
 regHumanoid('nem', { h: '#1a1024', H: '#0c0812', s: '#3a2a48', e: '#ff2a2a', m: '#5a0a1a', c: '#2a1a3a', C: '#180e24', b: '#8a1a2a', p: '#140c1c', B: '#0a0610' });
 regHumanoid('merch', { h: '#8a5a2a', H: '#5a3a1a', s: '#f0c8a0', e: '#2a2030', m: '#e0e0d0', c: '#3a8a5a', C: '#2a6a44', b: '#ffd870', p: '#5a4a3a', B: '#3a2a20' });
 
@@ -373,6 +385,9 @@ function genHouse(ra, rb) {
 }
 reg('house0', genHouse('#b8463a', '#8a2e28')); reg('house1', genHouse('#4a6ab8', '#34508a'));
 
+reg('tomb', ascii(['..ssss..', '.sSSSSs.', '.sSkkSs.', '.sSSSSs.', '.sSkSSs.', '.sSSSSs.', '.sSSSSs.', 'ssssssss'], { s: '#3a3a48', S: '#6a6a7a', k: '#2a2a36' }));
+reg('totem', ascii(['..r..r..', '.rRr.rRr', '..bbbb..', '.bWkkWb.', '.bWWWWb.', '.bkWWkb.', '..bWWb..', '..bbbb..', '...bb...', '...bb...', '..rbbr..', '...bb...', '...bb...', '..bbbb..'], { r: '#8a1a2a', R: '#ff2a4a', b: '#3a2a20', W: '#d8d0b8', k: '#1a1014' }));
+reg('stake', ascii(['..w..', '.wWw.', '.bBb.', '.bBb.', '.bBb.', '.bBb.', '.bBb.', '.bBb.', '.bBb.', 'bbBbb'], { w: '#b8b4a0', W: '#e8e4d0', b: '#2e2018', B: '#4a3626' }));
 // ---------- Деревья и камни (процедурно) ----------
 function pxLine(x, x0, y0, x1, y1, w) {
   x0 = Math.round(x0); y0 = Math.round(y0); x1 = Math.round(x1); y1 = Math.round(y1); w = w || 1;
@@ -412,13 +427,15 @@ function genRock(seed) {
 reg('rock0', genRock(3)); reg('rock1', genRock(8));
 
 // ---------- Тайлы ----------
-const T = { GRASS: 0, TALL: 1, DIRT: 2, SHALLOW: 3, DEEP: 4, PLAZA: 5, ASH: 6, DRY: 7, DRYTALL: 8, SCORCH: 9, LAIR: 10, DGRASS: 11, DTALL: 12 };
+const T = { GRASS: 0, TALL: 1, DIRT: 2, SHALLOW: 3, DEEP: 4, PLAZA: 5, ASH: 6, DRY: 7, DRYTALL: 8, SCORCH: 9, LAIR: 10, DGRASS: 11, DTALL: 12, MUD: 13, GRAVE: 14 };
 const TPAL = [
   ['#4a9a3c', '#3f8a36', '#5aac46'], null, ['#a8845a', '#96744c', '#ba966a'], ['#4a9ad8', '#3f8cc8', '#7ac0f0'], ['#2a5aa0', '#244e8e', '#3a70b8'],
   ['#8a8a96', '#74747f', '#9c9ca8'], ['#3a3436', '#2a2628', '#4c4240'], ['#b0a04a', '#9c8c3e', '#c4b45c'], null, ['#6a4a38', '#583c2e', '#7c5844'],
-  ['#4a3038', '#3c262e', '#5c3c44'], ['#357a3a', '#2a6832', '#408a40'], null];
+  ['#4a3038', '#3c262e', '#5c3c44'], ['#357a3a', '#2a6832', '#408a40'], null, ['#4a4a34', '#3a3c2a', '#5a5a3e'], ['#5a5e5a', '#4a4e4c', '#6a6e68']];
+// мрачная гамма: всё приглушено
+for (let i = 0; i < TPAL.length; i++) if (TPAL[i]) TPAL[i] = TPAL[i].map(c => { const v = parseInt(c.slice(1), 16), r = v >> 16, g = (v >> 8) & 255, b = v & 255, l = (r + g + b) / 3, f = x => Math.round((x * .72 + l * .28) * .8); return '#' + ((1 << 24) | (f(r) << 16) | (f(g) << 8) | Math.min(255, f(b) + 6)).toString(16).slice(1); });
 TPAL[T.TALL] = TPAL[T.GRASS]; TPAL[T.DRYTALL] = TPAL[T.DRY]; TPAL[T.DTALL] = TPAL[T.DGRASS];
-const TMAP = ['#4a9a3c', '#3a8a30', '#a8845a', '#4a9ad8', '#2a5aa0', '#8a8a96', '#3a3436', '#b0a04a', '#c8a83a', '#6a4a38', '#4a3038', '#357a3a', '#2a6a30'];
+const TMAP = ['#3a7a34', '#2e6a2c', '#8a6c4c', '#3a7ab0', '#224a84', '#74747e', '#3a3436', '#8e8240', '#a08a34', '#5a4032', '#4a3038', '#2c6232', '#24562a', '#4a4a34', '#5a5e5a'];
 function genTile(pal, seed, style) {
   const c = mkCanvas(32, 16), x = c.getContext('2d');
   for (let py = 0; py < 16; py++) {
@@ -463,6 +480,8 @@ function genGlow(w, h, rgb) {
   g.addColorStop(0, 'rgba(' + rgb + ',.13)'); g.addColorStop(1, 'rgba(' + rgb + ',0)');
   x.save(); x.translate(0, h / 2); x.scale(1, h / w); x.translate(0, -w / 2); x.fillStyle = g; x.fillRect(0, 0, w, w); x.restore(); return c;
 }
+function genLight() { const c = mkCanvas(128, 80), x = c.getContext('2d'), g = x.createRadialGradient(64, 64, 0, 64, 64, 64); g.addColorStop(0, 'rgba(255,255,255,1)'); g.addColorStop(.45, 'rgba(255,255,255,.75)'); g.addColorStop(1, 'rgba(255,255,255,0)'); x.save(); x.scale(1, 80 / 128); x.fillStyle = g; x.fillRect(0, 0, 128, 128); x.restore(); return c; }
+const LIGHT = genLight();
 const GLOW = { fire: genGlow(64, 40, '255,140,40'), storm: genGlow(48, 30, '255,240,120'), soul: genGlow(40, 26, '190,120,255') };
 
 // ---------- Пиксельные цифры (урон) ----------
@@ -510,19 +529,24 @@ function iconUrl(c) { return c.url || (c.url = c.toDataURL()); }
 
 // ===== 03_world.js =====
 // Мир: генерация карты шумом, зоны, огонь/лужи/зарастание, точки спавна
-const MW = 210, MH = 100;
-const O = { NONE: 0, TREE: 1, DEAD: 2, ROCK: 3, ALTAR: 4, STONE: 5, MERCH: 6, HOUSE: 7, CRATE: 8, LAMP: 9, BLOCK: 10 };
-const TOWN = { x: 14.5, y: 50.5, r: 11 }, LAIR = { x: 196.5, y: 50.5, r: 8.5 };
-const ZNAME = { town: 'Город', edge: 'Опушка', thicket: 'Чаща', scorch: 'Выжженная поляна', lair: 'Логово Пепельного Волка' };
-const ZLVL = { town: '', edge: 'ур. 1–3', thicket: 'ур. 3–6', scorch: 'ур. 6–9', lair: 'босс, ур. 10' };
+const MW = 210, MH = 170, MIDY = 85.5;
+const O = { NONE: 0, TREE: 1, DEAD: 2, ROCK: 3, ALTAR: 4, STONE: 5, MERCH: 6, HOUSE: 7, CRATE: 8, LAMP: 9, BLOCK: 10, TOMB: 11, TOTEM: 12, STAKE: 13 };
+const TOWN = { x: 14.5, y: MIDY, r: 11 }, LAIR = { x: 196.5, y: MIDY, r: 8.5 };
+const ZNAME = { town: 'Город', edge: 'Опушка', thicket: 'Чаща', scorch: 'Выжженная поляна', bog: 'Гнилые топи', grave: 'Костяной погост', lair: 'Логово Пепельного Волка' };
+const ZLVL = { town: '', edge: 'ур. 1–3', thicket: 'ур. 3–6', scorch: 'ур. 6–9', bog: 'ур. 4–7', grave: 'ур. 5–8', lair: 'босс, ур. 10' };
 // Горючесть тайлов: топливо (сек) и шанс перекинуться на соседа
 const FL = {}; FL[T.TALL] = { fuel: 5, sp: .2 }; FL[T.DTALL] = { fuel: 5, sp: .16 }; FL[T.DRY] = { fuel: 2.2, sp: .2 }; FL[T.DRYTALL] = { fuel: 4, sp: .45 };
 let W = null;
 
-function pathY(x) { const t = clamp((x - 26) / 22, 0, 1) * clamp((184 - x) / 16, 0, 1), s = t * t * (3 - 2 * t); return 50.5 + (vnoise(x * .045, 3.3, SEED) - .5) * 46 * s; }
+function pathY(x) { const t = clamp((x - 26) / 22, 0, 1) * clamp((184 - x) / 16, 0, 1), s = t * t * (3 - 2 * t); return MIDY + (vnoise(x * .045, 3.3, SEED) - .5) * 46 * s; }
+const ZDARK = { town: .34, edge: .5, thicket: .64, scorch: .52, bog: .62, grave: .68, lair: .56 };
+function zoneLvl(z, x) { return z === 'edge' ? clamp(1 + Math.floor((x - 26) / 18), 1, 3) : z === 'thicket' ? clamp(3 + Math.floor((x - 80) / 14), 3, 6) : z === 'bog' ? clamp(4 + Math.floor((x - 36) / 45), 4, 7) : z === 'grave' ? clamp(5 + Math.floor((x - 46) / 42), 5, 8) : clamp(6 + Math.floor((x - 136) / 12), 6, 9); }
+const ZTYPES = { edge: ['wolf', 'slime', 'shroom'], thicket: ['root', 'bat', 'skel'], scorch: ['imp', 'falcon'], bog: ['shroom', 'slime', 'root'], grave: ['skel', 'bat', 'wolf'] };
 function zoneAt(x, y) {
   if (dist(x, y, TOWN.x, TOWN.y) < TOWN.r + 1) return 'town';
   if (dist(x, y, LAIR.x, LAIR.y) < LAIR.r + 3) return 'lair';
+  if (x > 46 && x < 190 && y < 52 + (vnoise(x * .06, 1.1, SEED + 7) - .5) * 14) return 'grave';
+  if (x > 36 && x < 190 && y > 119 + (vnoise(x * .06, 5.1, SEED + 8) - .5) * 14) return 'bog';
   const w = x + (vnoise(y * .08, 7.7, SEED) - .5) * 8;
   return w < 80 ? 'edge' : w < 136 ? 'thicket' : 'scorch';
 }
@@ -537,7 +561,7 @@ const isWaterTile = i => W.g[i] === T.SHALLOW || W.g[i] === T.DEEP || W.puddle[i
 
 function genWorld() {
   const n = MW * MH;
-  W = { g: new Uint8Array(n), g0: new Uint8Array(n), o: new Uint8Array(n), o0: new Uint8Array(n), zi: new Uint8Array(n), fire: new Float32Array(n), puddle: new Float32Array(n), regrow: new Float32Array(n), burning: new Set(), puddles: new Set(), regrowing: new Set(), spawns: [], map: mkCanvas(MW, MH), mapDirty: true, tick: 0 };
+  W = { g: new Uint8Array(n), g0: new Uint8Array(n), o: new Uint8Array(n), o0: new Uint8Array(n), zi: new Uint8Array(n), fire: new Float32Array(n), puddle: new Float32Array(n), regrow: new Float32Array(n), burning: new Set(), puddles: new Set(), regrowing: new Set(), spawns: [], camps: [], seen: new Uint8Array(n), revT: 0, map: mkCanvas(MW, MH), mapDirty: true, tick: 0 };
   for (let y = 0; y < MH; y++) for (let x = 0; x < MW; x++) {
     const i = y * MW + x, cx = x + .5, cy = y + .5, z = zoneAt(cx, cy);
     const onPath = cx > TOWN.x && cx < LAIR.x && Math.abs(cy - pathY(cx)) < 1.5;
@@ -552,6 +576,12 @@ function genWorld() {
     } else if (z === 'thicket') {
       W.zi[i] = 1; g = nz > .54 ? T.DTALL : T.DGRASS; if (lake > .6) g = T.SHALLOW; if (lake > .655) g = T.DEEP;
       if (g !== T.SHALLOW && g !== T.DEEP) { if ((tr > .44 && h < .2) || h < .04) o = O.TREE; else if (h > .985) o = O.ROCK; }
+    } else if (z === 'bog') {
+      W.zi[i] = 1; g = nz > .6 ? T.DTALL : T.MUD; if (lake > .5) g = T.SHALLOW; if (lake > .62) g = T.DEEP;
+      if (g !== T.SHALLOW && g !== T.DEEP) { if (h < .05) o = hash2(x, y, SEED + 5) < .5 ? O.DEAD : O.TREE; else if (h > .988) o = O.ROCK; }
+    } else if (z === 'grave') {
+      W.zi[i] = 1; g = nz > .62 ? T.DTALL : T.GRAVE;
+      if (h < .06) o = hash2(x, y, SEED + 5) < .75 ? O.DEAD : O.TREE; else if (h > .93 && tr > .45) o = O.TOMB; else if (h > .985) o = O.ROCK;
     } else {
       W.zi[i] = 2; g = nz > .5 ? T.DRYTALL : T.DRY; if (tr > .64) g = T.SCORCH; if (lake > .73) g = T.SHALLOW;
       if (g !== T.SHALLOW) { if (h < .045) o = hash2(x, y, SEED + 5) < .4 ? O.DEAD : O.TREE; else if (h > .972) o = O.ROCK; }
@@ -560,8 +590,21 @@ function genWorld() {
     if (border) { if (g === T.SHALLOW || g === T.DEEP) g = T.GRASS; o = O.TREE; }
     W.g[i] = g; W.o[i] = o;
   }
+  // Вражеские лагеря: частокол, тотем, отряд с вожаком
+  for (let cy = 0; cy * 26 < MH; cy++) for (let cx = 0; cx * 26 < MW; cx++) {
+    if (hash2(cx, cy, SEED + 20) > .62) continue;
+    const x = cx * 26 + 7 + Math.floor(hash2(cx, cy, SEED + 21) * 12), y = cy * 26 + 7 + Math.floor(hash2(cx, cy, SEED + 22) * 12);
+    if (x < 9 || y < 9 || x > MW - 10 || y > MH - 10) continue; const z = zoneAt(x + .5, y + .5);
+    if (z === 'town' || z === 'lair' || dist(x, y, TOWN.x, TOWN.y) < 26 || dist(x, y, LAIR.x, LAIR.y) < 17 || Math.abs(y - pathY(x)) < 7) continue;
+    const base = z === 'edge' ? T.GRASS : z === 'thicket' ? T.DGRASS : z === 'bog' ? T.MUD : z === 'grave' ? T.GRAVE : T.DRY;
+    for (let j = -5; j <= 5; j++) for (let i = -5; i <= 5; i++) { const d = Math.hypot(i, j), k = (y + j) * MW + x + i; if (d < 5.2) { W.o[k] = 0; if (W.g[k] === T.DEEP || W.g[k] === T.SHALLOW || FL[W.g[k]]) W.g[k] = base; if (d < 3.4) W.g[k] = z === 'scorch' ? T.SCORCH : T.DIRT; } }
+    for (let a = 0; a < 32; a++) { if (a % 16 < 3) continue; const q = a / 32 * TAU; W.o[Math.round(y + Math.sin(q) * 4.4) * MW + Math.round(x + Math.cos(q) * 4.4)] = O.STAKE; }
+    W.o[y * MW + x] = O.TOTEM;
+    W.spawns.push({ x: x + .5, y: y + 1.6, camp: W.camps.length, types: ZTYPES[z], lvl: Math.min(9, zoneLvl(z, x) + 1), n: 5, list: [], t: 0 });
+    W.camps.push({ x: x + .5, y: y + .5, z, cleared: false });
+  }
   // Город
-  const put = (x, y, o) => { W.o[y * MW + x] = o; };
+  const put = (x, y, o) => { W.o[(y + 35) * MW + x] = o; };
   put(14, 50, O.STONE); put(10, 46, O.ALTAR); put(18, 45, O.MERCH); put(19, 46, O.CRATE);
   put(7, 53, O.HOUSE); put(6, 53, O.BLOCK); put(7, 52, O.BLOCK); put(6, 52, O.BLOCK);
   put(21, 54, O.HOUSE); put(20, 54, O.BLOCK); put(21, 53, O.BLOCK); put(20, 53, O.BLOCK);
@@ -579,9 +622,12 @@ function genWorld() {
       if (z === 'town' || z === 'lair' || dist(x, y, TOWN.x, TOWN.y) < TOWN.r + 5 || dist(x, y, LAIR.x, LAIR.y) < LAIR.r + 5) continue;
       if (W.o[i] || W.g[i] === T.DEEP || Math.abs(y - pathY(x)) < 2.5) continue;
       const r = hash2(cx, cy, SEED + 12); let type, lvl, cnt = 1;
-      if (z === 'edge') { lvl = clamp(1 + Math.floor((x - 26) / 18), 1, 3); type = r < .4 ? 'wolf' : r < .72 ? 'slime' : 'shroom'; if (type === 'wolf' && lvl > 1) cnt = 2; }
-      else if (z === 'thicket') { lvl = clamp(3 + Math.floor((x - 80) / 14), 3, 6); type = W.g[i] === T.SHALLOW ? 'water' : r < .34 ? 'root' : r < .67 ? 'bat' : 'skel'; if (type === 'bat') cnt = 2; }
-      else { lvl = clamp(6 + Math.floor((x - 136) / 12), 6, 9); type = r < .55 ? 'imp' : 'falcon'; if (type === 'imp' && r < .25) cnt = 2; }
+      lvl = zoneLvl(z, x); let inCamp = false; for (const c of W.camps) if (dist(x, y, c.x, c.y) < 7) inCamp = true; if (inCamp) continue;
+      if (z === 'bog') { type = W.g[i] === T.SHALLOW ? 'water' : r < .4 ? 'shroom' : r < .75 ? 'slime' : 'root'; if (type === 'slime') cnt = 2; }
+      else if (z === 'grave') { type = r < .5 ? 'skel' : r < .8 ? 'bat' : 'wolf'; cnt = 2; }
+      else if (z === 'edge') { type = r < .4 ? 'wolf' : r < .72 ? 'slime' : 'shroom'; if (type === 'wolf' && lvl > 1) cnt = 2; }
+      else if (z === 'thicket') { type = W.g[i] === T.SHALLOW ? 'water' : r < .34 ? 'root' : r < .67 ? 'bat' : 'skel'; if (type === 'bat') cnt = 2; }
+      else { type = r < .55 ? 'imp' : 'falcon'; if (type === 'imp' && r < .25) cnt = 2; }
       W.spawns.push({ x: x + .5, y: y + .5, type, lvl, n: cnt, list: [], t: 0 }); used[cx + '_' + cy] = 1; break;
     }
   }
@@ -590,7 +636,7 @@ function genWorld() {
     if (hash2(cx, cy, SEED + 14) > .2) continue; let done = false;
     for (let y = cy * 6; y < cy * 6 + 6 && !done; y++) for (let x = cx * 6; x < cx * 6 + 6 && !done; x++) {
       if (x < 4 || y < 4 || x >= MW - 4 || y >= MH - 4) continue;
-      if (W.g[y * MW + x] === T.SHALLOW && zoneAt(x, y) === 'thicket') { W.spawns.push({ x: x + .5, y: y + .5, type: 'water', lvl: clamp(3 + Math.floor((x - 80) / 14), 3, 6), n: 1, list: [], t: 0 }); done = true; }
+      const zz = zoneAt(x, y); if (W.g[y * MW + x] === T.SHALLOW && (zz === 'thicket' || zz === 'bog')) { W.spawns.push({ x: x + .5, y: y + .5, type: 'water', lvl: zoneLvl(zz, x), n: 1, list: [], t: 0 }); done = true; }
     }
   }
   W.spawns.push({ x: LAIR.x, y: LAIR.y, type: 'ashwolf', lvl: 10, n: 1, list: [], t: 0, boss: true });
@@ -617,7 +663,13 @@ function addPuddle(i, dur) {
   if (i < 0 || i >= W.g.length || W.g[i] === T.SHALLOW || W.g[i] === T.DEEP || (W.o[i] && W.o[i] !== O.LAMP)) return;
   W.puddle[i] = Math.max(W.puddle[i], dur || 10); W.puddles.add(i);
 }
+// Туман войны: карта открывается только там, где побывал
+function reveal(dt) {
+  W.revT -= dt; if (W.revT > 0) return; W.revT = .25;
+  for (const p of G.players) { const px = p.x | 0, py = p.y | 0, R = 10; for (let j = -R; j <= R; j++) for (let i = -R; i <= R; i++) { if (i * i + j * j > R * R) continue; const x = px + i, y = py + j; if (x < 0 || y < 0 || x >= MW || y >= MH) continue; const k = y * MW + x; if (!W.seen[k]) { W.seen[k] = 1; W.mapDirty = true; } } }
+}
 function updateWorld(dt) {
+  reveal(dt);
   for (const i of W.burning) { W.fire[i] -= dt; if (W.fire[i] <= 0) burnOut(i); }
   W.tick -= dt; if (W.tick > 0) return; W.tick = .3;
   // Огонь расползается сам
@@ -643,6 +695,7 @@ function renderMap() {
   const x = W.map.getContext('2d'), im = x.createImageData(MW, MH), d = im.data;
   for (let i = 0; i < MW * MH; i++) {
     let c = TMAP[W.g[i]]; const o = W.o[i];
+    if (!W.seen[i]) c = '#0b0810'; else if (o === O.STAKE || o === O.TOTEM) c = '#c82a3a'; else if (o === O.TOMB) c = '#8a8a98'; else
     if (o === O.TREE) c = W.zi[i] === 2 ? '#8a6a2a' : '#1f5a2c'; else if (o === O.DEAD) c = '#2a2428'; else if (o === O.ROCK) c = '#6a6a78'; else if (o >= O.ALTAR) c = '#c8b890';
     const v = parseInt(c.slice(1), 16); d[i * 4] = v >> 16; d[i * 4 + 1] = (v >> 8) & 255; d[i * 4 + 2] = v & 255; d[i * 4 + 3] = 255;
   }
@@ -1179,7 +1232,7 @@ const MOBS = {
   slime: { name: 'Слизень', hp: 55, atk: 6, spd: 2.2, abils: ['shield', 'bite'], el: 'slime', soul: 'slime', hop: true, blood: '#6fe0a0' },
   shroom: { name: 'Ядогриб', hp: 34, atk: 6, spd: 1.7, abils: ['cloud'], el: 'poison', soul: 'shroom', keep: 3.6, weak: 'fire', immune: { poison: 1 }, blood: '#8fcc2a' },
   root: { name: 'Корень-хватала', hp: 70, atk: 8, spd: 0, abils: ['roots', 'bite'], el: 'nature', soul: 'root', weak: 'fire', immune: { root: 1 }, heavy: .2, blood: '#7a5230' },
-  bat: { name: 'Грозовая мышь', hp: 30, atk: 7, spd: 4, abils: ['chain'], el: 'storm', soul: 'bat', fly: true, keep: 4.2, blood: '#7a4ab8' },
+  bat: { fem: true, name: 'Грозовая мышь', hp: 30, atk: 7, spd: 4, abils: ['chain'], el: 'storm', soul: 'bat', fly: true, keep: 4.2, blood: '#7a4ab8' },
   skel: { name: 'Скелет-лучник', hp: 40, atk: 7, spd: 2.8, abils: ['arrows'], el: 'bone', soul: 'skel', keep: 5.6, immune: { poison: 1, bleed: 1 }, blood: '#f0ecd8' },
   water: { name: 'Водяной дух', hp: 48, atk: 7, spd: 2.6, abils: ['wave'], el: 'water', soul: 'water', keep: 3.2, weak: 'storm', immune: { burn: 1 }, blood: '#5aa8f0' },
   imp: { name: 'Огненный бес', hp: 44, atk: 8, spd: 3.2, abils: ['ball'], el: 'fire', soul: 'imp', keep: 4.6, weak: 'water', immune: { burn: 1 }, blood: '#e8502a' },
@@ -1192,11 +1245,16 @@ function mkMob(type, x, y, lvl, o) {
   const d = MOBS[type], sc = d.boss || type === 'nemesis' || type === 'spirit';
   const m = mkEnt({
     ai: true, type, name: d.name, spr: d.spr || type, x, y, hx: x, hy: y, lvl, team: 2, r: d.r || .32, fly: !!d.fly, hop: !!d.hop, spd: d.spd, weak: d.weak, resist: d.resist, immune: d.immune || {}, heavy: d.heavy, blood: d.blood,
-    maxHp: Math.round(d.hp * (sc ? 1 : 1 + .32 * (lvl - 1))), atk: d.atk * (sc ? 1 : 1 + .2 * (lvl - 1)), state: 'idle', stT: 0, target: null, wu: null, scanT: rand(.3), wt: rand(1, 3), wx: x, wy: y,
-    abils: d.abils.map(a => ({ ab: a.ab || a, el: a.el || d.el, mult: a.mult || 1, stars: 1, cd: rand(.8, 2.5), cdm: a.cdm || 1.5 })), keep: d.keep || 0, aggro: d.aggro || 7.5, leash: d.leash || 15, boss: !!d.boss, scale: d.scale, humanoid: type === 'nemesis', stuck: 0, avoid: 0, strafe: chance(.5) ? 1 : -1, strT: rand(1, 3)
+    maxHp: Math.round(d.hp * (sc ? 1 : (1 + .32 * (lvl - 1)) * 1.25)), atk: d.atk * (sc ? 1 : (1 + .2 * (lvl - 1)) * 1.3), state: 'idle', stT: 0, target: null, wu: null, scanT: rand(.3), wt: rand(1, 3), wx: x, wy: y,
+    abils: d.abils.map(a => ({ ab: a.ab || a, el: a.el || d.el, mult: a.mult || 1, stars: 1, cd: rand(.8, 2.5), cdm: a.cdm || 1.2 })), keep: d.keep || 0, aggro: d.aggro || 8.5, leash: d.leash || 15, boss: !!d.boss, scale: d.scale, humanoid: type === 'nemesis', stuck: 0, avoid: 0, strafe: chance(.5) ? 1 : -1, strT: rand(1, 3)
   });
   if (o) Object.assign(m, o);
   m.hp = m.maxHp; G.ents.push(m); return m;
+}
+// Проклятые (элитные) мобы: крупнее, живучее, бьют больнее
+function makeElite(m, chief) {
+  m.elite = true; m.chief = !!chief; m.maxHp = m.hp = Math.round(m.maxHp * (chief ? 3 : 2.4)); m.atk *= 1.35; m.r *= 1.2; m.heavy = Math.min(m.heavy || 1, .5);
+  m.name = chief ? 'Вожак: ' + m.name : (MOBS[m.type].fem ? 'Проклятая ' : 'Проклятый ') + m.name.toLowerCase(); for (const a of m.abils) a.cdm *= .8;
 }
 function findTarget(m) {
   let best = null, bd = m.st.blind ? 1.6 : m.aggro;
@@ -1255,7 +1313,7 @@ function updateMob(m, dt) {
 }
 // Мобы не слипаются
 function separateMobs() {
-  const L = G.ents;
+  const L = G.ents.filter(e => e.ai && !e.dead && G.me && Math.abs(e.x - G.me.x) < 26 && Math.abs(e.y - G.me.y) < 26);
   for (let i = 0; i < L.length; i++) { const a = L[i]; if (!a.ai || a.dead || a.dash || a.spd === 0) continue; for (let j = i + 1; j < L.length; j++) { const c = L[j]; if (!c.ai || c.dead || c.dash) continue; const dx = c.x - a.x, dy = c.y - a.y; if (Math.abs(dx) > 1 || Math.abs(dy) > 1) continue; const d = Math.hypot(dx, dy), mn = a.r + c.r; if (d < mn && d > .001) { const p = (mn - d) / d * .5; if (!blk(a.x - dx * p, a.y - dy * p, a.r * .8, a.fly)) { a.x -= dx * p; a.y -= dy * p; } if (c.spd !== 0 && !blk(c.x + dx * p, c.y + dy * p, c.r * .8, c.fly)) { c.x += dx * p; c.y += dy * p; } } } }
 }
 // Спавнер: мобы возрождаются, когда игрок далеко
@@ -1266,13 +1324,18 @@ function updateSpawner(dt) {
   for (const s of W.spawns) {
     for (let i = s.list.length - 1; i >= 0; i--) if (s.list[i].dead) s.list.splice(i, 1);
     if (s.list.length) { s.armed = true; continue; }
-    if (s.armed) { s.armed = false; s.t = s.boss ? 100 : rand(35, 55); }
+    if (s.armed) { s.armed = false; s.t = s.boss ? 100 : s.camp !== undefined ? 240 : rand(35, 55); if (s.camp !== undefined) Bus.emit('campClear', s); }
     if (s.t > 0) { s.t -= .5; continue; }
     let near = false; for (const p of G.players) if (dist(p.x, p.y, s.x, s.y) < (G.time < 1 ? 0 : 13)) near = true;
     if (near) continue;
+    if (s.camp !== undefined) {
+      W.camps[s.camp].cleared = false;
+      for (let i = 0; i <= s.n; i++) { const a = i / (s.n + 1) * TAU, t = s.types[i % s.types.length]; let x = s.x + Math.cos(a) * 2, y = s.y - 1 + Math.sin(a) * 2; if (blocked(x, y)) { x = s.x; y = s.y; } const m = mkMob(i ? t : s.types[0], x, y, s.lvl + (i ? 0 : 1)); m.leash = 11; if (!i) makeElite(m, true); s.list.push(m); }
+      continue;
+    }
     for (let i = 0; i < s.n; i++) {
       let x = s.x + (i ? rand(-1.2, 1.2) : 0), y = s.y + (i ? rand(-1.2, 1.2) : 0); if (blocked(x, y, MOBS[s.type].fly)) { x = s.x; y = s.y; }
-      const m = mkMob(s.type, x, y, s.lvl); s.list.push(m);
+      const m = mkMob(s.type, x, y, s.lvl); s.list.push(m); if (!s.boss && G.time > 1 ? chance(.12) : hash2(x * 10, y * 10, 77) < .07) { if (!s.boss) makeElite(m); }
       if (s.boss) setupBoss(m);
     }
   }
@@ -1298,11 +1361,17 @@ Bus.on('mobDeath', (m, src) => {
   if (!p) return;
   if (m.isNemesis) { Bus.emit('nemesisDeath', m, p); return; }
   G.J.kills++;
-  gainXp(p, m.boss ? 400 : 5 + 5 * m.lvl);
-  const g = m.boss ? 250 : randi(2, 4) * m.lvl; for (let i = 0, n = m.boss ? 10 : 1 + (g > 12 ? 1 : 0); i < n; i++) dropPickup('gold', m.x, m.y, Math.ceil(g / n));
+  gainXp(p, m.boss ? 400 : (5 + 5 * m.lvl) * (m.elite ? 3 : 1));
+  const g = m.boss ? 250 : randi(2, 4) * m.lvl * (m.elite ? 3 : 1); for (let i = 0, n = m.boss ? 10 : 1 + (g > 12 ? 1 : 0); i < n; i++) dropPickup('gold', m.x, m.y, Math.ceil(g / n));
   const soul = MOBS[m.type].soul;
-  if (soul && !m.summoned) { const ch = m.boss ? (G.J.obtained[soul] ? .35 : 1) : (G.J.obtained[soul] ? .15 : .6); if (chance(ch)) dropPickup('soul', m.x, m.y, soul); }
+  if (soul && !m.summoned) { const ch = m.boss ? (G.J.obtained[soul] ? .35 : 1) : (m.chief ? 1 : m.elite ? .5 : G.J.obtained[soul] ? .15 : .6); if (chance(ch)) dropPickup('soul', m.x, m.y, soul); }
   if (m.boss) { G.J.bossKills++; banner('ПЕПЕЛЬНЫЙ ВОЛК ПОВЕРЖЕН', 'Шепчущий лес свободен... пока что', '#ffd870'); Sfx.play('levelup'); shake(10); for (let i = 0; i < 5; i++) fxRing(m.x, m.y, .5, 4 + i * 1.5, '#ff7a2a', .5 + i * .15); Bus.emit('bossDeath', m, p); }
+});
+Bus.on('campClear', (s) => {
+  const c = W.camps[s.camp], p = G.me; if (!p || dist(p.x, p.y, c.x, c.y) > 25) return;
+  c.cleared = true; G.J.camps = (G.J.camps || 0) + 1; const g = 30 * s.lvl; for (let i = 0; i < 8; i++) dropPickup('gold', c.x, c.y + 1, Math.ceil(g / 8));
+  if (p.potions < POTION_MAX) p.potions++;
+  banner('ЛАГЕРЬ ЗАЧИЩЕН', 'Золото, зелье и душа вожака твои. Лагерь восстановится не скоро', '#ff5a6a'); Sfx.play('levelup'); fxRing(c.x, c.y, .5, 6, '#ff2a4a', .7); shake(5);
 });
 
 // ===== 09_nemesis.js =====
@@ -1356,10 +1425,10 @@ Bus.on('nemesisDeath', (m, p) => {
 
 // ===== 10_player.js =====
 // Игрок. Управляется через «намерение» (intent) — локальный ввод или, в будущем, сеть.
-const MAXLVL = 10, POTION_MAX = 9, POTION_COST = 15;
+const MAXLVL = 10, POTION_MAX = 6, POTION_COST = 25;
 const xpNext = l => Math.round(20 * Math.pow(l, 1.7));
 function mkPlayer(name) {
-  const p = mkEnt({ isPlayer: true, humanoid: true, name: name || 'Герой', team: 1, spr: 'hero', r: .3, spd: 4.3, lvl: 1, xp: 0, gold: 0, potions: 3, souls: {}, slots: [null, null, null, null], sl: [0, 1, 2, 3].map(() => ({ cd: 0, ch: 1 })), combo: 0, comboT: 0, swing: null, roll: null, rollCd: 0, potCd: 0, respawn: 0, blood: '#ff5a5a', x: TOWN.x, y: TOWN.y + 1.6 });
+  const p = mkEnt({ isPlayer: true, humanoid: true, name: name || 'Герой', team: 1, spr: 'hero', r: .3, spd: 4.3, lvl: 1, xp: 0, gold: 0, potions: 2, souls: {}, slots: [null, null, null, null], sl: [0, 1, 2, 3].map(() => ({ cd: 0, ch: 1 })), combo: 0, comboT: 0, swing: null, roll: null, rollCd: 0, potCd: 0, respawn: 0, blood: '#ff5a5a', x: TOWN.x, y: TOWN.y + 1.6 });
   recalc(p); p.hp = p.maxHp; return p;
 }
 function recalc(p) { p.maxHp = 100 + 22 * (p.lvl - 1); p.atk = 10 + 3 * (p.lvl - 1); }
@@ -1401,7 +1470,7 @@ function nearInteract(p) {
 function usePotion(p) {
   if (p.potCd > 0 || p.dead) return;
   if (p.potions <= 0 || p.hp >= p.maxHp) { Sfx.play('deny'); return; }
-  p.potions--; p.potCd = 1; heal(p, p.maxHp * .45); Sfx.play('potion'); burst(p.x, p.y, ['#6aff8a', '#ffffff'], 12, 3, { z: 10, grav: -20 });
+  p.potions--; p.potCd = 1; heal(p, p.maxHp * .35); Sfx.play('potion'); burst(p.x, p.y, ['#6aff8a', '#ffffff'], 12, 3, { z: 10, grav: -20 });
 }
 function castSlot(p, s, dx, dy, ax, ay) {
   const id = p.slots[s]; if (!id) return; const sl = p.sl[s];
@@ -1564,7 +1633,8 @@ function drawHud(b) {
   b.save(); b.beginPath(); b.rect(mx, my, ms, ms); b.clip(); b.imageSmoothingEnabled = false; b.transform(1, .5, -1, .5, cx, cy); b.drawImage(W.map, -p.x, -p.y); b.restore();
   const mk = (x, y, c, s, blink) => { const q = mmPos(cx, cy, p, x, y, ms / 2 - 3); if (blink && Math.floor(G.time * 4) % 2) return; b.fillStyle = '#0b0810'; b.fillRect(q[0] - s, q[1] - s, s * 2 + 1, s * 2 + 1); b.fillStyle = c; b.fillRect(q[0] - s + 1, q[1] - s + 1, s * 2 - 1, s * 2 - 1); };
   for (const e of G.ents) if (e.ai && !e.dead && !e.boss && !e.isNemesis && e.team !== p.team && dist(e.x, e.y, p.x, p.y) < 22) { const q = mmPos(cx, cy, p, e.x, e.y, ms / 2 - 2); if (!q[2]) { b.fillStyle = '#ff5a5a'; b.fillRect(q[0], q[1], 1, 1); } }
-  mk(TOWN.x, TOWN.y, '#c9a0ff', 2); mk(LAIR.x, LAIR.y, '#ff7a1a', 2);
+  mk(TOWN.x, TOWN.y, '#c9a0ff', 2); if (W.seen[tIdx(LAIR.x, LAIR.y)]) mk(LAIR.x, LAIR.y, '#ff7a1a', 2);
+  for (const c of W.camps) if (!c.cleared && W.seen[tIdx(c.x, c.y)] && dist(c.x, c.y, p.x, p.y) < 40) mk(c.x, c.y, '#c82a3a', 1);
   if (G.nemesis && !G.nemesis.dead) mk(G.nemesis.x, G.nemesis.y, '#ff2a4a', 2, true);
   b.fillStyle = '#fff'; b.fillRect(cx - 1, cy - 1, 3, 3);
   const z = zoneAt(p.x, p.y); if (z !== zoneShown) { zoneShown = z; zoneT = 4; }
@@ -1583,6 +1653,7 @@ function drawHud(b) {
     else if (!H.soul && H.roll && p.moved > 7) setHint('soul', V.touch ? 'Кнопки с иконками — твои души. Сейчас у тебя душа волка: рывок' : 'Клавиши 1–4 — души. Сейчас у тебя душа волка: рывок (1)', 8);
     else if (!H.drop && H.soul && !inTown(p)) setHint('drop', 'С мобов падают души — их способности. Дубликаты усиливают душу: ★2 за 3 копии, ★3 за 6', 9);
     else if (!H.potion && p.hp < p.maxHp * .45 && p.potions > 0) setHint('potion', V.touch ? 'Мало здоровья! Кнопка с зельем лечит' : 'Мало здоровья! Q — выпить зелье', 6);
+    else if (!H.dark && H.drop && p.moved > 20) setHint('dark', 'Лес не прощает. Карта открывается только там, где ты прошёл. Красные тотемы — лагеря врагов с вожаком', 10);
     else if (!H.altar && Object.keys(p.souls).length >= 2) setHint('altar', 'Две души! На Алтаре в городе их можно слить в химеру. Рецепты скрыты — экспериментируй', 10);
     else if (!H.react && Object.keys(p.souls).length >= 3) setHint('react', 'Стихии вступают в реакции: огонь жжёт траву, молния бьёт по мокрым, огонь взрывает яд...', 10);
   }
@@ -1607,10 +1678,13 @@ const Menus = (() => {
 
   // ---------- Старт ----------
   function title() {
-    st = { kind: 'title', confirm: false }; const s = loadSave();
+    st = { kind: 'title', confirm: false, look: (st && st.look) || { cloak: 0, skin: 0, eyes: 0, scarf: 0 } }; const s = loadSave(); applyLook(st.look);
+    const pv = scaled(SPR.hero_i.c, 6), sw = (k, nm) => '<div class="row" style="margin:5px 0"><span style="width:64px;font-size:13px;color:#9a8ab0">' + nm + '</span>' + LOOKS[k].map((o, i) => '<button class="btn" title="' + o[0] + '" data-a="look" data-v="' + k + ':' + i + '" style="width:30px;height:30px;padding:0;background:' + o[1] + ';border-color:' + (st.look[k] === i ? '#ffd870' : '#3a2a5a') + '"></button>').join('') + '</div>';
+    const keepName = document.getElementById('nm') ? document.getElementById('nm').value : null;
     show('<h1>ПОЖИРАТЕЛЬ ДУШ</h1><div class="sub">изометрическая экшн-RPG · души вместо классов</div>' +
       (s ? '<button class="btn gold" style="width:100%;margin-bottom:10px" data-a="cont">Продолжить: ' + esc(s.name) + ', ур. ' + (s.lvl | 0) + '</button>' : '') +
-      '<input class="name" id="nm" maxlength="12" placeholder="Имя героя" value="' + (s ? '' : 'Герой') + '">' +
+      '<h3>Создание героя</h3><div class="row" style="align-items:flex-start;flex-wrap:nowrap"><img src="' + pv.toDataURL() + '" style="image-rendering:pixelated;width:84px;flex:none;background:#0b0810;border:2px solid #3a2a5a;padding:6px"><div style="flex:1">' + sw('cloak', 'Плащ') + sw('skin', 'Кожа') + sw('eyes', 'Глаза') + sw('scarf', 'Шарф') + '</div></div>' +
+      '<input class="name" id="nm" maxlength="12" placeholder="Имя героя" value="' + esc(keepName !== null ? keepName : (s ? '' : 'Герой')) + '" style="margin-top:8px">' +
       '<button class="btn" style="width:100%;margin-top:8px" data-a="new" id="newb">' + (s ? 'Новая игра (сотрёт сохранение)' : 'Начать игру') + '</button>' +
       '<div class="help"><b>ПК:</b> <kbd>WASD</kbd> движение · <kbd>мышь</kbd> прицел · <kbd>ЛКМ</kbd> удар · <kbd>Пробел</kbd> перекат · <kbd>1</kbd>–<kbd>4</kbd> души · <kbd>Q</kbd> зелье · <kbd>E</kbd> взаимодействие · <kbd>Tab</kbd> души и журнал<br>' +
       '<b>Телефон:</b> джойстик слева, кнопки справа, автоприцел на ближайшего врага.<br><br>' +
@@ -1618,17 +1692,18 @@ const Menus = (() => {
   }
   function begin(save) {
     const nm = document.getElementById('nm'), name = (nm && nm.value.trim()) || 'Герой';
-    ui.classList.remove('on'); ui.innerHTML = ''; st = null; Sfx.init();
-    if (save) startGame({ name: save.name, save }); else { wipeSave(); startGame({ name: name.slice(0, 12) }); }
+    const look = st && st.look; ui.classList.remove('on'); ui.innerHTML = ''; st = null; Sfx.init();
+    if (save) startGame({ name: save.name, save }); else { wipeSave(); startGame({ name: name.slice(0, 12), look }); }
   }
 
   // ---------- Алтарь ----------
   function openAltar(atAltar, tab) { if (!G.started || G.me.dead) return; st = { kind: 'altar', tab: tab || 'souls', sel: null, fa: null, fb: null, atAltar, res: null }; drawAltar(); }
   function drawAltar() {
     const p = G.me, t = st.tab; let h = '<button class="btn x" data-a="close">✕</button><h2>' + (st.atAltar ? 'Алтарь душ' : 'Души и журнал') + ' <span class="gd" style="font-size:14px">● ' + p.gold + '</span></h2>';
-    h += '<div class="tabs">' + [['souls', 'Души'], ['fuse', 'Слияние'], ['journal', 'Журнал']].map(x => '<button class="btn ' + (t === x[0] ? 'act' : '') + '" data-a="tab" data-v="' + x[0] + '">' + x[1] + '</button>').join('') + '</div>';
-    if (t === 'souls') h += tabSouls(p); else if (t === 'fuse') h += tabFuse(p); else h += tabJournal(p);
+    h += '<div class="tabs">' + [['souls', 'Души'], ['fuse', 'Слияние'], ['journal', 'Журнал'], ['map', 'Карта']].map(x => '<button class="btn ' + (t === x[0] ? 'act' : '') + '" data-a="tab" data-v="' + x[0] + '">' + x[1] + '</button>').join('') + '</div>';
+    if (t === 'souls') h += tabSouls(p); else if (t === 'fuse') h += tabFuse(p); else if (t === 'map') h += '<canvas id="bigmap" width="570" height="285" style="width:100%;image-rendering:pixelated;background:#0b0810;border:2px solid #3a2a5a"></canvas><div class="det"><span style="color:#fff">■</span> ты · <span style="color:#c9a0ff">■</span> город · <span style="color:#c82a3a">■</span> лагерь врагов · <span style="color:#ff7a1a">■</span> логово · <span style="color:#ff2a4a">■</span> Тень. Разведано: ' + Math.round(W.seen.reduce((a, c) => a + c, 0) / W.seen.length * 100) + '%. Лагерей зачищено: ' + (G.J.camps || 0) + '</div>'; else h += tabJournal(p);
     show(h);
+    if (t === 'map') { if (W.mapDirty) renderMap(); const c = document.getElementById('bigmap'), x = c.getContext('2d'); x.imageSmoothingEnabled = false; x.setTransform(1.5, .75, -1.5, .75, MH * 1.5, 2); x.drawImage(W.map, 0, 0); const mk = (wx, wy, col, s) => { x.fillStyle = '#0b0810'; x.fillRect(wx - s - 1, wy - s - 1, s * 2 + 2, s * 2 + 2); x.fillStyle = col; x.fillRect(wx - s, wy - s, s * 2, s * 2); }; mk(TOWN.x, TOWN.y, '#c9a0ff', 2); if (W.seen[tIdx(LAIR.x, LAIR.y)]) mk(LAIR.x, LAIR.y, '#ff7a1a', 2); for (const k of W.camps) if (W.seen[tIdx(k.x, k.y)] && !k.cleared) mk(k.x, k.y, '#c82a3a', 1.5); if (G.nemesis && !G.nemesis.dead) mk(G.nemesis.x, G.nemesis.y, '#ff2a4a', 2); mk(p.x, p.y, '#ffffff', 1.5); }
   }
   function tabSouls(p) {
     let h = '<div class="slots">' + p.slots.map((id, i) => '<div class="slot" data-a="slot" data-v="' + i + '"><i>' + (i + 1) + '</i>' + (id ? '<img src="' + iconUrl(soulDef(id).icon) + '"><br>' + esc(soulDef(id).abName) : '<br><span class="q">пусто</span>') + '</div>').join('') + '</div>';
@@ -1665,7 +1740,7 @@ const Menus = (() => {
     const pr = Object.keys(J.recipes).filter(k => !CHIMERAS[J.recipes[k]]);
     h += '</ul><h3>Прочие химеры (' + pr.length + ')</h3><ul class="j">' + (pr.length ? pr.map(k => { const ab = k.split('>'); return '<li>' + SOULS[ab[0]].mob + ' + ' + SOULS[ab[1]].mob + ' = <b>' + esc(soulDef(J.recipes[k]).name) + '</b></li>'; }).join('') : '<li class="q">Пока ни одной</li>') + '</ul>';
     h += '<h3>Души (' + Object.keys(SOULS).filter(id => J.obtained[id]).length + '/10)</h3><div class="row">' + Object.keys(SOULS).map(id => J.obtained[id] ? '<img title="' + SOULS[id].name + '" src="' + iconUrl(soulDef(id).icon) + '" style="width:32px;height:32px;image-rendering:pixelated">' : '<span class="q" style="width:32px;text-align:center;font-size:22px">?</span>').join('') + '</div>';
-    h += '<h3>Летопись</h3><ul class="j"><li>Убито врагов: ' + J.kills + '</li><li>Смертей: ' + J.deaths + '</li><li>Теней повержено: ' + J.nemKills + (G.nemesis && !G.nemesis.dead ? ' · <span class="bad">' + esc(G.nemesis.name) + ' ждёт (ур. ' + G.nemesis.lvl + ', держит ' + G.nemesis.nd.gold + ' зол.)</span>' : '') + '</li><li>Пепельный Волк повержен: ' + J.bossKills + '</li></ul>';
+    h += '<h3>Летопись</h3><ul class="j"><li>Убито врагов: ' + J.kills + '</li><li>Смертей: ' + J.deaths + '</li><li>Теней повержено: ' + J.nemKills + (G.nemesis && !G.nemesis.dead ? ' · <span class="bad">' + esc(G.nemesis.name) + ' ждёт (ур. ' + G.nemesis.lvl + ', держит ' + G.nemesis.nd.gold + ' зол.)</span>' : '') + '</li><li>Лагерей зачищено: ' + (J.camps || 0) + '</li><li>Пепельный Волк повержен: ' + J.bossKills + '</li></ul>';
     return h;
   }
 
@@ -1673,7 +1748,7 @@ const Menus = (() => {
   function openShop() { if (!G.started || G.me.dead) return; st = { kind: 'shop' }; drawShop(); }
   function drawShop() {
     const p = G.me, mx = Math.min(POTION_MAX - p.potions, Math.floor(p.gold / POTION_COST));
-    show('<button class="btn x" data-a="close">✕</button><h2>Торговец зельями</h2><div class="det">«Свежие зелья! Тени в лесу сами себя не убьют.»<br><br>Зелье лечения: восстанавливает 45% здоровья.<br>Цена: <span class="gd">' + POTION_COST + ' золота</span>. В сумке: <b>' + p.potions + ' / ' + POTION_MAX + '</b>. Золото: <span class="gd">● ' + p.gold + '</span></div>' +
+    show('<button class="btn x" data-a="close">✕</button><h2>Торговец зельями</h2><div class="det">«Свежие зелья! Тени в лесу сами себя не убьют.»<br><br>Зелье лечения: восстанавливает 35% здоровья.<br>Цена: <span class="gd">' + POTION_COST + ' золота</span>. В сумке: <b>' + p.potions + ' / ' + POTION_MAX + '</b>. Золото: <span class="gd">● ' + p.gold + '</span></div>' +
       '<div class="row" style="margin-top:8px"><button class="btn gold" data-a="buy" data-v="1"' + (mx >= 1 ? '' : ' disabled') + '>Купить 1</button><button class="btn gold" data-a="buy" data-v="' + mx + '"' + (mx >= 2 ? '' : ' disabled') + '>Купить ' + (mx >= 2 ? mx : 'все') + ' (' + Math.max(0, mx) * POTION_COST + ')</button><button class="btn" data-a="close">Уйти</button></div>');
   }
 
@@ -1681,6 +1756,7 @@ const Menus = (() => {
     const p = G.me;
     if (a === 'close') return close();
     if (a === 'cont') return begin(loadSave());
+    if (a === 'look') { const q = v.split(':'); st.look[q[0]] = +q[1]; return title(); }
     if (a === 'new') { if (loadSave() && !st.confirm) { st.confirm = true; const b = document.getElementById('newb'); b.textContent = 'Точно? Нажми ещё раз — сохранение сотрётся'; b.classList.add('red'); return; } return begin(null); }
     if (a === 'tab') { st.tab = v; st.res = null; return drawAltar(); }
     if (a === 'sel') { st.sel = st.sel === v ? null : v; return drawAltar(); }
@@ -1749,6 +1825,9 @@ function drawObj(b, i, j, o, k) {
     case O.CRATE: drawSpr(b, 'crate', sx, sy + 1); break;
     case O.LAMP: drawSpr(b, 'lamp', sx, sy - 2); break;
     case O.HOUSE: drawSpr(b, 'house' + (i > 14 ? 1 : 0), sx, sy + 6); break;
+    case O.TOMB: drawSpr(b, 'tomb', sx, sy); break;
+    case O.TOTEM: drawSpr(b, 'totem', sx, sy + 1); break;
+    case O.STAKE: drawSpr(b, 'stake', sx, sy + 1); break;
   }
 }
 function drawEnt(b, e) {
@@ -1758,6 +1837,7 @@ function drawEnt(b, e) {
   if (e.hop && e.moving) z += Math.abs(Math.sin(e.anim * 7)) * 3;
   const k = (e.scale || 1) * e.r / .32;
   b.globalAlpha = .3; b.fillStyle = '#000'; b.beginPath(); b.ellipse(sx, sy, 6.5 * k, 3 * k, 0, 0, TAU); b.fill(); b.globalAlpha = 1;
+  if (e.elite) { b.globalAlpha = .35 + .15 * Math.sin(G.time * 5); b.fillStyle = e.chief ? '#ff2a4a' : '#a04aff'; b.beginPath(); b.ellipse(sx, sy, 11 * k, 5 * k, 0, 0, TAU); b.fill(); b.globalAlpha = 1; }
   let name = e.spr; if (e.humanoid) name += e.moving ? (Math.floor(e.anim * 9) % 2 ? '_w1' : '_w2') : '_i';
   const bob = (!e.humanoid && e.moving && !e.fly && !e.hop) ? Math.floor(e.anim * 9) % 2 : 0, S = SPR[name]; if (!S) return;
   if (e.st.root) { b.fillStyle = '#5a3a1a'; b.fillRect(sx - 6, sy - 2, 12, 2); b.fillRect(sx - 4, sy - 5, 2, 4); b.fillRect(sx + 3, sy - 6, 2, 5); b.fillStyle = '#7ac84a'; b.fillRect(sx - 4, sy - 6, 2, 1); b.fillRect(sx + 3, sy - 7, 2, 1); }
@@ -1766,19 +1846,20 @@ function drawEnt(b, e) {
   if (e.roll) { b.save(); b.translate(sx, sy - 7); b.rotate((1 - e.roll.t / e.roll.max) * TAU * e.face); b.drawImage(S.c, -(S.w >> 1), -(S.h >> 1)); b.restore(); }
   else {
     let sc = null; if (e.wu) { const s = Math.sin(G.time * 34) * .07; sc = [1 + s, 1 - s]; } else if (e.swing) sc = [1.06, .96];
+    if (e.elite) { sc = sc || [1, 1]; sc = [sc[0] * 1.3, sc[1] * 1.3]; }
     drawSpr(b, name, sx, sy - z - bob, e.face < 0, e.flash > 0, sc);
     if (e.enraged && !(e.flash > 0)) { b.globalAlpha = .28 + .12 * Math.sin(G.time * 10); b.globalCompositeOperation = 'lighter'; drawSpr(b, name, sx, sy - z - bob, e.face < 0, true); b.globalCompositeOperation = 'source-over'; }
   }
   b.globalAlpha = 1;
-  const top = sy - z - S.h;
+  const top = sy - z - S.h * (e.elite ? 1.3 : 1);
   if (e.shield > 0) { b.strokeStyle = e.shieldEl && EL[e.shieldEl] ? EL[e.shieldEl].c : '#6fe0b0'; b.globalAlpha = .55 + .2 * Math.sin(G.time * 8); b.lineWidth = 1; b.beginPath(); b.ellipse(sx, sy - z - S.h / 2, S.w / 2 + 3, S.h / 2 + 3, 0, 0, TAU); b.stroke(); b.globalAlpha = .12; b.fillStyle = b.strokeStyle; b.fill(); b.globalAlpha = 1; }
   if (e.st.stun) { for (let i = 0; i < 3; i++) { const a = G.time * 7 + i * 2.1; b.fillStyle = '#ffe95a'; b.fillRect(sx + Math.cos(a) * 6 | 0, top - 3 + Math.sin(a) * 2 | 0, 2, 2); } }
-  if (e.ai && !e.boss && !e.ghost && (e.hp < e.maxHp || e.isNemesis)) {
-    const w = e.isNemesis ? 24 : 14; b.fillStyle = '#100a14'; b.fillRect(sx - w / 2 - 1, top - 5, w + 2, 4); b.fillStyle = e.isNemesis ? '#c82a4a' : '#e84a4a'; b.fillRect(sx - w / 2, top - 4, Math.ceil(w * clamp(e.hp / e.maxHp, 0, 1)), 2);
+  if (e.ai && !e.boss && !e.ghost && (e.hp < e.maxHp || e.isNemesis || e.elite)) {
+    const w = e.isNemesis || e.elite ? 24 : 14; b.fillStyle = '#100a14'; b.fillRect(sx - w / 2 - 1, top - 5, w + 2, 4); b.fillStyle = e.isNemesis ? '#c82a4a' : '#e84a4a'; b.fillRect(sx - w / 2, top - 4, Math.ceil(w * clamp(e.hp / e.maxHp, 0, 1)), 2);
     if (e.shield > 0) { b.fillStyle = '#6fe0b0'; b.fillRect(sx - w / 2, top - 4, Math.ceil(w * clamp(e.shield / (e.shieldMax || e.shield), 0, 1)), 1); }
   }
   if (e.isNemesis) txt(e.name, sx, top - 14, '#ff5a6a', 6, 'center');
-  else if (e.ai && !e.boss && !e.ghost && e.lvl && G.me && dist(e.x, e.y, G.me.x, G.me.y) < 7) txt(e.name + ' ' + e.lvl, sx, top - (e.hp < e.maxHp ? 13 : 9), e.lvl > G.me.lvl + 1 ? '#ff8a6a' : '#d8d0e0', 4.5, 'center', .85);
+  else if (e.ai && !e.boss && !e.ghost && e.lvl && G.me && dist(e.x, e.y, G.me.x, G.me.y) < 7) txt(e.name + ' ' + e.lvl, sx, top - (e.hp < e.maxHp ? 13 : 9), e.chief ? '#ff5a6a' : e.elite ? '#c88aff' : e.lvl > G.me.lvl + 1 ? '#ff8a6a' : '#d8d0e0', 4.5, 'center', .85);
   if (e.sayT > 0 && e.sayS) txt('«' + e.sayS + '»', sx, top - 23, '#ffb0b8', 6.5, 'center', clamp(e.sayT, 0, 1));
 }
 function drawProj(b, p) {
@@ -1854,7 +1935,7 @@ function render() {
       const ts = TALLSPR[g]; if (ts) b.drawImage(ts[v % 3], sx + (Math.sin(G.time * 2 + i * .7 + j * .9) > .55 ? 1 : 0), sy - 8);
     }
     if (W.fire[k] > 0) { D.push([i + j + 1.2, 3, i, j, W.o[k] === O.TREE ? 1 : 0]); if (sy < V.h + 20) glows.push(sx + 16, sy + 8); }
-    const o = W.o[k]; if (o && o !== O.BLOCK) { D.push([i + j + 1, 0, i, j, o, k]); if (o === O.LAMP) glows.push(sx + 16, sy - 6); }
+    const o = W.o[k]; if (o && o !== O.BLOCK) { D.push([i + j + 1, 0, i, j, o, k]); if (o === O.LAMP || o === O.ALTAR || o === O.STONE) glows.push(sx + 16, sy - 6); else if (o === O.TOTEM) glows.push(sx + 16, sy); }
   }
   // декали на земле: зоны и телеграфы
   for (const z of G.zones) { const K = ZK[z.kind]; if (K.draw) K.draw(b, z); if (K.top) D.push([z.x + z.y + (z.topD || 0), 5, z]); }
@@ -1891,6 +1972,24 @@ function render() {
     else if (f.t === 'slash') { b.fillStyle = f.color; b.globalAlpha = t; const n = 14, sw = 1 - t; for (let i = 0; i <= n; i++) { const u = i / n; if (u > sw + .5) continue; const a = f.a - f.arc / 2 + f.arc * u, s = w2s(f.x + Math.cos(a) * f.r, f.y + Math.sin(a) * f.r), q = w2s(f.x + Math.cos(a) * (f.r - .35), f.y + Math.sin(a) * (f.r - .35)); pxLine(b, q[0], q[1] - 8, s[0], s[1] - 8, 2); } b.globalAlpha = 1; }
     else if (f.t === 'ring') isoEllipse(b, f.x, f.y, lerp(f.r0, f.r1, 1 - t), f.color, t * .18, f.color);
   }
+  // мрак: тьма с пятнами света вокруг героя, огня, фонарей
+  if (G.me) {
+    const L = G.light, lx = G.lctx; if (L.width !== V.w || L.height !== V.h) { L.width = V.w; L.height = V.h; }
+    const target = ZDARK[zoneAt(G.me.x, G.me.y)] || .5; G.dark = G.dark === undefined ? target : G.dark + (target - G.dark) * .03;
+    lx.globalCompositeOperation = 'source-over'; lx.clearRect(0, 0, V.w, V.h); lx.globalAlpha = G.dark; lx.fillStyle = '#05040c'; lx.fillRect(0, 0, V.w, V.h); lx.globalAlpha = 1;
+    lx.globalCompositeOperation = 'destination-out';
+    const lit = (x, y, w, a) => { lx.globalAlpha = a; lx.drawImage(LIGHT, x - w / 2, y - w * .3125, w, w * .625); };
+    for (const p of G.players) if (!p.dead) { const s = w2s(p.x, p.y); lit(s[0], s[1] - 6, 230 + Math.sin(G.time * 3) * 4, .95); }
+    for (let i = 0; i < glows.length; i += 2) lit(glows[i], glows[i + 1], 110, .8);
+    for (const p of G.projs) if (p.el !== 'bone' && p.el !== 'beast') { const s = w2s(p.x, p.y); lit(s[0], s[1] - 8, 70, .7); }
+    for (const k of G.pickups) { const s = w2s(k.x, k.y); lit(s[0], s[1] - 6, 40, .6); }
+    for (const z of G.zones) if (z.kind === 'blast' || z.kind === 'heal' || z.kind === 'thundercloud') { const s = w2s(z.x, z.y); lit(s[0], s[1], 90, .5); }
+    for (const f of G.fx) if (f.t === 'bolt' || f.t === 'ring') { const q = f.t === 'bolt' ? f.pts[f.pts.length - 1] : [f.x, f.y], s = w2s(q[0], q[1]); lit(s[0], s[1], 100, .7 * clamp(f.life / f.max, 0, 1)); }
+    for (const e of G.ents) if (!e.dead && (e.isNemesis || e.elite || e.boss || e.st.burn)) { const s = w2s(e.x, e.y); lit(s[0], s[1] - 8, 60, .45); }
+    lx.globalAlpha = 1; b.drawImage(L, 0, 0);
+    // виньетка
+    const vg = b.createRadialGradient(V.w / 2, V.h / 2, V.h * .45, V.w / 2, V.h / 2, V.w * .75); vg.addColorStop(0, 'rgba(0,0,0,0)'); vg.addColorStop(1, 'rgba(0,0,0,.55)'); b.fillStyle = vg; b.fillRect(0, 0, V.w, V.h);
+  }
   for (const t of G.texts) { const s = w2s(t.x, t.y); if (t.num !== undefined) drawNum(b, t.num, s[0], s[1] - t.z, t.color); else txt(t.s, s[0], s[1] - t.z, t.color, t.size, 'center', clamp(t.life * 2, 0, 1)); }
   for (const f of G.hud) f(b);
   drawTouch(b);
@@ -1904,8 +2003,10 @@ function render() {
 const SAVE_KEY = 'soul_eater_save_v1';
 function saveGame() {
   if (!G.started || !G.me) return; const p = G.me, n = G.nemesis && !G.nemesis.dead ? Object.assign({}, G.nemesis.nd, { x: G.nemesis.x, y: G.nemesis.y }) : null;
-  try { localStorage.setItem(SAVE_KEY, JSON.stringify({ v: 1, name: p.name, lvl: p.lvl, xp: p.xp, gold: p.gold, potions: p.potions, souls: p.souls, slots: p.slots, J: G.J, nem: n })); } catch (e) { }
+  try { localStorage.setItem(SAVE_KEY, JSON.stringify({ v: 1, name: p.name, lvl: p.lvl, xp: p.xp, gold: p.gold, potions: p.potions, souls: p.souls, slots: p.slots, J: G.J, nem: n, look: p.look || {}, seen: packSeen() })); } catch (e) { }
 }
+function packSeen() { let s = ''; const a = W.seen; for (let i = 0; i < a.length; i += 6) { let v = 0; for (let k = 0; k < 6; k++) if (a[i + k]) v |= 1 << k; s += String.fromCharCode(48 + v); } return s; }
+function unpackSeen(s) { if (typeof s !== 'string') return; const a = W.seen; for (let i = 0, j = 0; i < a.length && j < s.length; i += 6, j++) { const v = s.charCodeAt(j) - 48; for (let k = 0; k < 6 && i + k < a.length; k++) a[i + k] = (v >> k) & 1; } W.mapDirty = true; }
 function loadSave() { try { const s = JSON.parse(localStorage.getItem(SAVE_KEY)); return s && s.v === 1 && s.name ? s : null; } catch (e) { return null; } }
 function wipeSave() { try { localStorage.removeItem(SAVE_KEY); } catch (e) { } }
 const validSoul = id => typeof id === 'string' && (!!SOULS[id] || !!CHIMERAS[id] || (id.slice(0, 2) === 'p_' && !!SOULS[id.split('_')[1]] && !!SOULS[id.split('_')[2]]));
@@ -1915,12 +2016,12 @@ function applySave(p, s) {
   if (!Object.keys(p.souls).length) p.souls.wolf = 1;
   p.slots = [0, 1, 2, 3].map(i => { const id = s.slots && s.slots[i]; return id && p.souls[id] ? id : null; });
   G.J = Object.assign(newJournal(), s.J || {}); for (const k of ['reactions', 'recipes', 'obtained', 'hints']) if (!G.J[k] || typeof G.J[k] !== 'object') G.J[k] = {};
-  recalc(p); p.hp = p.maxHp; for (let i = 0; i < 4; i++) resetSlot(p, i);
+  recalc(p); p.hp = p.maxHp; for (let i = 0; i < 4; i++) resetSlot(p, i); unpackSeen(s.seen);
   if (s.nem && s.nem.x > 1 && s.nem.y > 1 && Array.isArray(s.nem.souls)) { s.nem.souls = s.nem.souls.filter(q => q && validSoul(q.id)); try { spawnNemesis(s.nem); } catch (e) { G.nemesis = null; } }
 }
 let saveT = 10;
 G.systems.push(dt => { saveT -= dt; if (saveT <= 0) { saveT = 10; saveGame(); } });
-for (const ev of ['fused', 'bossDeath', 'nemesisDeath', 'respawn', 'menuClosed']) Bus.on(ev, () => setTimeout(saveGame, 0));
+for (const ev of ['campClear', 'fused', 'bossDeath', 'nemesisDeath', 'respawn', 'menuClosed']) Bus.on(ev, () => setTimeout(saveGame, 0));
 window.addEventListener('pagehide', saveGame); document.addEventListener('visibilitychange', () => { if (document.hidden) saveGame(); });
 
 // ===== 15_main.js =====
@@ -1964,14 +2065,15 @@ function frame(t) {
 function startGame(o) {
   G.ents = []; G.projs = []; G.zones = []; G.parts = []; G.texts = []; G.fx = []; G.pickups = []; G.players = []; G.nemesis = null; G.time = 0;
   genWorld(); G.J = newJournal();
-  const p = mkPlayer(o && o.name); G.me = p; G.players.push(p); G.ents.push(p);
+  const look = (o && o.save && o.save.look) || (o && o.look) || {}; applyLook(look);
+  const p = mkPlayer(o && o.name); p.look = look; G.me = p; G.dark = undefined; G.players.push(p); G.ents.push(p);
   if (o && o.save && typeof applySave === 'function') applySave(p, o.save);
   else if (typeof giveSoul === 'function' && typeof soulDef === 'function') giveSoul(p, 'wolf', 1, true);
   G.cam.x = p.x; G.cam.y = p.y; G.started = true; G.paused = false; Input.clear();
   Bus.emit('start', p);
 }
 function boot() {
-  G.canvas = document.getElementById('c'); G.ctx = G.canvas.getContext('2d'); G.buf = mkCanvas(V.w, V.h); G.bctx = G.buf.getContext('2d');
+  G.canvas = document.getElementById('c'); G.ctx = G.canvas.getContext('2d'); G.buf = mkCanvas(V.w, V.h); G.bctx = G.buf.getContext('2d'); G.light = mkCanvas(V.w, V.h); G.lctx = G.light.getContext('2d');
   resize(); window.addEventListener('resize', resize); window.addEventListener('orientationchange', () => setTimeout(resize, 200));
   Input.init(G.canvas);
   if (typeof Menus !== 'undefined') Menus.title(); else startGame({ name: 'Герой' });

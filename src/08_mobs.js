@@ -4,7 +4,7 @@ const MOBS = {
   slime: { name: 'Слизень', hp: 55, atk: 6, spd: 2.2, abils: ['shield', 'bite'], el: 'slime', soul: 'slime', hop: true, blood: '#6fe0a0' },
   shroom: { name: 'Ядогриб', hp: 34, atk: 6, spd: 1.7, abils: ['cloud'], el: 'poison', soul: 'shroom', keep: 3.6, weak: 'fire', immune: { poison: 1 }, blood: '#8fcc2a' },
   root: { name: 'Корень-хватала', hp: 70, atk: 8, spd: 0, abils: ['roots', 'bite'], el: 'nature', soul: 'root', weak: 'fire', immune: { root: 1 }, heavy: .2, blood: '#7a5230' },
-  bat: { name: 'Грозовая мышь', hp: 30, atk: 7, spd: 4, abils: ['chain'], el: 'storm', soul: 'bat', fly: true, keep: 4.2, blood: '#7a4ab8' },
+  bat: { fem: true, name: 'Грозовая мышь', hp: 30, atk: 7, spd: 4, abils: ['chain'], el: 'storm', soul: 'bat', fly: true, keep: 4.2, blood: '#7a4ab8' },
   skel: { name: 'Скелет-лучник', hp: 40, atk: 7, spd: 2.8, abils: ['arrows'], el: 'bone', soul: 'skel', keep: 5.6, immune: { poison: 1, bleed: 1 }, blood: '#f0ecd8' },
   water: { name: 'Водяной дух', hp: 48, atk: 7, spd: 2.6, abils: ['wave'], el: 'water', soul: 'water', keep: 3.2, weak: 'storm', immune: { burn: 1 }, blood: '#5aa8f0' },
   imp: { name: 'Огненный бес', hp: 44, atk: 8, spd: 3.2, abils: ['ball'], el: 'fire', soul: 'imp', keep: 4.6, weak: 'water', immune: { burn: 1 }, blood: '#e8502a' },
@@ -17,11 +17,16 @@ function mkMob(type, x, y, lvl, o) {
   const d = MOBS[type], sc = d.boss || type === 'nemesis' || type === 'spirit';
   const m = mkEnt({
     ai: true, type, name: d.name, spr: d.spr || type, x, y, hx: x, hy: y, lvl, team: 2, r: d.r || .32, fly: !!d.fly, hop: !!d.hop, spd: d.spd, weak: d.weak, resist: d.resist, immune: d.immune || {}, heavy: d.heavy, blood: d.blood,
-    maxHp: Math.round(d.hp * (sc ? 1 : 1 + .32 * (lvl - 1))), atk: d.atk * (sc ? 1 : 1 + .2 * (lvl - 1)), state: 'idle', stT: 0, target: null, wu: null, scanT: rand(.3), wt: rand(1, 3), wx: x, wy: y,
-    abils: d.abils.map(a => ({ ab: a.ab || a, el: a.el || d.el, mult: a.mult || 1, stars: 1, cd: rand(.8, 2.5), cdm: a.cdm || 1.5 })), keep: d.keep || 0, aggro: d.aggro || 7.5, leash: d.leash || 15, boss: !!d.boss, scale: d.scale, humanoid: type === 'nemesis', stuck: 0, avoid: 0, strafe: chance(.5) ? 1 : -1, strT: rand(1, 3)
+    maxHp: Math.round(d.hp * (sc ? 1 : (1 + .32 * (lvl - 1)) * 1.25)), atk: d.atk * (sc ? 1 : (1 + .2 * (lvl - 1)) * 1.3), state: 'idle', stT: 0, target: null, wu: null, scanT: rand(.3), wt: rand(1, 3), wx: x, wy: y,
+    abils: d.abils.map(a => ({ ab: a.ab || a, el: a.el || d.el, mult: a.mult || 1, stars: 1, cd: rand(.8, 2.5), cdm: a.cdm || 1.2 })), keep: d.keep || 0, aggro: d.aggro || 8.5, leash: d.leash || 15, boss: !!d.boss, scale: d.scale, humanoid: type === 'nemesis', stuck: 0, avoid: 0, strafe: chance(.5) ? 1 : -1, strT: rand(1, 3)
   });
   if (o) Object.assign(m, o);
   m.hp = m.maxHp; G.ents.push(m); return m;
+}
+// Проклятые (элитные) мобы: крупнее, живучее, бьют больнее
+function makeElite(m, chief) {
+  m.elite = true; m.chief = !!chief; m.maxHp = m.hp = Math.round(m.maxHp * (chief ? 3 : 2.4)); m.atk *= 1.35; m.r *= 1.2; m.heavy = Math.min(m.heavy || 1, .5);
+  m.name = chief ? 'Вожак: ' + m.name : (MOBS[m.type].fem ? 'Проклятая ' : 'Проклятый ') + m.name.toLowerCase(); for (const a of m.abils) a.cdm *= .8;
 }
 function findTarget(m) {
   let best = null, bd = m.st.blind ? 1.6 : m.aggro;
@@ -80,7 +85,7 @@ function updateMob(m, dt) {
 }
 // Мобы не слипаются
 function separateMobs() {
-  const L = G.ents;
+  const L = G.ents.filter(e => e.ai && !e.dead && G.me && Math.abs(e.x - G.me.x) < 26 && Math.abs(e.y - G.me.y) < 26);
   for (let i = 0; i < L.length; i++) { const a = L[i]; if (!a.ai || a.dead || a.dash || a.spd === 0) continue; for (let j = i + 1; j < L.length; j++) { const c = L[j]; if (!c.ai || c.dead || c.dash) continue; const dx = c.x - a.x, dy = c.y - a.y; if (Math.abs(dx) > 1 || Math.abs(dy) > 1) continue; const d = Math.hypot(dx, dy), mn = a.r + c.r; if (d < mn && d > .001) { const p = (mn - d) / d * .5; if (!blk(a.x - dx * p, a.y - dy * p, a.r * .8, a.fly)) { a.x -= dx * p; a.y -= dy * p; } if (c.spd !== 0 && !blk(c.x + dx * p, c.y + dy * p, c.r * .8, c.fly)) { c.x += dx * p; c.y += dy * p; } } } }
 }
 // Спавнер: мобы возрождаются, когда игрок далеко
@@ -91,13 +96,18 @@ function updateSpawner(dt) {
   for (const s of W.spawns) {
     for (let i = s.list.length - 1; i >= 0; i--) if (s.list[i].dead) s.list.splice(i, 1);
     if (s.list.length) { s.armed = true; continue; }
-    if (s.armed) { s.armed = false; s.t = s.boss ? 100 : rand(35, 55); }
+    if (s.armed) { s.armed = false; s.t = s.boss ? 100 : s.camp !== undefined ? 240 : rand(35, 55); if (s.camp !== undefined) Bus.emit('campClear', s); }
     if (s.t > 0) { s.t -= .5; continue; }
     let near = false; for (const p of G.players) if (dist(p.x, p.y, s.x, s.y) < (G.time < 1 ? 0 : 13)) near = true;
     if (near) continue;
+    if (s.camp !== undefined) {
+      W.camps[s.camp].cleared = false;
+      for (let i = 0; i <= s.n; i++) { const a = i / (s.n + 1) * TAU, t = s.types[i % s.types.length]; let x = s.x + Math.cos(a) * 2, y = s.y - 1 + Math.sin(a) * 2; if (blocked(x, y)) { x = s.x; y = s.y; } const m = mkMob(i ? t : s.types[0], x, y, s.lvl + (i ? 0 : 1)); m.leash = 11; if (!i) makeElite(m, true); s.list.push(m); }
+      continue;
+    }
     for (let i = 0; i < s.n; i++) {
       let x = s.x + (i ? rand(-1.2, 1.2) : 0), y = s.y + (i ? rand(-1.2, 1.2) : 0); if (blocked(x, y, MOBS[s.type].fly)) { x = s.x; y = s.y; }
-      const m = mkMob(s.type, x, y, s.lvl); s.list.push(m);
+      const m = mkMob(s.type, x, y, s.lvl); s.list.push(m); if (!s.boss && G.time > 1 ? chance(.12) : hash2(x * 10, y * 10, 77) < .07) { if (!s.boss) makeElite(m); }
       if (s.boss) setupBoss(m);
     }
   }
@@ -123,9 +133,15 @@ Bus.on('mobDeath', (m, src) => {
   if (!p) return;
   if (m.isNemesis) { Bus.emit('nemesisDeath', m, p); return; }
   G.J.kills++;
-  gainXp(p, m.boss ? 400 : 5 + 5 * m.lvl);
-  const g = m.boss ? 250 : randi(2, 4) * m.lvl; for (let i = 0, n = m.boss ? 10 : 1 + (g > 12 ? 1 : 0); i < n; i++) dropPickup('gold', m.x, m.y, Math.ceil(g / n));
+  gainXp(p, m.boss ? 400 : (5 + 5 * m.lvl) * (m.elite ? 3 : 1));
+  const g = m.boss ? 250 : randi(2, 4) * m.lvl * (m.elite ? 3 : 1); for (let i = 0, n = m.boss ? 10 : 1 + (g > 12 ? 1 : 0); i < n; i++) dropPickup('gold', m.x, m.y, Math.ceil(g / n));
   const soul = MOBS[m.type].soul;
-  if (soul && !m.summoned) { const ch = m.boss ? (G.J.obtained[soul] ? .35 : 1) : (G.J.obtained[soul] ? .15 : .6); if (chance(ch)) dropPickup('soul', m.x, m.y, soul); }
+  if (soul && !m.summoned) { const ch = m.boss ? (G.J.obtained[soul] ? .35 : 1) : (m.chief ? 1 : m.elite ? .5 : G.J.obtained[soul] ? .15 : .6); if (chance(ch)) dropPickup('soul', m.x, m.y, soul); }
   if (m.boss) { G.J.bossKills++; banner('ПЕПЕЛЬНЫЙ ВОЛК ПОВЕРЖЕН', 'Шепчущий лес свободен... пока что', '#ffd870'); Sfx.play('levelup'); shake(10); for (let i = 0; i < 5; i++) fxRing(m.x, m.y, .5, 4 + i * 1.5, '#ff7a2a', .5 + i * .15); Bus.emit('bossDeath', m, p); }
+});
+Bus.on('campClear', (s) => {
+  const c = W.camps[s.camp], p = G.me; if (!p || dist(p.x, p.y, c.x, c.y) > 25) return;
+  c.cleared = true; G.J.camps = (G.J.camps || 0) + 1; const g = 30 * s.lvl; for (let i = 0; i < 8; i++) dropPickup('gold', c.x, c.y + 1, Math.ceil(g / 8));
+  if (p.potions < POTION_MAX) p.potions++;
+  banner('ЛАГЕРЬ ЗАЧИЩЕН', 'Золото, зелье и душа вожака твои. Лагерь восстановится не скоро', '#ff5a6a'); Sfx.play('levelup'); fxRing(c.x, c.y, .5, 6, '#ff2a4a', .7); shake(5);
 });

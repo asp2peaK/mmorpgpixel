@@ -40,6 +40,9 @@ function drawObj(b, i, j, o, k) {
     case O.CRATE: drawSpr(b, 'crate', sx, sy + 1); break;
     case O.LAMP: drawSpr(b, 'lamp', sx, sy - 2); break;
     case O.HOUSE: drawSpr(b, 'house' + (i > 14 ? 1 : 0), sx, sy + 6); break;
+    case O.TOMB: drawSpr(b, 'tomb', sx, sy); break;
+    case O.TOTEM: drawSpr(b, 'totem', sx, sy + 1); break;
+    case O.STAKE: drawSpr(b, 'stake', sx, sy + 1); break;
   }
 }
 function drawEnt(b, e) {
@@ -49,6 +52,7 @@ function drawEnt(b, e) {
   if (e.hop && e.moving) z += Math.abs(Math.sin(e.anim * 7)) * 3;
   const k = (e.scale || 1) * e.r / .32;
   b.globalAlpha = .3; b.fillStyle = '#000'; b.beginPath(); b.ellipse(sx, sy, 6.5 * k, 3 * k, 0, 0, TAU); b.fill(); b.globalAlpha = 1;
+  if (e.elite) { b.globalAlpha = .35 + .15 * Math.sin(G.time * 5); b.fillStyle = e.chief ? '#ff2a4a' : '#a04aff'; b.beginPath(); b.ellipse(sx, sy, 11 * k, 5 * k, 0, 0, TAU); b.fill(); b.globalAlpha = 1; }
   let name = e.spr; if (e.humanoid) name += e.moving ? (Math.floor(e.anim * 9) % 2 ? '_w1' : '_w2') : '_i';
   const bob = (!e.humanoid && e.moving && !e.fly && !e.hop) ? Math.floor(e.anim * 9) % 2 : 0, S = SPR[name]; if (!S) return;
   if (e.st.root) { b.fillStyle = '#5a3a1a'; b.fillRect(sx - 6, sy - 2, 12, 2); b.fillRect(sx - 4, sy - 5, 2, 4); b.fillRect(sx + 3, sy - 6, 2, 5); b.fillStyle = '#7ac84a'; b.fillRect(sx - 4, sy - 6, 2, 1); b.fillRect(sx + 3, sy - 7, 2, 1); }
@@ -57,19 +61,20 @@ function drawEnt(b, e) {
   if (e.roll) { b.save(); b.translate(sx, sy - 7); b.rotate((1 - e.roll.t / e.roll.max) * TAU * e.face); b.drawImage(S.c, -(S.w >> 1), -(S.h >> 1)); b.restore(); }
   else {
     let sc = null; if (e.wu) { const s = Math.sin(G.time * 34) * .07; sc = [1 + s, 1 - s]; } else if (e.swing) sc = [1.06, .96];
+    if (e.elite) { sc = sc || [1, 1]; sc = [sc[0] * 1.3, sc[1] * 1.3]; }
     drawSpr(b, name, sx, sy - z - bob, e.face < 0, e.flash > 0, sc);
     if (e.enraged && !(e.flash > 0)) { b.globalAlpha = .28 + .12 * Math.sin(G.time * 10); b.globalCompositeOperation = 'lighter'; drawSpr(b, name, sx, sy - z - bob, e.face < 0, true); b.globalCompositeOperation = 'source-over'; }
   }
   b.globalAlpha = 1;
-  const top = sy - z - S.h;
+  const top = sy - z - S.h * (e.elite ? 1.3 : 1);
   if (e.shield > 0) { b.strokeStyle = e.shieldEl && EL[e.shieldEl] ? EL[e.shieldEl].c : '#6fe0b0'; b.globalAlpha = .55 + .2 * Math.sin(G.time * 8); b.lineWidth = 1; b.beginPath(); b.ellipse(sx, sy - z - S.h / 2, S.w / 2 + 3, S.h / 2 + 3, 0, 0, TAU); b.stroke(); b.globalAlpha = .12; b.fillStyle = b.strokeStyle; b.fill(); b.globalAlpha = 1; }
   if (e.st.stun) { for (let i = 0; i < 3; i++) { const a = G.time * 7 + i * 2.1; b.fillStyle = '#ffe95a'; b.fillRect(sx + Math.cos(a) * 6 | 0, top - 3 + Math.sin(a) * 2 | 0, 2, 2); } }
-  if (e.ai && !e.boss && !e.ghost && (e.hp < e.maxHp || e.isNemesis)) {
-    const w = e.isNemesis ? 24 : 14; b.fillStyle = '#100a14'; b.fillRect(sx - w / 2 - 1, top - 5, w + 2, 4); b.fillStyle = e.isNemesis ? '#c82a4a' : '#e84a4a'; b.fillRect(sx - w / 2, top - 4, Math.ceil(w * clamp(e.hp / e.maxHp, 0, 1)), 2);
+  if (e.ai && !e.boss && !e.ghost && (e.hp < e.maxHp || e.isNemesis || e.elite)) {
+    const w = e.isNemesis || e.elite ? 24 : 14; b.fillStyle = '#100a14'; b.fillRect(sx - w / 2 - 1, top - 5, w + 2, 4); b.fillStyle = e.isNemesis ? '#c82a4a' : '#e84a4a'; b.fillRect(sx - w / 2, top - 4, Math.ceil(w * clamp(e.hp / e.maxHp, 0, 1)), 2);
     if (e.shield > 0) { b.fillStyle = '#6fe0b0'; b.fillRect(sx - w / 2, top - 4, Math.ceil(w * clamp(e.shield / (e.shieldMax || e.shield), 0, 1)), 1); }
   }
   if (e.isNemesis) txt(e.name, sx, top - 14, '#ff5a6a', 6, 'center');
-  else if (e.ai && !e.boss && !e.ghost && e.lvl && G.me && dist(e.x, e.y, G.me.x, G.me.y) < 7) txt(e.name + ' ' + e.lvl, sx, top - (e.hp < e.maxHp ? 13 : 9), e.lvl > G.me.lvl + 1 ? '#ff8a6a' : '#d8d0e0', 4.5, 'center', .85);
+  else if (e.ai && !e.boss && !e.ghost && e.lvl && G.me && dist(e.x, e.y, G.me.x, G.me.y) < 7) txt(e.name + ' ' + e.lvl, sx, top - (e.hp < e.maxHp ? 13 : 9), e.chief ? '#ff5a6a' : e.elite ? '#c88aff' : e.lvl > G.me.lvl + 1 ? '#ff8a6a' : '#d8d0e0', 4.5, 'center', .85);
   if (e.sayT > 0 && e.sayS) txt('«' + e.sayS + '»', sx, top - 23, '#ffb0b8', 6.5, 'center', clamp(e.sayT, 0, 1));
 }
 function drawProj(b, p) {
@@ -145,7 +150,7 @@ function render() {
       const ts = TALLSPR[g]; if (ts) b.drawImage(ts[v % 3], sx + (Math.sin(G.time * 2 + i * .7 + j * .9) > .55 ? 1 : 0), sy - 8);
     }
     if (W.fire[k] > 0) { D.push([i + j + 1.2, 3, i, j, W.o[k] === O.TREE ? 1 : 0]); if (sy < V.h + 20) glows.push(sx + 16, sy + 8); }
-    const o = W.o[k]; if (o && o !== O.BLOCK) { D.push([i + j + 1, 0, i, j, o, k]); if (o === O.LAMP) glows.push(sx + 16, sy - 6); }
+    const o = W.o[k]; if (o && o !== O.BLOCK) { D.push([i + j + 1, 0, i, j, o, k]); if (o === O.LAMP || o === O.ALTAR || o === O.STONE) glows.push(sx + 16, sy - 6); else if (o === O.TOTEM) glows.push(sx + 16, sy); }
   }
   // декали на земле: зоны и телеграфы
   for (const z of G.zones) { const K = ZK[z.kind]; if (K.draw) K.draw(b, z); if (K.top) D.push([z.x + z.y + (z.topD || 0), 5, z]); }
@@ -181,6 +186,24 @@ function render() {
     if (f.t === 'bolt') { b.globalAlpha = t; for (let pass = 0; pass < 2; pass++) { b.fillStyle = pass ? '#ffffff' : f.color; for (let i = 1; i < f.pts.length; i++) { const a = w2s(f.pts[i - 1][0], f.pts[i - 1][1]), c = w2s(f.pts[i][0], f.pts[i][1]); pxLine(b, a[0], a[1] - f.pts[i - 1][2], c[0], c[1] - f.pts[i][2], pass ? 1 : 2); } } b.globalAlpha = 1; }
     else if (f.t === 'slash') { b.fillStyle = f.color; b.globalAlpha = t; const n = 14, sw = 1 - t; for (let i = 0; i <= n; i++) { const u = i / n; if (u > sw + .5) continue; const a = f.a - f.arc / 2 + f.arc * u, s = w2s(f.x + Math.cos(a) * f.r, f.y + Math.sin(a) * f.r), q = w2s(f.x + Math.cos(a) * (f.r - .35), f.y + Math.sin(a) * (f.r - .35)); pxLine(b, q[0], q[1] - 8, s[0], s[1] - 8, 2); } b.globalAlpha = 1; }
     else if (f.t === 'ring') isoEllipse(b, f.x, f.y, lerp(f.r0, f.r1, 1 - t), f.color, t * .18, f.color);
+  }
+  // мрак: тьма с пятнами света вокруг героя, огня, фонарей
+  if (G.me) {
+    const L = G.light, lx = G.lctx; if (L.width !== V.w || L.height !== V.h) { L.width = V.w; L.height = V.h; }
+    const target = ZDARK[zoneAt(G.me.x, G.me.y)] || .5; G.dark = G.dark === undefined ? target : G.dark + (target - G.dark) * .03;
+    lx.globalCompositeOperation = 'source-over'; lx.clearRect(0, 0, V.w, V.h); lx.globalAlpha = G.dark; lx.fillStyle = '#05040c'; lx.fillRect(0, 0, V.w, V.h); lx.globalAlpha = 1;
+    lx.globalCompositeOperation = 'destination-out';
+    const lit = (x, y, w, a) => { lx.globalAlpha = a; lx.drawImage(LIGHT, x - w / 2, y - w * .3125, w, w * .625); };
+    for (const p of G.players) if (!p.dead) { const s = w2s(p.x, p.y); lit(s[0], s[1] - 6, 230 + Math.sin(G.time * 3) * 4, .95); }
+    for (let i = 0; i < glows.length; i += 2) lit(glows[i], glows[i + 1], 110, .8);
+    for (const p of G.projs) if (p.el !== 'bone' && p.el !== 'beast') { const s = w2s(p.x, p.y); lit(s[0], s[1] - 8, 70, .7); }
+    for (const k of G.pickups) { const s = w2s(k.x, k.y); lit(s[0], s[1] - 6, 40, .6); }
+    for (const z of G.zones) if (z.kind === 'blast' || z.kind === 'heal' || z.kind === 'thundercloud') { const s = w2s(z.x, z.y); lit(s[0], s[1], 90, .5); }
+    for (const f of G.fx) if (f.t === 'bolt' || f.t === 'ring') { const q = f.t === 'bolt' ? f.pts[f.pts.length - 1] : [f.x, f.y], s = w2s(q[0], q[1]); lit(s[0], s[1], 100, .7 * clamp(f.life / f.max, 0, 1)); }
+    for (const e of G.ents) if (!e.dead && (e.isNemesis || e.elite || e.boss || e.st.burn)) { const s = w2s(e.x, e.y); lit(s[0], s[1] - 8, 60, .45); }
+    lx.globalAlpha = 1; b.drawImage(L, 0, 0);
+    // виньетка
+    const vg = b.createRadialGradient(V.w / 2, V.h / 2, V.h * .45, V.w / 2, V.h / 2, V.w * .75); vg.addColorStop(0, 'rgba(0,0,0,0)'); vg.addColorStop(1, 'rgba(0,0,0,.55)'); b.fillStyle = vg; b.fillRect(0, 0, V.w, V.h);
   }
   for (const t of G.texts) { const s = w2s(t.x, t.y); if (t.num !== undefined) drawNum(b, t.num, s[0], s[1] - t.z, t.color); else txt(t.s, s[0], s[1] - t.z, t.color, t.size, 'center', clamp(t.life * 2, 0, 1)); }
   for (const f of G.hud) f(b);

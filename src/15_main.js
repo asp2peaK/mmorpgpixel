@@ -38,14 +38,15 @@ function frame(t) {
 function startGame(o) {
   G.ents = []; G.projs = []; G.zones = []; G.parts = []; G.texts = []; G.fx = []; G.pickups = []; G.players = []; G.nemesis = null; G.time = 0;
   genWorld(); G.J = newJournal();
-  const p = mkPlayer(o && o.name); G.me = p; G.players.push(p); G.ents.push(p);
+  const look = (o && o.save && o.save.look) || (o && o.look) || {}; applyLook(look);
+  const p = mkPlayer(o && o.name); p.look = look; G.me = p; G.dark = undefined; G.players.push(p); G.ents.push(p);
   if (o && o.save && typeof applySave === 'function') applySave(p, o.save);
   else if (typeof giveSoul === 'function' && typeof soulDef === 'function') giveSoul(p, 'wolf', 1, true);
   G.cam.x = p.x; G.cam.y = p.y; G.started = true; G.paused = false; Input.clear();
   Bus.emit('start', p);
 }
 function boot() {
-  G.canvas = document.getElementById('c'); G.ctx = G.canvas.getContext('2d'); G.buf = mkCanvas(V.w, V.h); G.bctx = G.buf.getContext('2d');
+  G.canvas = document.getElementById('c'); G.ctx = G.canvas.getContext('2d'); G.buf = mkCanvas(V.w, V.h); G.bctx = G.buf.getContext('2d'); G.light = mkCanvas(V.w, V.h); G.lctx = G.light.getContext('2d');
   resize(); window.addEventListener('resize', resize); window.addEventListener('orientationchange', () => setTimeout(resize, 200));
   Input.init(G.canvas);
   if (typeof Menus !== 'undefined') Menus.title(); else startGame({ name: 'Герой' });

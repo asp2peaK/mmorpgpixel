@@ -32,4 +32,4 @@ const Bus = { h: {}, on(e, f) { (this.h[e] = this.h[e] || []).push(f); }, emit(e
 function w2s(x, y) { return [Math.round(isoX(x, y) - G.cam.sx), Math.round(isoY(x, y) - G.cam.sy)]; }
 function s2w(px, py) { const a = (px + G.cam.sx) / 16, b = (py + G.cam.sy) / 8; return [(a + b) / 2, (b - a) / 2]; }
 function shake(n) { if (n > G.cam.shake) G.cam.shake = n; }
-function newJournal() { return { reactions: {}, recipes: {}, obtained: {}, kills: 0, deaths: 0, nemKills: 0, bossKills: 0, hints: {} }; }
+function newJournal() { return { reactions: {}, recipes: {}, obtained: {}, kills: 0, deaths: 0, nemKills: 0, bossKills: 0, camps: 0, hints: {} }; }

@@ -40,7 +40,19 @@ const HERO_LEGS = {
   w2: ['..ccc..ccc..', '...ppp.ppp..', '...pp...pp..', '...BB...BB..']
 };
 function regHumanoid(name, pal) { for (const k in HERO_LEGS) reg(name + '_' + k, ascii(HERO_TOP.concat(HERO_LEGS[k]), pal)); }
-regHumanoid('hero', { h: '#5a3a9a', H: '#3a2466', s: '#f0c8a0', e: '#8ff0ff', m: '#c03a4a', c: '#7a52c8', C: '#553a94', b: '#ffd870', p: '#3a3450', B: '#2a2030' });
+// Внешность героя: выбирается при создании персонажа
+const LOOKS = {
+  cloak: [['Пепел', '#4a4658', '#2e2c3a'], ['Кровь', '#8a2a34', '#5a1a22'], ['Сумрак', '#5a3a9a', '#3a2466'], ['Мох', '#3a6a44', '#244a2e'], ['Бездна', '#2a3a6a', '#18244a'], ['Кость', '#b8b0a0', '#8a8474']],
+  skin: [['Бледная', '#e8d0c0'], ['Светлая', '#f0c8a0'], ['Смуглая', '#b88860'], ['Тёмная', '#6a4630'], ['Мертвенная', '#a8b8b0']],
+  eyes: [['Лёд', '#8ff0ff'], ['Янтарь', '#ffc84a'], ['Яд', '#a6e23c'], ['Кровь', '#ff4a4a'], ['Пустота', '#e8e0ff']],
+  scarf: [['Багровый', '#8a2a3a'], ['Ржавый', '#a85a2a'], ['Серый', '#6a6a78'], ['Болотный', '#4a6a3a'], ['Чёрный', '#1e1a24']]
+};
+function shadeHex(h, k) { const v = parseInt(h.slice(1), 16), f = c => Math.max(0, Math.min(255, Math.round(c * k))); return '#' + ((1 << 24) | (f(v >> 16) << 16) | (f((v >> 8) & 255) << 8) | f(v & 255)).toString(16).slice(1); }
+function applyLook(l) {
+  l = l || {}; const c = LOOKS.cloak[l.cloak | 0] || LOOKS.cloak[0], s = LOOKS.skin[l.skin | 0] || LOOKS.skin[0], e = LOOKS.eyes[l.eyes | 0] || LOOKS.eyes[0], m = LOOKS.scarf[l.scarf | 0] || LOOKS.scarf[0];
+  regHumanoid('hero', { h: shadeHex(c[1], .8), H: shadeHex(c[2], .7), s: s[1], e: e[1], m: m[1], c: c[1], C: c[2], b: '#c8a850', p: '#2a2636', B: '#1a1620' });
+}
+applyLook({});
 regHumanoid('nem', { h: '#1a1024', H: '#0c0812', s: '#3a2a48', e: '#ff2a2a', m: '#5a0a1a', c: '#2a1a3a', C: '#180e24', b: '#8a1a2a', p: '#140c1c', B: '#0a0610' });
 regHumanoid('merch', { h: '#8a5a2a', H: '#5a3a1a', s: '#f0c8a0', e: '#2a2030', m: '#e0e0d0', c: '#3a8a5a', C: '#2a6a44', b: '#ffd870', p: '#5a4a3a', B: '#3a2a20' });
 
@@ -234,6 +246,9 @@ function genHouse(ra, rb) {
 }
 reg('house0', genHouse('#b8463a', '#8a2e28')); reg('house1', genHouse('#4a6ab8', '#34508a'));
 
+reg('tomb', ascii(['..ssss..', '.sSSSSs.', '.sSkkSs.', '.sSSSSs.', '.sSkSSs.', '.sSSSSs.', '.sSSSSs.', 'ssssssss'], { s: '#3a3a48', S: '#6a6a7a', k: '#2a2a36' }));
+reg('totem', ascii(['..r..r..', '.rRr.rRr', '..bbbb..', '.bWkkWb.', '.bWWWWb.', '.bkWWkb.', '..bWWb..', '..bbbb..', '...bb...', '...bb...', '..rbbr..', '...bb...', '...bb...', '..bbbb..'], { r: '#8a1a2a', R: '#ff2a4a', b: '#3a2a20', W: '#d8d0b8', k: '#1a1014' }));
+reg('stake', ascii(['..w..', '.wWw.', '.bBb.', '.bBb.', '.bBb.', '.bBb.', '.bBb.', '.bBb.', '.bBb.', 'bbBbb'], { w: '#b8b4a0', W: '#e8e4d0', b: '#2e2018', B: '#4a3626' }));
 // ---------- Деревья и камни (процедурно) ----------
 function pxLine(x, x0, y0, x1, y1, w) {
   x0 = Math.round(x0); y0 = Math.round(y0); x1 = Math.round(x1); y1 = Math.round(y1); w = w || 1;
@@ -273,13 +288,15 @@ function genRock(seed) {
 reg('rock0', genRock(3)); reg('rock1', genRock(8));
 
 // ---------- Тайлы ----------
-const T = { GRASS: 0, TALL: 1, DIRT: 2, SHALLOW: 3, DEEP: 4, PLAZA: 5, ASH: 6, DRY: 7, DRYTALL: 8, SCORCH: 9, LAIR: 10, DGRASS: 11, DTALL: 12 };
+const T = { GRASS: 0, TALL: 1, DIRT: 2, SHALLOW: 3, DEEP: 4, PLAZA: 5, ASH: 6, DRY: 7, DRYTALL: 8, SCORCH: 9, LAIR: 10, DGRASS: 11, DTALL: 12, MUD: 13, GRAVE: 14 };
 const TPAL = [
   ['#4a9a3c', '#3f8a36', '#5aac46'], null, ['#a8845a', '#96744c', '#ba966a'], ['#4a9ad8', '#3f8cc8', '#7ac0f0'], ['#2a5aa0', '#244e8e', '#3a70b8'],
   ['#8a8a96', '#74747f', '#9c9ca8'], ['#3a3436', '#2a2628', '#4c4240'], ['#b0a04a', '#9c8c3e', '#c4b45c'], null, ['#6a4a38', '#583c2e', '#7c5844'],
-  ['#4a3038', '#3c262e', '#5c3c44'], ['#357a3a', '#2a6832', '#408a40'], null];
+  ['#4a3038', '#3c262e', '#5c3c44'], ['#357a3a', '#2a6832', '#408a40'], null, ['#4a4a34', '#3a3c2a', '#5a5a3e'], ['#5a5e5a', '#4a4e4c', '#6a6e68']];
+// мрачная гамма: всё приглушено
+for (let i = 0; i < TPAL.length; i++) if (TPAL[i]) TPAL[i] = TPAL[i].map(c => { const v = parseInt(c.slice(1), 16), r = v >> 16, g = (v >> 8) & 255, b = v & 255, l = (r + g + b) / 3, f = x => Math.round((x * .72 + l * .28) * .8); return '#' + ((1 << 24) | (f(r) << 16) | (f(g) << 8) | Math.min(255, f(b) + 6)).toString(16).slice(1); });
 TPAL[T.TALL] = TPAL[T.GRASS]; TPAL[T.DRYTALL] = TPAL[T.DRY]; TPAL[T.DTALL] = TPAL[T.DGRASS];
-const TMAP = ['#4a9a3c', '#3a8a30', '#a8845a', '#4a9ad8', '#2a5aa0', '#8a8a96', '#3a3436', '#b0a04a', '#c8a83a', '#6a4a38', '#4a3038', '#357a3a', '#2a6a30'];
+const TMAP = ['#3a7a34', '#2e6a2c', '#8a6c4c', '#3a7ab0', '#224a84', '#74747e', '#3a3436', '#8e8240', '#a08a34', '#5a4032', '#4a3038', '#2c6232', '#24562a', '#4a4a34', '#5a5e5a'];
 function genTile(pal, seed, style) {
   const c = mkCanvas(32, 16), x = c.getContext('2d');
   for (let py = 0; py < 16; py++) {
@@ -324,6 +341,8 @@ function genGlow(w, h, rgb) {
   g.addColorStop(0, 'rgba(' + rgb + ',.13)'); g.addColorStop(1, 'rgba(' + rgb + ',0)');
   x.save(); x.translate(0, h / 2); x.scale(1, h / w); x.translate(0, -w / 2); x.fillStyle = g; x.fillRect(0, 0, w, w); x.restore(); return c;
 }
+function genLight() { const c = mkCanvas(128, 80), x = c.getContext('2d'), g = x.createRadialGradient(64, 64, 0, 64, 64, 64); g.addColorStop(0, 'rgba(255,255,255,1)'); g.addColorStop(.45, 'rgba(255,255,255,.75)'); g.addColorStop(1, 'rgba(255,255,255,0)'); x.save(); x.scale(1, 80 / 128); x.fillStyle = g; x.fillRect(0, 0, 128, 128); x.restore(); return c; }
+const LIGHT = genLight();
 const GLOW = { fire: genGlow(64, 40, '255,140,40'), storm: genGlow(48, 30, '255,240,120'), soul: genGlow(40, 26, '190,120,255') };
 
 // ---------- Пиксельные цифры (урон) ----------

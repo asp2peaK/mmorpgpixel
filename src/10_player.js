@@ -1,8 +1,8 @@
 // Игрок. Управляется через «намерение» (intent) — локальный ввод или, в будущем, сеть.
-const MAXLVL = 10, POTION_MAX = 9, POTION_COST = 15;
+const MAXLVL = 10, POTION_MAX = 6, POTION_COST = 25;
 const xpNext = l => Math.round(20 * Math.pow(l, 1.7));
 function mkPlayer(name) {
-  const p = mkEnt({ isPlayer: true, humanoid: true, name: name || 'Герой', team: 1, spr: 'hero', r: .3, spd: 4.3, lvl: 1, xp: 0, gold: 0, potions: 3, souls: {}, slots: [null, null, null, null], sl: [0, 1, 2, 3].map(() => ({ cd: 0, ch: 1 })), combo: 0, comboT: 0, swing: null, roll: null, rollCd: 0, potCd: 0, respawn: 0, blood: '#ff5a5a', x: TOWN.x, y: TOWN.y + 1.6 });
+  const p = mkEnt({ isPlayer: true, humanoid: true, name: name || 'Герой', team: 1, spr: 'hero', r: .3, spd: 4.3, lvl: 1, xp: 0, gold: 0, potions: 2, souls: {}, slots: [null, null, null, null], sl: [0, 1, 2, 3].map(() => ({ cd: 0, ch: 1 })), combo: 0, comboT: 0, swing: null, roll: null, rollCd: 0, potCd: 0, respawn: 0, blood: '#ff5a5a', x: TOWN.x, y: TOWN.y + 1.6 });
   recalc(p); p.hp = p.maxHp; return p;
 }
 function recalc(p) { p.maxHp = 100 + 22 * (p.lvl - 1); p.atk = 10 + 3 * (p.lvl - 1); }
@@ -44,7 +44,7 @@ function nearInteract(p) {
 function usePotion(p) {
   if (p.potCd > 0 || p.dead) return;
   if (p.potions <= 0 || p.hp >= p.maxHp) { Sfx.play('deny'); return; }
-  p.potions--; p.potCd = 1; heal(p, p.maxHp * .45); Sfx.play('potion'); burst(p.x, p.y, ['#6aff8a', '#ffffff'], 12, 3, { z: 10, grav: -20 });
+  p.potions--; p.potCd = 1; heal(p, p.maxHp * .35); Sfx.play('potion'); burst(p.x, p.y, ['#6aff8a', '#ffffff'], 12, 3, { z: 10, grav: -20 });
 }
 function castSlot(p, s, dx, dy, ax, ay) {
   const id = p.slots[s]; if (!id) return; const sl = p.sl[s];
