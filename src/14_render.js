@@ -93,7 +93,8 @@ function drawProj(b, p) {
 function drawPickup(b, k) {
   const s = w2s(k.x, k.y), z = 4 + Math.abs(Math.sin(k.age * 4)) * 4;
   b.globalAlpha = .3; b.fillStyle = '#000'; b.fillRect(s[0] - 2, s[1] - 1, 5, 2); b.globalAlpha = 1;
-  if (k.kind === 'gold') { b.fillStyle = '#8a5a10'; b.fillRect(s[0] - 2, s[1] - z - 3, 5, 5); b.fillStyle = '#ffd870'; b.fillRect(s[0] - 1, s[1] - z - 3, 3, 5); b.fillRect(s[0] - 2, s[1] - z - 2, 5, 3); b.fillStyle = '#fff8d0'; b.fillRect(s[0] - 1, s[1] - z - 2, 1, 2); }
+  if (k.kind === 'item') { const c = RANKS[k.v.rank].c; b.fillStyle = '#0b0810'; b.fillRect(s[0] - 4, s[1] - z - 8, 9, 9); b.fillStyle = c; b.fillRect(s[0] - 3, s[1] - z - 7, 7, 7); b.fillStyle = '#1a1424'; b.fillRect(s[0] - 2, s[1] - z - 6, 5, 5); b.fillStyle = c; b.fillRect(s[0] - 1, s[1] - z - 5, 3, 3); if (k.v.rank >= 2 && chance(.3)) part(k.x, k.y, z + 6, rand(-.4, .4), rand(-.4, .4), 26, .6, c, 1, -10, 1); }
+  else if (k.kind === 'gold') { b.fillStyle = '#8a5a10'; b.fillRect(s[0] - 2, s[1] - z - 3, 5, 5); b.fillStyle = '#ffd870'; b.fillRect(s[0] - 1, s[1] - z - 3, 3, 5); b.fillRect(s[0] - 2, s[1] - z - 2, 5, 3); b.fillStyle = '#fff8d0'; b.fillRect(s[0] - 1, s[1] - z - 2, 1, 2); }
   else { const c = (typeof soulDef === 'function' ? EL[soulDef(k.v).el].c : '#c9a0ff'); b.fillStyle = '#ffffff'; b.fillRect(s[0] - 2, s[1] - z - 7, 5, 7); b.fillRect(s[0] - 3, s[1] - z - 6, 7, 5); b.fillStyle = c; b.fillRect(s[0] - 2, s[1] - z - 6, 5, 5); b.fillStyle = '#ffffff'; b.fillRect(s[0] - 1, s[1] - z - 5, 2, 2); if (chance(.3)) part(k.x, k.y, z + 4, rand(-.4, .4), rand(-.4, .4), 22, .5, c, 1, -10, 1); }
 }
 const UIG = {

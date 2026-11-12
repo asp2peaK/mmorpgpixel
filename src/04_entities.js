@@ -210,7 +210,8 @@ function updatePickups(dt) {
     if (k.age < .35) { const nx = k.x + k.vx * dt, ny = k.y + k.vy * dt; if (!blocked(nx, ny)) { k.x = nx; k.y = ny; } continue; }
     if (k.age > 90) { G.pickups.splice(i, 1); continue; }
     for (const p of G.players) {
-      if (p.dead) continue; const d = dist(k.x, k.y, p.x, p.y);
+      if (p.dead || (k.owner && k.owner !== p.id)) continue; const d = dist(k.x, k.y, p.x, p.y);
+      if (k.kind === 'item' && p.bag.length >= BAG_MAX && p.equip[k.v.slot]) { if (d < 1 && !(k.fullT > G.time)) { k.fullT = G.time + 3; floatText(p.x, p.y, 'Сумка полна', '#ff7a7a', 6); } continue; }
       if (d < .6) { Bus.emit('pickup', p, k); G.pickups.splice(i, 1); break; }
       if (d < 3.2) { const n = norm(p.x - k.x, p.y - k.y), s = (3.4 - d) * 4; k.x += n[0] * s * dt; k.y += n[1] * s * dt; }
     }

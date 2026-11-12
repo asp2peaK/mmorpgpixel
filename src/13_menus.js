@@ -33,8 +33,8 @@ const Menus = (() => {
   function openAltar(atAltar, tab) { if (!G.started || G.me.dead) return; st = { kind: 'altar', tab: tab || 'souls', sel: null, fa: null, fb: null, atAltar, res: null }; drawAltar(); }
   function drawAltar() {
     const p = G.me, t = st.tab; let h = '<button class="btn x" data-a="close">✕</button><h2>' + (st.atAltar ? 'Алтарь душ' : 'Души и журнал') + ' <span class="gd" style="font-size:14px">● ' + p.gold + '</span></h2>';
-    h += '<div class="tabs">' + [['souls', 'Души'], ['fuse', 'Слияние'], ['journal', 'Журнал'], ['map', 'Карта']].map(x => '<button class="btn ' + (t === x[0] ? 'act' : '') + '" data-a="tab" data-v="' + x[0] + '">' + x[1] + '</button>').join('') + '</div>';
-    if (t === 'souls') h += tabSouls(p); else if (t === 'fuse') h += tabFuse(p); else if (t === 'map') h += '<canvas id="bigmap" width="570" height="285" style="width:100%;image-rendering:pixelated;background:#0b0810;border:2px solid #3a2a5a"></canvas><div class="det"><span style="color:#fff">■</span> ты · <span style="color:#c9a0ff">■</span> город · <span style="color:#c82a3a">■</span> лагерь врагов · <span style="color:#ff7a1a">■</span> логово · <span style="color:#ff2a4a">■</span> Тень. Разведано: ' + Math.round(W.seen.reduce((a, c) => a + c, 0) / W.seen.length * 100) + '%. Лагерей зачищено: ' + (G.J.camps || 0) + '</div>'; else h += tabJournal(p);
+    h += '<div class="tabs">' + [['souls', 'Души'], ['gear', 'Снаряжение'], ['fuse', 'Слияние'], ['journal', 'Журнал'], ['map', 'Карта']].map(x => '<button class="btn ' + (t === x[0] ? 'act' : '') + '" data-a="tab" data-v="' + x[0] + '">' + x[1] + '</button>').join('') + '</div>';
+    if (t === 'souls') h += tabSouls(p); else if (t === 'gear') h += tabGear(p, false); else if (t === 'fuse') h += tabFuse(p); else if (t === 'map') h += '<canvas id="bigmap" width="570" height="285" style="width:100%;image-rendering:pixelated;background:#0b0810;border:2px solid #3a2a5a"></canvas><div class="det"><span style="color:#fff">■</span> ты · <span style="color:#c9a0ff">■</span> город · <span style="color:#c82a3a">■</span> лагерь врагов · <span style="color:#ff7a1a">■</span> логово · <span style="color:#ff2a4a">■</span> Тень. Разведано: ' + Math.round(W.seen.reduce((a, c) => a + c, 0) / W.seen.length * 100) + '%. Лагерей зачищено: ' + (G.J.camps || 0) + '</div>'; else h += tabJournal(p);
     show(h);
     if (t === 'map') { if (W.mapDirty) renderMap(); const c = document.getElementById('bigmap'), x = c.getContext('2d'); x.imageSmoothingEnabled = false; x.setTransform(1.5, .75, -1.5, .75, MH * 1.5, 2); x.drawImage(W.map, 0, 0); const mk = (wx, wy, col, s) => { x.fillStyle = '#0b0810'; x.fillRect(wx - s - 1, wy - s - 1, s * 2 + 2, s * 2 + 2); x.fillStyle = col; x.fillRect(wx - s, wy - s, s * 2, s * 2); }; mk(TOWN.x, TOWN.y, '#c9a0ff', 2); if (W.seen[tIdx(LAIR.x, LAIR.y)]) mk(LAIR.x, LAIR.y, '#ff7a1a', 2); for (const k of W.camps) if (W.seen[tIdx(k.x, k.y)] && !k.cleared) mk(k.x, k.y, '#c82a3a', 1.5); if (G.nemesis && !G.nemesis.dead) mk(G.nemesis.x, G.nemesis.y, '#ff2a4a', 2); mk(p.x, p.y, '#ffffff', 1.5); }
   }
@@ -48,6 +48,22 @@ const Menus = (() => {
         '<span class="gd">★3: ' + esc(d.s3 || '—') + '</span> · ' + (sN >= 3 ? '<span class="ok">максимум</span>' : 'до ★' + (sN + 1) + ': ' + n + '/' + (sN === 1 ? 3 : 6) + ' копий') + ' · урон +' + (sN - 1) * 25 + '%' +
         '<br><span class="q">Нажми на слот сверху, чтобы поставить душу' + (p.slots.indexOf(st.sel) >= 0 ? ' (или убрать)' : '') + '.</span></div>';
     } else h += '<div class="det q">Выбери душу, затем нажми на слот. Дубликаты усиливают душу: ★2 — 3 копии, ★3 — 6 копий.</div>';
+    return h;
+  }
+  function icard(it, cls) { return '<div class="soul ' + (cls || '') + '" data-a="isel" data-v="' + it.uid + '" style="border-color:' + RANKS[it.rank].c + '"><img src="' + iconUrl(itemIcon(it)) + '"><div><b style="color:' + RANKS[it.rank].c + '">' + esc(it.name) + '</b><small>ур. ' + it.lvl + ' · ' + AFF[it.base[0]].n + ' +' + it.base[1] + AFF[it.base[0]].u + '</small></div></div>'; }
+  const findItem = (p, uid) => p.bag.find(i => i.uid === uid) || ISLOTS.map(s => p.equip[s]).find(i => i && i.uid === uid);
+  function idet(it, title) { return '<div class="det"><span class="q">' + title + '</span><br><b style="font-size:16px;color:' + RANKS[it.rank].c + '">' + esc(it.name) + '</b><br>' + RANKS[it.rank].n + ' · ' + ISLOT_N[it.slot] + ' · ур. ' + it.lvl + '<br>' + itemLines(it).join('<br>') + '</div>'; }
+  function tabGear(p, shop) {
+    const g = p.gs; let h = '<div class="slots">' + ISLOTS.map(s => { const it = p.equip[s]; return '<div class="slot" data-a="isel" data-v="' + (it ? it.uid : '') + '" style="' + (it ? 'border-color:' + RANKS[it.rank].c : '') + '"><i>' + ISLOT_N[s] + '</i><br>' + (it ? '<img src="' + iconUrl(itemIcon(it)) + '"><br><span style="color:' + RANKS[it.rank].c + '">' + esc(it.name) + '</span>' : '<span class="q">пусто</span>') + '</div>'; }).join('') + '</div>';
+    h += '<div class="det" style="margin:0 0 8px">Здоровье <b>' + p.maxHp + '</b> · Урон <b>' + Math.round(p.atk) + '</b> · Крит <b>' + Math.round(p.crit * 100) + '%</b> · Скорость <b>+' + Math.min(30, g.spd) + '%</b> · Перезарядка <b>−' + Math.min(40, g.cdr) + '%</b> · Урон душ <b>+' + g.soul + '%</b>' + Object.keys(g.el).map(e => ' · ' + EL[e].n + ' <b>+' + g.el[e] + '%</b>').join('') + '</div>';
+    h += '<h3>Сумка (' + p.bag.length + '/' + BAG_MAX + ')</h3><div class="grid" style="grid-template-columns:repeat(auto-fill,minmax(180px,1fr))">' + (p.bag.length ? p.bag.slice().sort((a, b) => itemScore(b) - itemScore(a)).map(it => icard(it, st.isel === it.uid ? 'sel' : '')).join('') : '<span class="q">Пусто. Предметы падают с врагов — чаще с проклятых и вожаков.</span>') + '</div>';
+    const it = st.isel && findItem(p, st.isel);
+    if (it) {
+      const worn = p.equip[it.slot] === it; h += idet(it, worn ? 'Надето' : 'В сумке'); if (!worn && p.equip[it.slot]) h += idet(p.equip[it.slot], 'Сейчас надето');
+      h += '<div class="row" style="margin-top:8px">' + (worn ? '<button class="btn" data-a="iun" data-v="' + it.slot + '"' + (p.bag.length >= BAG_MAX ? ' disabled' : '') + '>Снять</button>' : '<button class="btn gold" data-a="ieq">Надеть</button>') + (shop && !worn ? '<button class="btn" data-a="isell">Продать за ' + itemPrice(it) + '</button>' : '') + '</div>';
+    }
+    if (shop) { const junk = p.bag.filter(i => i.rank === 0); if (junk.length) h += '<button class="btn" style="width:100%;margin-top:8px" data-a="ijunk">Продать всё обычное (' + junk.length + ' шт. за ' + junk.reduce((a, i) => a + itemPrice(i), 0) + ')</button>'; }
+    else h += '<div class="det q">Продать вещи можно у торговца в городе. При смерти Тень снимает с тебя самую ценную надетую вещь — убей её, чтобы вернуть.</div>';
     return h;
   }
   function tabFuse(p) {
@@ -82,7 +98,7 @@ const Menus = (() => {
   function drawShop() {
     const p = G.me, mx = Math.min(POTION_MAX - p.potions, Math.floor(p.gold / POTION_COST));
     show('<button class="btn x" data-a="close">✕</button><h2>Торговец зельями</h2><div class="det">«Свежие зелья! Тени в лесу сами себя не убьют.»<br><br>Зелье лечения: восстанавливает 35% здоровья.<br>Цена: <span class="gd">' + POTION_COST + ' золота</span>. В сумке: <b>' + p.potions + ' / ' + POTION_MAX + '</b>. Золото: <span class="gd">● ' + p.gold + '</span></div>' +
-      '<div class="row" style="margin-top:8px"><button class="btn gold" data-a="buy" data-v="1"' + (mx >= 1 ? '' : ' disabled') + '>Купить 1</button><button class="btn gold" data-a="buy" data-v="' + mx + '"' + (mx >= 2 ? '' : ' disabled') + '>Купить ' + (mx >= 2 ? mx : 'все') + ' (' + Math.max(0, mx) * POTION_COST + ')</button><button class="btn" data-a="close">Уйти</button></div>');
+      '<div class="row" style="margin-top:8px"><button class="btn gold" data-a="buy" data-v="1"' + (mx >= 1 ? '' : ' disabled') + '>Купить 1</button><button class="btn gold" data-a="buy" data-v="' + mx + '"' + (mx >= 2 ? '' : ' disabled') + '>Купить ' + (mx >= 2 ? mx : 'все') + ' (' + Math.max(0, mx) * POTION_COST + ')</button><button class="btn" data-a="close">Уйти</button></div><h3>Твои вещи</h3>' + tabGear(p, true));
   }
 
   function act(a, v) {
@@ -98,6 +114,12 @@ const Menus = (() => {
     if (a === 'unf') { if (v === 'a') st.fa = null; else st.fb = null; return drawAltar(); }
     if (a === 'fuse') { const r = fuse(p, st.fa, st.fb); if (r) { st.res = r; st.fa = st.fb = null; } return drawAltar(); }
     if (a === 'again') { st.res = null; return drawAltar(); }
+    const redraw = () => st.kind === 'shop' ? drawShop() : drawAltar();
+    if (a === 'isel') { st.isel = st.isel === v || !v ? null : v; return redraw(); }
+    if (a === 'ieq') { const it = findItem(p, st.isel); if (it) equipItem(p, it); return redraw(); }
+    if (a === 'iun') { unequipItem(p, v); return redraw(); }
+    if (a === 'isell') { const it = findItem(p, st.isel), i = p.bag.indexOf(it); if (i >= 0) { p.bag.splice(i, 1); p.gold += itemPrice(it); st.isel = null; Sfx.play('coin'); } return redraw(); }
+    if (a === 'ijunk') { for (let i = p.bag.length - 1; i >= 0; i--) if (p.bag[i].rank === 0) { p.gold += itemPrice(p.bag[i]); p.bag.splice(i, 1); } Sfx.play('coin'); return redraw(); }
     if (a === 'buy') { const n = Math.min(+v, POTION_MAX - p.potions, Math.floor(p.gold / POTION_COST)); if (n > 0) { p.gold -= n * POTION_COST; p.potions += n; Sfx.play('coin'); } return drawShop(); }
   }
   ui.addEventListener('click', e => { const t = e.target.closest('[data-a]'); if (!t || t.disabled) return; Sfx.init(); Sfx.play('ui'); act(t.dataset.a, t.dataset.v); });

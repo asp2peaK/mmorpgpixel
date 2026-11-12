@@ -2,10 +2,14 @@
 const MAXLVL = 10, POTION_MAX = 6, POTION_COST = 25;
 const xpNext = l => Math.round(20 * Math.pow(l, 1.7));
 function mkPlayer(name) {
-  const p = mkEnt({ isPlayer: true, humanoid: true, name: name || 'Герой', team: 1, spr: 'hero', r: .3, spd: 4.3, lvl: 1, xp: 0, gold: 0, potions: 2, souls: {}, slots: [null, null, null, null], sl: [0, 1, 2, 3].map(() => ({ cd: 0, ch: 1 })), combo: 0, comboT: 0, swing: null, roll: null, rollCd: 0, potCd: 0, respawn: 0, blood: '#ff5a5a', x: TOWN.x, y: TOWN.y + 1.6 });
+  const p = mkEnt({ isPlayer: true, humanoid: true, name: name || 'Герой', team: 1, spr: 'hero', r: .3, spd: 4.3, lvl: 1, xp: 0, gold: 0, potions: 2, souls: {}, equip: { weapon: null, armor: null, amulet: null, ring: null }, bag: [], slots: [null, null, null, null], sl: [0, 1, 2, 3].map(() => ({ cd: 0, ch: 1 })), combo: 0, comboT: 0, swing: null, roll: null, rollCd: 0, potCd: 0, respawn: 0, blood: '#ff5a5a', x: TOWN.x, y: TOWN.y + 1.6 });
   recalc(p); p.hp = p.maxHp; return p;
 }
-function recalc(p) { p.maxHp = 100 + 22 * (p.lvl - 1); p.atk = 10 + 3 * (p.lvl - 1); }
+function recalc(p) {
+  const g = gearStats(ISLOTS.map(s => p.equip[s])); p.gs = g;
+  p.maxHp = Math.round((100 + 22 * (p.lvl - 1) + g.hp) * (1 - .08 * g.curse)); p.atk = 10 + 3 * (p.lvl - 1) + g.atk; p.spd = 4.3 * (1 + Math.min(30, g.spd) / 100);
+  p.cdm = 1 - Math.min(40, g.cdr) / 100; p.crit = .1 + g.crit / 100; p.potB = 1 + g.pot / 100; if (p.hp > p.maxHp) p.hp = p.maxHp;
+}
 const starsOf = n => n >= 6 ? 3 : n >= 3 ? 2 : n >= 1 ? 1 : 0;
 function maxCharges(def, stars) { return def && def.ab === 'dash' && stars >= 3 ? 2 : 1; }
 function resetSlot(p, s) { const id = p.slots[s]; p.sl[s] = { cd: 0, ch: id ? maxCharges(soulDef(id), starsOf(p.souls[id])) : 1 }; }
@@ -44,15 +48,15 @@ function nearInteract(p) {
 function usePotion(p) {
   if (p.potCd > 0 || p.dead) return;
   if (p.potions <= 0 || p.hp >= p.maxHp) { Sfx.play('deny'); return; }
-  p.potions--; p.potCd = 1; heal(p, p.maxHp * .35); Sfx.play('potion'); burst(p.x, p.y, ['#6aff8a', '#ffffff'], 12, 3, { z: 10, grav: -20 });
+  p.potions--; p.potCd = 1; heal(p, p.maxHp * .35 * p.potB); Sfx.play('potion'); burst(p.x, p.y, ['#6aff8a', '#ffffff'], 12, 3, { z: 10, grav: -20 });
 }
 function castSlot(p, s, dx, dy, ax, ay) {
   const id = p.slots[s]; if (!id) return; const sl = p.sl[s];
   if (sl.ch <= 0) { Sfx.play('deny'); return; }
   const def = soulDef(id), stars = starsOf(p.souls[id]), ab = AB[def.ab], mr = ab.maxRange || 6;
   let tx = ax, ty = ay; const d = dist(p.x, p.y, ax, ay); if (d > mr) { tx = p.x + (ax - p.x) / d * mr; ty = p.y + (ay - p.y) / d * mr; }
-  castSoul(p, def, stars, dx, dy, tx, ty);
-  sl.ch--; if (sl.cd <= 0) sl.cd = ab.cd; p.swing = null; p.usedSoul = true;
+  castSoul(p, def, stars, dx, dy, tx, ty, 1 + (p.gs.soul + (p.gs.el[def.el] || 0)) / 100);
+  sl.ch--; if (sl.cd <= 0) sl.cd = ab.cd * p.cdm; p.swing = null; p.usedSoul = true;
 }
 const SWING = [{ dur: .24, at: .08, r: 1.6, cos: .2, k: 1, kb: 4 }, { dur: .24, at: .08, r: 1.6, cos: .2, k: 1.1, kb: 4 }, { dur: .4, at: .15, r: 2, cos: -.15, k: 1.9, kb: 12 }];
 function swingHit(p, s) {
@@ -60,7 +64,7 @@ function swingHit(p, s) {
   for (const e of G.ents) {
     if (e.dead || !hostile(p, e)) continue; const d = dist(p.x, p.y, e.x, e.y); if (d > S.r + e.r) continue;
     if (d > .4 && ((e.x - p.x) * s.dx + (e.y - p.y) * s.dy) / d < S.cos) continue;
-    const crit = chance(.1); damage(e, p.atk * S.k * rand(.9, 1.1) * (crit ? 1.6 : 1), p, { kb: [s.dx * S.kb, s.dy * S.kb], crit }); any = true;
+    const crit = chance(p.crit); damage(e, p.atk * S.k * rand(.9, 1.1) * (crit ? 1.6 : 1), p, { kb: [s.dx * S.kb, s.dy * S.kb], crit }); any = true;
   }
   if (any) { if (s.n === 3) { G.hitstop = .06; shake(4); } else shake(1.5); }
 }
@@ -71,7 +75,7 @@ function updatePlayer(p, dt, I) {
   for (let s = 0; s < 4; s++) {
     const id = p.slots[s], sl = p.sl[s]; if (!id) continue;
     const def = soulDef(id), mx = maxCharges(def, starsOf(p.souls[id]));
-    if (sl.ch < mx) { sl.cd -= dt; if (sl.cd <= 0) { sl.ch++; sl.cd = sl.ch < mx ? AB[def.ab].cd : 0; } }
+    if (sl.ch < mx) { sl.cd -= dt; if (sl.cd <= 0) { sl.ch++; sl.cd = sl.ch < mx ? AB[def.ab].cd * p.cdm : 0; } }
   }
   let a = norm(I.ax - p.x, I.ay - p.y); if (!a[0] && !a[1]) a = [p.dirx, p.diry];
   if (!p.swing && !p.roll && !p.dash) { p.dirx = a[0]; p.diry = a[1]; const f = a[0] - a[1]; if (Math.abs(f) > .15) p.face = f > 0 ? 1 : -1; }
@@ -112,4 +116,5 @@ Bus.on('playerDeath', (p) => {
 Bus.on('pickup', (p, k) => {
   if (k.kind === 'gold') { p.gold += k.v; floatNum(p.x, p.y, k.v, '#ffd870'); Sfx.play('coin'); }
   else if (k.kind === 'soul') giveSoul(p, k.v, 1);
+  else if (k.kind === 'item') { const it = k.v; giveItem(p, it); floatText(p.x, p.y, it.name, RANKS[it.rank].c, 7); Sfx.play(it.rank >= 3 ? 'soul' : 'pickup'); if (it.rank >= 3) banner(RANKS[it.rank].n.toUpperCase() + ' ПРЕДМЕТ', it.name, RANKS[it.rank].c); setHint('gear', 'Предмет! Tab → «Снаряжение»: надень, сравни. Лишнее продай торговцу. Тень при смерти снимет с тебя лучшую вещь', 10); }
 });

@@ -53,5 +53,5 @@ function boot() {
   requestAnimationFrame(frame);
 }
 window.__G = G; // для отладки и автотестов
-G.dbg = { Menus, saveGame, loadSave, spawnNemesis, castSoul, soulDef, mkMob, giveSoul, addSt, damage, fuse, SOULS, CHIMERAS, T, O, tIdx, getW: () => W, ignite, addPuddle, kill, gainXp, zoneAt };
+G.dbg = { makeItem, giveItem, dropItem, recalc, Menus, saveGame, loadSave, spawnNemesis, castSoul, soulDef, mkMob, giveSoul, addSt, damage, fuse, SOULS, CHIMERAS, T, O, tIdx, getW: () => W, ignite, addPuddle, kill, gainXp, zoneAt };
 boot();

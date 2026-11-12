@@ -85,7 +85,7 @@ const AB = {
   geyser: { noun: 'гейзер', g: 0, cd: 9, k: 2.2, maxRange: 6, ai: { range: 6, windup: .5, tele: 'circle', r: 1.9 }, cast(c, x) { const p = clampPt(c, x, 6); addZone({ kind: 'blast', x: p[0], y: p[1], r: 1.9, life: .7, max: .7, team: c.team, src: c, dmg: c.atk * this.k * x.mult, el: 'water', stun: 1, after: 'steam' }); Sfx.play('steam'); } }
 };
 function castAb(c, a, aim) { AB[a.ab].cast(c, { dx: aim.dx, dy: aim.dy, tx: aim.tx, ty: aim.ty, stars: a.stars || 1, el: a.el, mult: a.mult || 1 }); }
-function castSoul(c, def, stars, dx, dy, tx, ty) { AB[def.ab].cast(c, { dx, dy, tx, ty, stars, el: def.el, mult: (def.mult || 1) * (1 + .25 * (stars - 1)) }); }
+function castSoul(c, def, stars, dx, dy, tx, ty, bonus) { AB[def.ab].cast(c, { dx, dy, tx, ty, stars, el: def.el, mult: (def.mult || 1) * (1 + .25 * (stars - 1)) * (bonus || 1) }); }
 
 // ---------- Виды зон ----------
 const zoneCol = z => EL[z.el] ? EL[z.el].c : '#ffffff';

@@ -513,6 +513,7 @@ const GLYPH = {
   bomb: ['.....#.', '....#..', '..###..', '.#####.', '#######', '#######', '.#####.', '..###..'],
   bubble: ['..###..', '.#...#.', '#..#..#', '#.###.#', '#..#..#', '.#...#.', '..###..'],
   paw: ['.#.#.#.', '.#.#.#.', '.......', '..###..', '.#####.', '.#####.', '..###..'],
+  i_weapon: ['......##', '.....###', '....###.', '#..###..', '.####...', '.###....', '#.##....', '...#....'], i_armor: ['##.#.##', '#######', '#######', '.#####.', '.#####.', '.#####.', '.#####.'], i_amulet: ['.#...#.', '#.....#', '#.....#', '.#...#.', '..###..', '.#####.', '..###..'], i_ring: ['..###..', '.#####.', '..###..', '.#...#.', '#.....#', '.#...#.', '..###..'],
   geyser: ['#..#..#', '.#.#.#.', '..###..', '..###..', '..###..', '.#####.', '#######']
 };
 const ICONC = {};
@@ -915,7 +916,8 @@ function updatePickups(dt) {
     if (k.age < .35) { const nx = k.x + k.vx * dt, ny = k.y + k.vy * dt; if (!blocked(nx, ny)) { k.x = nx; k.y = ny; } continue; }
     if (k.age > 90) { G.pickups.splice(i, 1); continue; }
     for (const p of G.players) {
-      if (p.dead) continue; const d = dist(k.x, k.y, p.x, p.y);
+      if (p.dead || (k.owner && k.owner !== p.id)) continue; const d = dist(k.x, k.y, p.x, p.y);
+      if (k.kind === 'item' && p.bag.length >= BAG_MAX && p.equip[k.v.slot]) { if (d < 1 && !(k.fullT > G.time)) { k.fullT = G.time + 3; floatText(p.x, p.y, 'Сумка полна', '#ff7a7a', 6); } continue; }
       if (d < .6) { Bus.emit('pickup', p, k); G.pickups.splice(i, 1); break; }
       if (d < 3.2) { const n = norm(p.x - k.x, p.y - k.y), s = (3.4 - d) * 4; k.x += n[0] * s * dt; k.y += n[1] * s * dt; }
     }
@@ -1010,7 +1012,7 @@ const AB = {
   geyser: { noun: 'гейзер', g: 0, cd: 9, k: 2.2, maxRange: 6, ai: { range: 6, windup: .5, tele: 'circle', r: 1.9 }, cast(c, x) { const p = clampPt(c, x, 6); addZone({ kind: 'blast', x: p[0], y: p[1], r: 1.9, life: .7, max: .7, team: c.team, src: c, dmg: c.atk * this.k * x.mult, el: 'water', stun: 1, after: 'steam' }); Sfx.play('steam'); } }
 };
 function castAb(c, a, aim) { AB[a.ab].cast(c, { dx: aim.dx, dy: aim.dy, tx: aim.tx, ty: aim.ty, stars: a.stars || 1, el: a.el, mult: a.mult || 1 }); }
-function castSoul(c, def, stars, dx, dy, tx, ty) { AB[def.ab].cast(c, { dx, dy, tx, ty, stars, el: def.el, mult: (def.mult || 1) * (1 + .25 * (stars - 1)) }); }
+function castSoul(c, def, stars, dx, dy, tx, ty, bonus) { AB[def.ab].cast(c, { dx, dy, tx, ty, stars, el: def.el, mult: (def.mult || 1) * (1 + .25 * (stars - 1)) * (bonus || 1) }); }
 
 // ---------- Виды зон ----------
 const zoneCol = z => EL[z.el] ? EL[z.el].c : '#ffffff';
@@ -1225,6 +1227,59 @@ function fuse(p, a, b) {
   return { id, isNew };
 }
 
+// ===== 07a_items.js =====
+// Снаряжение: 4 слота, 5 рангов, случайные свойства. Предметы — простые данные, лежат в данных игрока (задел под сеть).
+const ISLOTS = ['weapon', 'armor', 'amulet', 'ring'];
+const ISLOT_N = { weapon: 'Оружие', armor: 'Броня', amulet: 'Амулет', ring: 'Кольцо' };
+const RANKS = [{ n: 'Обычный', c: '#c8c8d0', aff: 0, m: 1 }, { n: 'Редкий', c: '#4aa8ff', aff: 1, m: 1.25 }, { n: 'Эпический', c: '#b04ad8', aff: 2, m: 1.55 }, { n: 'Легендарный', c: '#ffb02e', aff: 3, m: 1.9 }, { n: 'Проклятый', c: '#ff2a4a', aff: 4, m: 2.3 }];
+const BAG_MAX = 24;
+const AFF = {
+  atk: { n: 'Урон', f: l => 1 + .6 * l, u: '', sx: 'ярости' }, hp: { n: 'Здоровье', f: l => 8 + 4 * l, u: '', sx: 'стойкости' },
+  spd: { n: 'Скорость', f: () => 4, u: '%', sx: 'ветра' }, cdr: { n: 'Перезарядка душ −', f: () => 5, u: '%', sx: 'спешки' },
+  crit: { n: 'Шанс крита', f: () => 4, u: '%', sx: 'меткости' }, soul: { n: 'Урон душ', f: l => 5 + .5 * l, u: '%', sx: 'пожирателя' }, pot: { n: 'Сила зелий', f: () => 12, u: '%', sx: 'лекаря' }
+};
+for (const el of ['fire', 'water', 'storm', 'wind', 'poison', 'nature', 'bone', 'beast']) AFF['el_' + el] = { n: 'Урон стихии «' + EL[el].n + '»', f: l => 8 + .8 * l, u: '%', sx: { fire: 'пламени', water: 'глубин', storm: 'грозы', wind: 'бури', poison: 'гнили', nature: 'терний', bone: 'костей', beast: 'зверя' }[el], el };
+const INAMES = {
+  weapon: ['Ржавый клинок', 'Охотничий тесак', 'Клинок сумерек', 'Жнец душ'], armor: ['Рваный плащ', 'Кожаный доспех', 'Кольчуга стража', 'Панцирь бездны'],
+  amulet: ['Костяной оберег', 'Амулет шёпота', 'Око чащи', 'Сердце пепла'], ring: ['Медное кольцо', 'Кольцо охотника', 'Перстень теней', 'Печать пожирателя']
+};
+let itemUid = 1;
+function rollRank(w) { let r = rand(w.reduce((a, c) => a + c, 0)); for (let i = 0; i < w.length; i++) { r -= w[i]; if (r < 0) return i; } return 0; }
+function makeItem(lvl, rank, slot) {
+  slot = slot || pick(ISLOTS); const R = RANKS[rank], m = R.m; lvl = clamp(lvl | 0, 1, 12);
+  const base = slot === 'weapon' ? ['atk', Math.round((3 + 1.5 * lvl) * m)] : slot === 'armor' ? ['hp', Math.round((15 + 8 * lvl) * m)] : slot === 'amulet' ? ['soul', Math.round((6 + .8 * lvl) * m)] : ['crit', Math.round((3 + .3 * lvl) * m)];
+  const keys = Object.keys(AFF).filter(k => k !== base[0]), aff = [];
+  for (let i = 0; i < R.aff; i++) { const k = keys.splice(Math.floor(rand(keys.length)), 1)[0]; aff.push([k, Math.max(1, Math.round(AFF[k].f(lvl) * rand(.8, 1.2) * Math.pow(m, .6)))]); }
+  const nm = INAMES[slot][clamp(Math.floor((lvl - 1) / 3), 0, 3)] + (aff.length ? ' ' + AFF[aff[0][0]].sx : '');
+  return { uid: Date.now().toString(36) + (itemUid++), slot, rank, lvl, base, aff, name: nm, curse: rank === 4 };
+}
+function itemLines(it) {
+  const L = ['<b>' + AFF[it.base[0]].n + ' +' + it.base[1] + AFF[it.base[0]].u + '</b>'];
+  for (const a of it.aff) L.push(AFF[a[0]].n + (a[0] === 'cdr' ? '' : ' +') + a[1] + AFF[a[0]].u);
+  if (it.curse) L.push('<span class="bad">Проклятие: −8% здоровья</span>');
+  return L;
+}
+const itemPrice = it => Math.round((4 + 2 * it.lvl) * (it.rank + 1) * (it.rank + 1) * .5);
+const itemScore = it => it.rank * 100 + it.lvl;
+function itemIcon(it) { return makeIcon('it_' + it.slot + it.rank, 'i_' + it.slot, RANKS[it.rank].c); }
+// Суммарные бонусы надетого
+function gearStats(list) {
+  const s = { atk: 0, hp: 0, spd: 0, cdr: 0, crit: 0, soul: 0, pot: 0, el: {}, curse: 0 };
+  for (const it of list) { if (!it) continue; for (const a of [it.base].concat(it.aff)) { const d = AFF[a[0]]; if (d.el) s.el[d.el] = (s.el[d.el] || 0) + a[1]; else s[a[0]] += a[1]; } if (it.curse) s.curse++; }
+  return s;
+}
+function equipItem(p, it) { const i = p.bag.indexOf(it); if (i < 0) return; p.bag.splice(i, 1); const old = p.equip[it.slot]; p.equip[it.slot] = it; if (old) p.bag.push(old); recalc(p); Sfx.play('pickup'); }
+function unequipItem(p, slot) { const it = p.equip[slot]; if (!it || p.bag.length >= BAG_MAX) return; p.equip[slot] = null; p.bag.push(it); recalc(p); }
+function giveItem(p, it) { if (!p.equip[it.slot]) { p.equip[it.slot] = it; recalc(p); } else p.bag.push(it); }
+function dropItem(x, y, it, owner) { const a = rand(TAU); G.pickups.push({ kind: 'item', x, y, v: it, age: 0, vx: Math.cos(a) * 2.5, vy: Math.sin(a) * 2.5, owner: owner ? owner.id : 0 }); }
+// Дроп с мобов: ранг зависит от того, кого убил
+const DROP = { mob: [.09, [70, 24, 5, 1, 0]], elite: [.6, [30, 45, 20, 5, 0]], chief: [1, [0, 45, 38, 12, 5]], boss: [1, [0, 0, 50, 35, 15]] };
+Bus.on('mobDeath', (m) => {
+  if (m.owner || m.type === 'spirit' || m.isNemesis || m.summoned) return; const p = m.lastHitBy || G.me; if (!p || dist(p.x, p.y, m.x, m.y) > 22) return;
+  const D = DROP[m.boss ? 'boss' : m.chief ? 'chief' : m.elite ? 'elite' : 'mob'];
+  for (let i = 0, n = m.boss ? 2 : 1; i < n; i++) if (chance(D[0])) dropItem(m.x, m.y, makeItem(m.lvl, rollRank(D[1])), p);
+});
+
 // ===== 08_mobs.js =====
 // Мобы: каждый дерётся СВОЕЙ душой-способностью, с замахом-телеграфом. ИИ целится в ближайшего врага по team.
 const MOBS = {
@@ -1382,6 +1437,8 @@ const NEM_SAY = {
   low: ['Нет... это МОИ души!', 'Ты не можешь победить себя!'],
   die: ['Я... ещё... вернусь...']
 };
+// Тень снимает с игрока самую ценную надетую вещь
+function nemSteal(p, d) { let best = null; for (const s of ISLOTS) { const it = p.equip[s]; if (it && (!best || itemScore(it) > itemScore(best))) best = it; } if (!best) return ''; p.equip[best.slot] = null; d.items = d.items || []; d.items.push(best); recalc(p); p.hp = Math.min(p.hp, p.maxHp); return best.name; }
 const nemSouls = p => p.slots.filter(Boolean).map(id => ({ id, stars: starsOf(p.souls[id]) }));
 function nemSay(m, kind) { m.sayS = pick(NEM_SAY[kind]); m.sayT = 3.2; }
 function spawnNemesis(d) {
@@ -1389,7 +1446,8 @@ function spawnNemesis(d) {
   const m = mkMob('nemesis', x, y, d.lvl, { isNemesis: true, nd: d });
   m.name = 'Тень ' + d.name + (d.tier > 1 ? ' ×' + d.tier : '');
   m.maxHp = m.hp = Math.round((100 + 22 * (d.lvl - 1)) * 2.2 * (1 + .3 * (d.tier - 1)));
-  m.atk = (10 + 3 * (d.lvl - 1)) * .7 * (1 + .15 * (d.tier - 1));
+  d.items = d.items || []; const gs = gearStats(d.items);
+  m.maxHp = m.hp = m.maxHp + gs.hp * 3; m.atk = ((10 + 3 * (d.lvl - 1)) * .7 + gs.atk * .7) * (1 + .15 * (d.tier - 1)) * (1 + (gs.soul + gs.crit) / 200);
   m.abils = [{ ab: 'bite', el: 'phys', mult: 1.1, stars: 1, cd: 1, cdm: .8 }].concat(d.souls.map(s => { const f = soulDef(s.id); return { ab: f.ab, el: f.el, mult: (f.mult || 1) * (1 + .25 * (s.stars - 1)) * .85, stars: s.stars, cd: rand(1.5, 4), cdm: 1.5 }; }));
   m.onUpdate = (n) => { if (!n.saidLow && n.hp < n.maxHp * .3) { n.saidLow = true; nemSay(n, 'low'); } if (chance(.02)) part(n.x + rand(-.3, .3), n.y + rand(-.3, .3), rand(2, 16), 0, 0, 12, .7, pick(['#2a1a3a', '#8a1a2a']), 2, -4); };
   G.nemesis = m; return m;
@@ -1402,21 +1460,24 @@ Bus.on('playerDeath', (p, src) => {
     if (killer !== n) { G.deathMsg2 = n.name + ' всё ещё ждёт тебя'; return; }
     // Тень убила снова — растёт и забирает новый билд
     const d = n.nd, steal = Math.floor(p.gold * .2); p.gold -= steal;
-    d.tier++; d.lvl++; d.gold += steal; d.souls = nemSouls(p); d.x = n.x; d.y = n.y;
+    d.tier++; d.lvl++; d.gold += steal; d.souls = nemSouls(p); d.x = n.x; d.y = n.y; const took = nemSteal(p, d);
     n.dead = true; const m = spawnNemesis(d); nemSay(m, 'kill'); fxRing(m.x, m.y, .3, 3, '#ff2a4a', .6);
-    G.deathMsg2 = m.name + ' стала сильнее и забрала ещё ' + steal + ' золота';
+    G.deathMsg2 = m.name + ' стала сильнее и забрала ещё ' + steal + ' золота' + (took ? ' и «' + took + '»' : '');
   } else {
     if (inTown(p)) return;
     const steal = Math.floor(p.gold * .2); p.gold -= steal;
-    const m = spawnNemesis({ x: p.x, y: p.y, lvl: p.lvl + 1, tier: 1, gold: steal, souls: nemSouls(p), name: p.name });
+    const nd0 = { x: p.x, y: p.y, lvl: p.lvl + 1, tier: 1, gold: steal, souls: nemSouls(p), name: p.name, items: [] }, took = nemSteal(p, nd0);
+    const m = spawnNemesis(nd0);
     burst(m.x, m.y, ['#2a1a3a', '#8a1a2a', '#ff2a4a'], 30, 5, { z: 10 }); nemSay(m, 'aggro');
-    G.deathMsg2 = 'На месте гибели встала ' + m.name + ' и забрала ' + steal + ' золота';
+    G.deathMsg2 = 'На месте гибели встала ' + m.name + ' и забрала ' + steal + ' золота' + (took ? ' и «' + took + '»' : '');
     G.J.hints.nem = 0;
   }
 });
 Bus.on('respawn', (p) => { if (G.nemesis && !G.nemesis.dead && !G.J.hints.nem) setHint('nem', 'Твоя Тень отмечена красным на миникарте. Убей её — вернёшь золото и получишь копии её душ', 10); });
 Bus.on('nemesisDeath', (m, p) => {
   const d = m.nd, gold = d.gold + 25 * d.lvl; p.gold += gold; gainXp(p, 60 * d.lvl); G.J.nemKills++; G.nemesis = null;
+  for (const it of (d.items || [])) { giveItem(p, it); floatText(p.x, p.y, 'Возвращено: ' + it.name, RANKS[it.rank].c, 6); }
+  dropItem(m.x, m.y, makeItem(Math.min(10, d.lvl), rollRank([0, 30, 40, 20, 10 + 5 * d.tier])), p);
   const names = []; for (const s of d.souls) { giveSoul(p, s.id, 1, true); names.push(soulDef(s.id).abName); }
   floatText(m.x, m.y, '«' + NEM_SAY.die[0] + '»', '#ffb0b8', 7); floatNum(p.x, p.y, gold, '#ffd870');
   banner('ТЕНЬ ПОВЕРЖЕНА', '+' + gold + ' золота' + (names.length ? ', копии душ: ' + names.join(', ') : ''), '#ff5a6a'); Sfx.play('soul'); shake(8);
@@ -1428,10 +1489,14 @@ Bus.on('nemesisDeath', (m, p) => {
 const MAXLVL = 10, POTION_MAX = 6, POTION_COST = 25;
 const xpNext = l => Math.round(20 * Math.pow(l, 1.7));
 function mkPlayer(name) {
-  const p = mkEnt({ isPlayer: true, humanoid: true, name: name || 'Герой', team: 1, spr: 'hero', r: .3, spd: 4.3, lvl: 1, xp: 0, gold: 0, potions: 2, souls: {}, slots: [null, null, null, null], sl: [0, 1, 2, 3].map(() => ({ cd: 0, ch: 1 })), combo: 0, comboT: 0, swing: null, roll: null, rollCd: 0, potCd: 0, respawn: 0, blood: '#ff5a5a', x: TOWN.x, y: TOWN.y + 1.6 });
+  const p = mkEnt({ isPlayer: true, humanoid: true, name: name || 'Герой', team: 1, spr: 'hero', r: .3, spd: 4.3, lvl: 1, xp: 0, gold: 0, potions: 2, souls: {}, equip: { weapon: null, armor: null, amulet: null, ring: null }, bag: [], slots: [null, null, null, null], sl: [0, 1, 2, 3].map(() => ({ cd: 0, ch: 1 })), combo: 0, comboT: 0, swing: null, roll: null, rollCd: 0, potCd: 0, respawn: 0, blood: '#ff5a5a', x: TOWN.x, y: TOWN.y + 1.6 });
   recalc(p); p.hp = p.maxHp; return p;
 }
-function recalc(p) { p.maxHp = 100 + 22 * (p.lvl - 1); p.atk = 10 + 3 * (p.lvl - 1); }
+function recalc(p) {
+  const g = gearStats(ISLOTS.map(s => p.equip[s])); p.gs = g;
+  p.maxHp = Math.round((100 + 22 * (p.lvl - 1) + g.hp) * (1 - .08 * g.curse)); p.atk = 10 + 3 * (p.lvl - 1) + g.atk; p.spd = 4.3 * (1 + Math.min(30, g.spd) / 100);
+  p.cdm = 1 - Math.min(40, g.cdr) / 100; p.crit = .1 + g.crit / 100; p.potB = 1 + g.pot / 100; if (p.hp > p.maxHp) p.hp = p.maxHp;
+}
 const starsOf = n => n >= 6 ? 3 : n >= 3 ? 2 : n >= 1 ? 1 : 0;
 function maxCharges(def, stars) { return def && def.ab === 'dash' && stars >= 3 ? 2 : 1; }
 function resetSlot(p, s) { const id = p.slots[s]; p.sl[s] = { cd: 0, ch: id ? maxCharges(soulDef(id), starsOf(p.souls[id])) : 1 }; }
@@ -1470,15 +1535,15 @@ function nearInteract(p) {
 function usePotion(p) {
   if (p.potCd > 0 || p.dead) return;
   if (p.potions <= 0 || p.hp >= p.maxHp) { Sfx.play('deny'); return; }
-  p.potions--; p.potCd = 1; heal(p, p.maxHp * .35); Sfx.play('potion'); burst(p.x, p.y, ['#6aff8a', '#ffffff'], 12, 3, { z: 10, grav: -20 });
+  p.potions--; p.potCd = 1; heal(p, p.maxHp * .35 * p.potB); Sfx.play('potion'); burst(p.x, p.y, ['#6aff8a', '#ffffff'], 12, 3, { z: 10, grav: -20 });
 }
 function castSlot(p, s, dx, dy, ax, ay) {
   const id = p.slots[s]; if (!id) return; const sl = p.sl[s];
   if (sl.ch <= 0) { Sfx.play('deny'); return; }
   const def = soulDef(id), stars = starsOf(p.souls[id]), ab = AB[def.ab], mr = ab.maxRange || 6;
   let tx = ax, ty = ay; const d = dist(p.x, p.y, ax, ay); if (d > mr) { tx = p.x + (ax - p.x) / d * mr; ty = p.y + (ay - p.y) / d * mr; }
-  castSoul(p, def, stars, dx, dy, tx, ty);
-  sl.ch--; if (sl.cd <= 0) sl.cd = ab.cd; p.swing = null; p.usedSoul = true;
+  castSoul(p, def, stars, dx, dy, tx, ty, 1 + (p.gs.soul + (p.gs.el[def.el] || 0)) / 100);
+  sl.ch--; if (sl.cd <= 0) sl.cd = ab.cd * p.cdm; p.swing = null; p.usedSoul = true;
 }
 const SWING = [{ dur: .24, at: .08, r: 1.6, cos: .2, k: 1, kb: 4 }, { dur: .24, at: .08, r: 1.6, cos: .2, k: 1.1, kb: 4 }, { dur: .4, at: .15, r: 2, cos: -.15, k: 1.9, kb: 12 }];
 function swingHit(p, s) {
@@ -1486,7 +1551,7 @@ function swingHit(p, s) {
   for (const e of G.ents) {
     if (e.dead || !hostile(p, e)) continue; const d = dist(p.x, p.y, e.x, e.y); if (d > S.r + e.r) continue;
     if (d > .4 && ((e.x - p.x) * s.dx + (e.y - p.y) * s.dy) / d < S.cos) continue;
-    const crit = chance(.1); damage(e, p.atk * S.k * rand(.9, 1.1) * (crit ? 1.6 : 1), p, { kb: [s.dx * S.kb, s.dy * S.kb], crit }); any = true;
+    const crit = chance(p.crit); damage(e, p.atk * S.k * rand(.9, 1.1) * (crit ? 1.6 : 1), p, { kb: [s.dx * S.kb, s.dy * S.kb], crit }); any = true;
   }
   if (any) { if (s.n === 3) { G.hitstop = .06; shake(4); } else shake(1.5); }
 }
@@ -1497,7 +1562,7 @@ function updatePlayer(p, dt, I) {
   for (let s = 0; s < 4; s++) {
     const id = p.slots[s], sl = p.sl[s]; if (!id) continue;
     const def = soulDef(id), mx = maxCharges(def, starsOf(p.souls[id]));
-    if (sl.ch < mx) { sl.cd -= dt; if (sl.cd <= 0) { sl.ch++; sl.cd = sl.ch < mx ? AB[def.ab].cd : 0; } }
+    if (sl.ch < mx) { sl.cd -= dt; if (sl.cd <= 0) { sl.ch++; sl.cd = sl.ch < mx ? AB[def.ab].cd * p.cdm : 0; } }
   }
   let a = norm(I.ax - p.x, I.ay - p.y); if (!a[0] && !a[1]) a = [p.dirx, p.diry];
   if (!p.swing && !p.roll && !p.dash) { p.dirx = a[0]; p.diry = a[1]; const f = a[0] - a[1]; if (Math.abs(f) > .15) p.face = f > 0 ? 1 : -1; }
@@ -1538,6 +1603,7 @@ Bus.on('playerDeath', (p) => {
 Bus.on('pickup', (p, k) => {
   if (k.kind === 'gold') { p.gold += k.v; floatNum(p.x, p.y, k.v, '#ffd870'); Sfx.play('coin'); }
   else if (k.kind === 'soul') giveSoul(p, k.v, 1);
+  else if (k.kind === 'item') { const it = k.v; giveItem(p, it); floatText(p.x, p.y, it.name, RANKS[it.rank].c, 7); Sfx.play(it.rank >= 3 ? 'soul' : 'pickup'); if (it.rank >= 3) banner(RANKS[it.rank].n.toUpperCase() + ' ПРЕДМЕТ', it.name, RANKS[it.rank].c); setHint('gear', 'Предмет! Tab → «Снаряжение»: надень, сравни. Лишнее продай торговцу. Тень при смерти снимет с тебя лучшую вещь', 10); }
 });
 
 // ===== 11_input.js =====
@@ -1700,8 +1766,8 @@ const Menus = (() => {
   function openAltar(atAltar, tab) { if (!G.started || G.me.dead) return; st = { kind: 'altar', tab: tab || 'souls', sel: null, fa: null, fb: null, atAltar, res: null }; drawAltar(); }
   function drawAltar() {
     const p = G.me, t = st.tab; let h = '<button class="btn x" data-a="close">✕</button><h2>' + (st.atAltar ? 'Алтарь душ' : 'Души и журнал') + ' <span class="gd" style="font-size:14px">● ' + p.gold + '</span></h2>';
-    h += '<div class="tabs">' + [['souls', 'Души'], ['fuse', 'Слияние'], ['journal', 'Журнал'], ['map', 'Карта']].map(x => '<button class="btn ' + (t === x[0] ? 'act' : '') + '" data-a="tab" data-v="' + x[0] + '">' + x[1] + '</button>').join('') + '</div>';
-    if (t === 'souls') h += tabSouls(p); else if (t === 'fuse') h += tabFuse(p); else if (t === 'map') h += '<canvas id="bigmap" width="570" height="285" style="width:100%;image-rendering:pixelated;background:#0b0810;border:2px solid #3a2a5a"></canvas><div class="det"><span style="color:#fff">■</span> ты · <span style="color:#c9a0ff">■</span> город · <span style="color:#c82a3a">■</span> лагерь врагов · <span style="color:#ff7a1a">■</span> логово · <span style="color:#ff2a4a">■</span> Тень. Разведано: ' + Math.round(W.seen.reduce((a, c) => a + c, 0) / W.seen.length * 100) + '%. Лагерей зачищено: ' + (G.J.camps || 0) + '</div>'; else h += tabJournal(p);
+    h += '<div class="tabs">' + [['souls', 'Души'], ['gear', 'Снаряжение'], ['fuse', 'Слияние'], ['journal', 'Журнал'], ['map', 'Карта']].map(x => '<button class="btn ' + (t === x[0] ? 'act' : '') + '" data-a="tab" data-v="' + x[0] + '">' + x[1] + '</button>').join('') + '</div>';
+    if (t === 'souls') h += tabSouls(p); else if (t === 'gear') h += tabGear(p, false); else if (t === 'fuse') h += tabFuse(p); else if (t === 'map') h += '<canvas id="bigmap" width="570" height="285" style="width:100%;image-rendering:pixelated;background:#0b0810;border:2px solid #3a2a5a"></canvas><div class="det"><span style="color:#fff">■</span> ты · <span style="color:#c9a0ff">■</span> город · <span style="color:#c82a3a">■</span> лагерь врагов · <span style="color:#ff7a1a">■</span> логово · <span style="color:#ff2a4a">■</span> Тень. Разведано: ' + Math.round(W.seen.reduce((a, c) => a + c, 0) / W.seen.length * 100) + '%. Лагерей зачищено: ' + (G.J.camps || 0) + '</div>'; else h += tabJournal(p);
     show(h);
     if (t === 'map') { if (W.mapDirty) renderMap(); const c = document.getElementById('bigmap'), x = c.getContext('2d'); x.imageSmoothingEnabled = false; x.setTransform(1.5, .75, -1.5, .75, MH * 1.5, 2); x.drawImage(W.map, 0, 0); const mk = (wx, wy, col, s) => { x.fillStyle = '#0b0810'; x.fillRect(wx - s - 1, wy - s - 1, s * 2 + 2, s * 2 + 2); x.fillStyle = col; x.fillRect(wx - s, wy - s, s * 2, s * 2); }; mk(TOWN.x, TOWN.y, '#c9a0ff', 2); if (W.seen[tIdx(LAIR.x, LAIR.y)]) mk(LAIR.x, LAIR.y, '#ff7a1a', 2); for (const k of W.camps) if (W.seen[tIdx(k.x, k.y)] && !k.cleared) mk(k.x, k.y, '#c82a3a', 1.5); if (G.nemesis && !G.nemesis.dead) mk(G.nemesis.x, G.nemesis.y, '#ff2a4a', 2); mk(p.x, p.y, '#ffffff', 1.5); }
   }
@@ -1715,6 +1781,22 @@ const Menus = (() => {
         '<span class="gd">★3: ' + esc(d.s3 || '—') + '</span> · ' + (sN >= 3 ? '<span class="ok">максимум</span>' : 'до ★' + (sN + 1) + ': ' + n + '/' + (sN === 1 ? 3 : 6) + ' копий') + ' · урон +' + (sN - 1) * 25 + '%' +
         '<br><span class="q">Нажми на слот сверху, чтобы поставить душу' + (p.slots.indexOf(st.sel) >= 0 ? ' (или убрать)' : '') + '.</span></div>';
     } else h += '<div class="det q">Выбери душу, затем нажми на слот. Дубликаты усиливают душу: ★2 — 3 копии, ★3 — 6 копий.</div>';
+    return h;
+  }
+  function icard(it, cls) { return '<div class="soul ' + (cls || '') + '" data-a="isel" data-v="' + it.uid + '" style="border-color:' + RANKS[it.rank].c + '"><img src="' + iconUrl(itemIcon(it)) + '"><div><b style="color:' + RANKS[it.rank].c + '">' + esc(it.name) + '</b><small>ур. ' + it.lvl + ' · ' + AFF[it.base[0]].n + ' +' + it.base[1] + AFF[it.base[0]].u + '</small></div></div>'; }
+  const findItem = (p, uid) => p.bag.find(i => i.uid === uid) || ISLOTS.map(s => p.equip[s]).find(i => i && i.uid === uid);
+  function idet(it, title) { return '<div class="det"><span class="q">' + title + '</span><br><b style="font-size:16px;color:' + RANKS[it.rank].c + '">' + esc(it.name) + '</b><br>' + RANKS[it.rank].n + ' · ' + ISLOT_N[it.slot] + ' · ур. ' + it.lvl + '<br>' + itemLines(it).join('<br>') + '</div>'; }
+  function tabGear(p, shop) {
+    const g = p.gs; let h = '<div class="slots">' + ISLOTS.map(s => { const it = p.equip[s]; return '<div class="slot" data-a="isel" data-v="' + (it ? it.uid : '') + '" style="' + (it ? 'border-color:' + RANKS[it.rank].c : '') + '"><i>' + ISLOT_N[s] + '</i><br>' + (it ? '<img src="' + iconUrl(itemIcon(it)) + '"><br><span style="color:' + RANKS[it.rank].c + '">' + esc(it.name) + '</span>' : '<span class="q">пусто</span>') + '</div>'; }).join('') + '</div>';
+    h += '<div class="det" style="margin:0 0 8px">Здоровье <b>' + p.maxHp + '</b> · Урон <b>' + Math.round(p.atk) + '</b> · Крит <b>' + Math.round(p.crit * 100) + '%</b> · Скорость <b>+' + Math.min(30, g.spd) + '%</b> · Перезарядка <b>−' + Math.min(40, g.cdr) + '%</b> · Урон душ <b>+' + g.soul + '%</b>' + Object.keys(g.el).map(e => ' · ' + EL[e].n + ' <b>+' + g.el[e] + '%</b>').join('') + '</div>';
+    h += '<h3>Сумка (' + p.bag.length + '/' + BAG_MAX + ')</h3><div class="grid" style="grid-template-columns:repeat(auto-fill,minmax(180px,1fr))">' + (p.bag.length ? p.bag.slice().sort((a, b) => itemScore(b) - itemScore(a)).map(it => icard(it, st.isel === it.uid ? 'sel' : '')).join('') : '<span class="q">Пусто. Предметы падают с врагов — чаще с проклятых и вожаков.</span>') + '</div>';
+    const it = st.isel && findItem(p, st.isel);
+    if (it) {
+      const worn = p.equip[it.slot] === it; h += idet(it, worn ? 'Надето' : 'В сумке'); if (!worn && p.equip[it.slot]) h += idet(p.equip[it.slot], 'Сейчас надето');
+      h += '<div class="row" style="margin-top:8px">' + (worn ? '<button class="btn" data-a="iun" data-v="' + it.slot + '"' + (p.bag.length >= BAG_MAX ? ' disabled' : '') + '>Снять</button>' : '<button class="btn gold" data-a="ieq">Надеть</button>') + (shop && !worn ? '<button class="btn" data-a="isell">Продать за ' + itemPrice(it) + '</button>' : '') + '</div>';
+    }
+    if (shop) { const junk = p.bag.filter(i => i.rank === 0); if (junk.length) h += '<button class="btn" style="width:100%;margin-top:8px" data-a="ijunk">Продать всё обычное (' + junk.length + ' шт. за ' + junk.reduce((a, i) => a + itemPrice(i), 0) + ')</button>'; }
+    else h += '<div class="det q">Продать вещи можно у торговца в городе. При смерти Тень снимает с тебя самую ценную надетую вещь — убей её, чтобы вернуть.</div>';
     return h;
   }
   function tabFuse(p) {
@@ -1749,7 +1831,7 @@ const Menus = (() => {
   function drawShop() {
     const p = G.me, mx = Math.min(POTION_MAX - p.potions, Math.floor(p.gold / POTION_COST));
     show('<button class="btn x" data-a="close">✕</button><h2>Торговец зельями</h2><div class="det">«Свежие зелья! Тени в лесу сами себя не убьют.»<br><br>Зелье лечения: восстанавливает 35% здоровья.<br>Цена: <span class="gd">' + POTION_COST + ' золота</span>. В сумке: <b>' + p.potions + ' / ' + POTION_MAX + '</b>. Золото: <span class="gd">● ' + p.gold + '</span></div>' +
-      '<div class="row" style="margin-top:8px"><button class="btn gold" data-a="buy" data-v="1"' + (mx >= 1 ? '' : ' disabled') + '>Купить 1</button><button class="btn gold" data-a="buy" data-v="' + mx + '"' + (mx >= 2 ? '' : ' disabled') + '>Купить ' + (mx >= 2 ? mx : 'все') + ' (' + Math.max(0, mx) * POTION_COST + ')</button><button class="btn" data-a="close">Уйти</button></div>');
+      '<div class="row" style="margin-top:8px"><button class="btn gold" data-a="buy" data-v="1"' + (mx >= 1 ? '' : ' disabled') + '>Купить 1</button><button class="btn gold" data-a="buy" data-v="' + mx + '"' + (mx >= 2 ? '' : ' disabled') + '>Купить ' + (mx >= 2 ? mx : 'все') + ' (' + Math.max(0, mx) * POTION_COST + ')</button><button class="btn" data-a="close">Уйти</button></div><h3>Твои вещи</h3>' + tabGear(p, true));
   }
 
   function act(a, v) {
@@ -1765,6 +1847,12 @@ const Menus = (() => {
     if (a === 'unf') { if (v === 'a') st.fa = null; else st.fb = null; return drawAltar(); }
     if (a === 'fuse') { const r = fuse(p, st.fa, st.fb); if (r) { st.res = r; st.fa = st.fb = null; } return drawAltar(); }
     if (a === 'again') { st.res = null; return drawAltar(); }
+    const redraw = () => st.kind === 'shop' ? drawShop() : drawAltar();
+    if (a === 'isel') { st.isel = st.isel === v || !v ? null : v; return redraw(); }
+    if (a === 'ieq') { const it = findItem(p, st.isel); if (it) equipItem(p, it); return redraw(); }
+    if (a === 'iun') { unequipItem(p, v); return redraw(); }
+    if (a === 'isell') { const it = findItem(p, st.isel), i = p.bag.indexOf(it); if (i >= 0) { p.bag.splice(i, 1); p.gold += itemPrice(it); st.isel = null; Sfx.play('coin'); } return redraw(); }
+    if (a === 'ijunk') { for (let i = p.bag.length - 1; i >= 0; i--) if (p.bag[i].rank === 0) { p.gold += itemPrice(p.bag[i]); p.bag.splice(i, 1); } Sfx.play('coin'); return redraw(); }
     if (a === 'buy') { const n = Math.min(+v, POTION_MAX - p.potions, Math.floor(p.gold / POTION_COST)); if (n > 0) { p.gold -= n * POTION_COST; p.potions += n; Sfx.play('coin'); } return drawShop(); }
   }
   ui.addEventListener('click', e => { const t = e.target.closest('[data-a]'); if (!t || t.disabled) return; Sfx.init(); Sfx.play('ui'); act(t.dataset.a, t.dataset.v); });
@@ -1878,7 +1966,8 @@ function drawProj(b, p) {
 function drawPickup(b, k) {
   const s = w2s(k.x, k.y), z = 4 + Math.abs(Math.sin(k.age * 4)) * 4;
   b.globalAlpha = .3; b.fillStyle = '#000'; b.fillRect(s[0] - 2, s[1] - 1, 5, 2); b.globalAlpha = 1;
-  if (k.kind === 'gold') { b.fillStyle = '#8a5a10'; b.fillRect(s[0] - 2, s[1] - z - 3, 5, 5); b.fillStyle = '#ffd870'; b.fillRect(s[0] - 1, s[1] - z - 3, 3, 5); b.fillRect(s[0] - 2, s[1] - z - 2, 5, 3); b.fillStyle = '#fff8d0'; b.fillRect(s[0] - 1, s[1] - z - 2, 1, 2); }
+  if (k.kind === 'item') { const c = RANKS[k.v.rank].c; b.fillStyle = '#0b0810'; b.fillRect(s[0] - 4, s[1] - z - 8, 9, 9); b.fillStyle = c; b.fillRect(s[0] - 3, s[1] - z - 7, 7, 7); b.fillStyle = '#1a1424'; b.fillRect(s[0] - 2, s[1] - z - 6, 5, 5); b.fillStyle = c; b.fillRect(s[0] - 1, s[1] - z - 5, 3, 3); if (k.v.rank >= 2 && chance(.3)) part(k.x, k.y, z + 6, rand(-.4, .4), rand(-.4, .4), 26, .6, c, 1, -10, 1); }
+  else if (k.kind === 'gold') { b.fillStyle = '#8a5a10'; b.fillRect(s[0] - 2, s[1] - z - 3, 5, 5); b.fillStyle = '#ffd870'; b.fillRect(s[0] - 1, s[1] - z - 3, 3, 5); b.fillRect(s[0] - 2, s[1] - z - 2, 5, 3); b.fillStyle = '#fff8d0'; b.fillRect(s[0] - 1, s[1] - z - 2, 1, 2); }
   else { const c = (typeof soulDef === 'function' ? EL[soulDef(k.v).el].c : '#c9a0ff'); b.fillStyle = '#ffffff'; b.fillRect(s[0] - 2, s[1] - z - 7, 5, 7); b.fillRect(s[0] - 3, s[1] - z - 6, 7, 5); b.fillStyle = c; b.fillRect(s[0] - 2, s[1] - z - 6, 5, 5); b.fillStyle = '#ffffff'; b.fillRect(s[0] - 1, s[1] - z - 5, 2, 2); if (chance(.3)) part(k.x, k.y, z + 4, rand(-.4, .4), rand(-.4, .4), 22, .5, c, 1, -10, 1); }
 }
 const UIG = {
@@ -2003,7 +2092,7 @@ function render() {
 const SAVE_KEY = 'soul_eater_save_v1';
 function saveGame() {
   if (!G.started || !G.me) return; const p = G.me, n = G.nemesis && !G.nemesis.dead ? Object.assign({}, G.nemesis.nd, { x: G.nemesis.x, y: G.nemesis.y }) : null;
-  try { localStorage.setItem(SAVE_KEY, JSON.stringify({ v: 1, name: p.name, lvl: p.lvl, xp: p.xp, gold: p.gold, potions: p.potions, souls: p.souls, slots: p.slots, J: G.J, nem: n, look: p.look || {}, seen: packSeen() })); } catch (e) { }
+  try { localStorage.setItem(SAVE_KEY, JSON.stringify({ v: 1, name: p.name, lvl: p.lvl, xp: p.xp, gold: p.gold, potions: p.potions, souls: p.souls, slots: p.slots, J: G.J, equip: p.equip, bag: p.bag, nem: n, look: p.look || {}, seen: packSeen() })); } catch (e) { }
 }
 function packSeen() { let s = ''; const a = W.seen; for (let i = 0; i < a.length; i += 6) { let v = 0; for (let k = 0; k < 6; k++) if (a[i + k]) v |= 1 << k; s += String.fromCharCode(48 + v); } return s; }
 function unpackSeen(s) { if (typeof s !== 'string') return; const a = W.seen; for (let i = 0, j = 0; i < a.length && j < s.length; i += 6, j++) { const v = s.charCodeAt(j) - 48; for (let k = 0; k < 6 && i + k < a.length; k++) a[i + k] = (v >> k) & 1; } W.mapDirty = true; }
@@ -2016,6 +2105,9 @@ function applySave(p, s) {
   if (!Object.keys(p.souls).length) p.souls.wolf = 1;
   p.slots = [0, 1, 2, 3].map(i => { const id = s.slots && s.slots[i]; return id && p.souls[id] ? id : null; });
   G.J = Object.assign(newJournal(), s.J || {}); for (const k of ['reactions', 'recipes', 'obtained', 'hints']) if (!G.J[k] || typeof G.J[k] !== 'object') G.J[k] = {};
+  const okIt = it => it && ISLOTS.indexOf(it.slot) >= 0 && RANKS[it.rank] && AFF[it.base && it.base[0]] && Array.isArray(it.aff) && it.aff.every(a => AFF[a[0]]);
+  if (s.equip) for (const k of ISLOTS) p.equip[k] = okIt(s.equip[k]) && s.equip[k].slot === k ? s.equip[k] : null; if (Array.isArray(s.bag)) p.bag = s.bag.filter(okIt).slice(0, BAG_MAX + 8);
+  if (s.nem && Array.isArray(s.nem.items)) s.nem.items = s.nem.items.filter(okIt);
   recalc(p); p.hp = p.maxHp; for (let i = 0; i < 4; i++) resetSlot(p, i); unpackSeen(s.seen);
   if (s.nem && s.nem.x > 1 && s.nem.y > 1 && Array.isArray(s.nem.souls)) { s.nem.souls = s.nem.souls.filter(q => q && validSoul(q.id)); try { spawnNemesis(s.nem); } catch (e) { G.nemesis = null; } }
 }
@@ -2080,7 +2172,7 @@ function boot() {
   requestAnimationFrame(frame);
 }
 window.__G = G; // для отладки и автотестов
-G.dbg = { Menus, saveGame, loadSave, spawnNemesis, castSoul, soulDef, mkMob, giveSoul, addSt, damage, fuse, SOULS, CHIMERAS, T, O, tIdx, getW: () => W, ignite, addPuddle, kill, gainXp, zoneAt };
+G.dbg = { makeItem, giveItem, dropItem, recalc, Menus, saveGame, loadSave, spawnNemesis, castSoul, soulDef, mkMob, giveSoul, addSt, damage, fuse, SOULS, CHIMERAS, T, O, tIdx, getW: () => W, ignite, addPuddle, kill, gainXp, zoneAt };
 boot();
 
 })();
