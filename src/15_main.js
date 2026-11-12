@@ -10,7 +10,7 @@ function update(dt) {
   G.time += dt;
   const I = Input.intent(G.me);
   if (performance.now() < (G.noKeyUntil || 0)) { I.menu = I.interact = false; }
-  if (I.menu) Bus.emit('menuKey');
+  if (I.menu) Bus.emit('menuKey', I.mtab);
   for (const e of G.ents) {
     if (e.isPlayer) { if (!e.dead) updateEntCommon(e, dt); updatePlayer(e, dt, e === G.me ? I : (e.intent || NO_INTENT)); continue; }
     if (e.dead || nearestPlayerDist(e) > 30) continue;

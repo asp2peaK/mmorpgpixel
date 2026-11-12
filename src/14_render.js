@@ -4,7 +4,7 @@ function txt(s, x, y, c, size, align, alpha) { TXT.push([s, x, y, c || '#fff', s
 function flushTxt(ctx) {
   const k = V.scale; ctx.textBaseline = 'top'; ctx.lineJoin = 'round';
   for (const t of TXT) {
-    const px = Math.max(9, Math.round(t[4] * k)); ctx.font = 'bold ' + px + 'px "Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif';
+    const px = Math.max(9, Math.round(t[4] * k)); ctx.font = 'bold ' + px + 'px "Lucida Console","DejaVu Sans Mono","Liberation Mono","Courier New",monospace';
     ctx.textAlign = t[5]; ctx.globalAlpha = t[6]; ctx.lineWidth = Math.max(2, px * .22); ctx.strokeStyle = '#0b0810';
     ctx.strokeText(t[0], t[1] * k, t[2] * k); ctx.fillStyle = t[3]; ctx.fillText(t[0], t[1] * k, t[2] * k);
   }

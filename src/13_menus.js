@@ -4,7 +4,16 @@ const Menus = (() => {
   const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
   const stars = n => '★'.repeat(starsOf(n)) + '<span class="q">' + '★'.repeat(3 - starsOf(n)) + '</span>';
   const elChip = el => '<span class="el" style="background:' + EL[el].c + '">' + EL[el].n + '</span>';
-  function show(html) { ui.innerHTML = '<div class="panel">' + html + '</div>'; ui.classList.add('on'); G.paused = true; Input.clear(); }
+  let lastKey = '', lastTab = 'gear';
+  const res = p => '<span class="res"><span>Ур. ' + p.lvl + '</span><span class="gd">● ' + p.gold + '</span><span class="sh">◆ ' + (p.shards | 0) + '</span><span class="bad">✚ ' + p.potions + '</span></span>';
+  // Окно: шапка сверху, слева список, справа детали выбранного. Прокрутка не сбрасывается при клике.
+  function show(html) {
+    const key = st ? st.kind + ':' + (st.tab || '') : '', sc = {}; if (key === lastKey) for (const c of ['panel', 'cl', 'cr']) { const e = ui.querySelector('.' + c); if (e) sc[c] = e.scrollTop; }
+    let wide = false, ti = html.indexOf('<div class="tabs">'), ci = ti >= 0 ? html.indexOf('</div>', ti) + 6 : (html.indexOf('</h2>') >= 0 ? html.indexOf('</h2>') + 5 : -1);
+    if (ci >= 0) { const body = html.slice(ci), ri = body.indexOf('<!--R-->'); if (ri >= 0) { wide = true; html = html.slice(0, ci) + '<div class="cols"><div class="cl">' + body.slice(0, ri) + '</div><div class="cr">' + body.slice(ri + 8) + '</div></div>'; } else if (body.indexOf('bigmap') >= 0) wide = true; }
+    ui.innerHTML = '<div class="panel' + (wide ? ' wide' : '') + '">' + html + '</div>'; ui.classList.add('on'); G.paused = true; Input.clear();
+    for (const c in sc) { const e = ui.querySelector('.' + c); if (e) e.scrollTop = sc[c]; } lastKey = key;
+  }
   function close() { if (!st || st.kind === 'title') return; ui.classList.remove('on'); ui.innerHTML = ''; st = null; G.paused = false; Input.clear(); G.noKeyUntil = performance.now() + 250; Bus.emit('menuClosed'); }
   const isOpen = () => !!st;
   function card(id, n, cls, act) { const d = soulDef(id); return '<div class="soul ' + (cls || '') + '" data-a="' + act + '" data-v="' + id + '"><img src="' + iconUrl(d.icon) + '"><div><b>' + esc(d.abName) + '</b><small>' + stars(n) + ' ×' + n + '</small></div></div>'; }
@@ -12,14 +21,14 @@ const Menus = (() => {
   // ---------- Старт ----------
   function title() {
     st = { kind: 'title', confirm: false, look: (st && st.look) || { cloak: 0, skin: 0, eyes: 0, scarf: 0 } }; const s = loadSave(); applyLook(st.look);
-    const pv = scaled(SPR.hero_i.c, 6), sw = (k, nm) => '<div class="row" style="margin:5px 0"><span style="width:64px;font-size:13px;color:#9a8ab0">' + nm + '</span>' + LOOKS[k].map((o, i) => '<button class="btn" title="' + o[0] + '" data-a="look" data-v="' + k + ':' + i + '" style="width:30px;height:30px;padding:0;background:' + o[1] + ';border-color:' + (st.look[k] === i ? '#ffd870' : '#3a2a5a') + '"></button>').join('') + '</div>';
+    const pv = scaled(SPR.hero_i.c, 6), sw = (k, nm) => '<div class="row" style="margin:5px 0"><span style="width:64px;font-size:13px;color:#7d7462">' + nm + '</span>' + LOOKS[k].map((o, i) => '<button class="btn" title="' + o[0] + '" data-a="look" data-v="' + k + ':' + i + '" style="width:30px;height:30px;padding:0;background:' + o[1] + ';border-color:' + (st.look[k] === i ? '#ffd870' : '#3a3024') + '"></button>').join('') + '</div>';
     const keepName = document.getElementById('nm') ? document.getElementById('nm').value : null;
     show('<h1>ПОЖИРАТЕЛЬ ДУШ</h1><div class="sub">изометрическая экшн-RPG · души вместо классов</div>' +
       (s ? '<button class="btn gold" style="width:100%;margin-bottom:10px" data-a="cont">Продолжить: ' + esc(s.name) + ', ур. ' + (s.lvl | 0) + '</button>' : '') +
-      '<h3>Создание героя</h3><div class="row" style="align-items:flex-start;flex-wrap:nowrap"><img src="' + pv.toDataURL() + '" style="image-rendering:pixelated;width:84px;flex:none;background:#0b0810;border:2px solid #3a2a5a;padding:6px"><div style="flex:1">' + sw('cloak', 'Плащ') + sw('skin', 'Кожа') + sw('eyes', 'Глаза') + sw('scarf', 'Шарф') + '</div></div>' +
+      '<h3>Создание героя</h3><div class="row" style="align-items:flex-start;flex-wrap:nowrap"><img src="' + pv.toDataURL() + '" style="image-rendering:pixelated;width:84px;flex:none;background:#07060a;border:2px solid #3a3024;padding:6px"><div style="flex:1">' + sw('cloak', 'Плащ') + sw('skin', 'Кожа') + sw('eyes', 'Глаза') + sw('scarf', 'Шарф') + '</div></div>' +
       '<input class="name" id="nm" maxlength="12" placeholder="Имя героя" value="' + esc(keepName !== null ? keepName : (s ? '' : 'Герой')) + '" style="margin-top:8px">' +
       '<button class="btn" style="width:100%;margin-top:8px" data-a="new" id="newb">' + (s ? 'Новая игра (сотрёт сохранение)' : 'Начать игру') + '</button>' +
-      '<div class="help"><b>ПК:</b> <kbd>WASD</kbd> движение · <kbd>мышь</kbd> прицел · <kbd>ЛКМ</kbd> удар · <kbd>Пробел</kbd> перекат · <kbd>1</kbd>–<kbd>4</kbd> души · <kbd>Q</kbd> зелье · <kbd>E</kbd> взаимодействие · <kbd>Tab</kbd> души и журнал<br>' +
+      '<div class="help"><b>ПК:</b> <kbd>WASD</kbd> движение · <kbd>мышь</kbd> прицел · <kbd>ЛКМ</kbd> удар · <kbd>Пробел</kbd> перекат · <kbd>1</kbd>–<kbd>4</kbd> души · <kbd>Q</kbd> зелье · <kbd>E</kbd> взаимодействие · <kbd>I</kbd> снаряжение · <kbd>K</kbd> души · <kbd>J</kbd> журнал · <kbd>M</kbd> карта<br>' +
       '<b>Телефон:</b> джойстик слева, кнопки справа, автоприцел на ближайшего врага.<br><br>' +
       'Мобы роняют свои <b>души</b> — способность + стихия. Стихии вступают в <b>реакции</b>. На Алтаре души сливаются в <b>химер</b>. А если погибнешь — твой труп встанет <b>Тенью</b> с твоими же душами.</div>');
   }
@@ -30,18 +39,19 @@ const Menus = (() => {
   }
 
   // ---------- Алтарь ----------
-  function openAltar(atAltar, tab) { if (!G.started || G.me.dead) return; st = { kind: 'altar', tab: tab || 'souls', sel: null, fa: null, fb: null, atAltar, res: null }; drawAltar(); }
+  function openAltar(atAltar, tab) { if (!G.started || G.me.dead) return; st = { kind: 'altar', tab: tab || (atAltar ? 'souls' : lastTab), sel: null, fa: null, fb: null, atAltar, res: null }; drawAltar(); }
   function drawAltar() {
-    const p = G.me, t = st.tab; let h = '<button class="btn x" data-a="close">✕</button><h2>' + (st.atAltar ? 'Алтарь душ' : 'Души и журнал') + ' <span class="gd" style="font-size:14px">● ' + p.gold + '</span></h2>';
-    h += '<div class="tabs">' + [['souls', 'Души'], ['gear', 'Снаряжение'], ['fuse', 'Слияние'], ['journal', 'Журнал'], ['map', 'Карта']].map(x => '<button class="btn ' + (t === x[0] ? 'act' : '') + '" data-a="tab" data-v="' + x[0] + '">' + x[1] + '</button>').join('') + '</div>';
-    if (t === 'souls') h += tabSouls(p); else if (t === 'gear') h += tabGear(p, false); else if (t === 'fuse') h += tabFuse(p); else if (t === 'map') h += '<canvas id="bigmap" width="570" height="285" style="width:100%;image-rendering:pixelated;background:#0b0810;border:2px solid #3a2a5a"></canvas><div class="det"><span style="color:#fff">■</span> ты · <span style="color:#c9a0ff">■</span> город · <span style="color:#c82a3a">■</span> лагерь врагов · <span style="color:#ff7a1a">■</span> логово · <span style="color:#ff2a4a">■</span> Тень. Разведано: ' + Math.round(W.seen.reduce((a, c) => a + c, 0) / W.seen.length * 100) + '%. Лагерей зачищено: ' + (G.J.camps || 0) + '</div>'; else h += tabJournal(p);
+    const p = G.me, t = st.tab; let h = '<button class="btn x" data-a="close">✕</button><h2>' + (st.atAltar ? 'Алтарь душ' : 'Герой: ' + esc(p.name)) + res(p) + '</h2>'; if (!st.atAltar) lastTab = t;
+    h += '<div class="tabs">' + [['souls', 'Души', 'K'], ['gear', 'Снаряжение', 'I'], ['fuse', 'Слияние', ''], ['journal', 'Журнал', 'J'], ['map', 'Карта', 'M']].map(x => '<button class="btn ' + (t === x[0] ? 'act' : '') + '" data-a="tab" data-v="' + x[0] + '">' + x[1] + (x[2] && !V.touch ? '<small>[' + x[2] + ']</small>' : '') + '</button>').join('') + '</div>';
+    if (t === 'souls') h += tabSouls(p); else if (t === 'gear') h += tabGear(p, false); else if (t === 'fuse') h += tabFuse(p); else if (t === 'map') h += '<canvas id="bigmap" width="570" height="285" style="width:100%;image-rendering:pixelated;background:#07060a;border:2px solid #3a3024"></canvas><div class="det"><span style="color:#fff">■</span> ты · <span style="color:#c9a0ff">■</span> город · <span style="color:#c82a3a">■</span> лагерь врагов · <span style="color:#ff7a1a">■</span> логово · <span style="color:#ff2a4a">■</span> Тень. Разведано: ' + Math.round(W.seen.reduce((a, c) => a + c, 0) / W.seen.length * 100) + '%. Лагерей зачищено: ' + (G.J.camps || 0) + '</div>'; else h += tabJournal(p);
     show(h);
-    if (t === 'map') { if (W.mapDirty) renderMap(); const c = document.getElementById('bigmap'), x = c.getContext('2d'); x.imageSmoothingEnabled = false; x.setTransform(1.5, .75, -1.5, .75, MH * 1.5, 2); x.drawImage(W.map, 0, 0); const mk = (wx, wy, col, s) => { x.fillStyle = '#0b0810'; x.fillRect(wx - s - 1, wy - s - 1, s * 2 + 2, s * 2 + 2); x.fillStyle = col; x.fillRect(wx - s, wy - s, s * 2, s * 2); }; if (!W.dun) { mk(TOWN.x, TOWN.y, '#c9a0ff', 2); if (W.seen[tIdx(LAIR.x, LAIR.y)]) mk(LAIR.x, LAIR.y, '#ff7a1a', 2); } for (const k of W.crypts) if (W.seen[tIdx(k.x, k.y)]) mk(k.x, k.y, '#b04ad8', 2); for (const k of W.camps) if (W.seen[tIdx(k.x, k.y)] && !k.cleared) mk(k.x, k.y, '#c82a3a', 1.5); if (G.nemesis && !G.nemesis.dead && !W.dun) mk(G.nemesis.x, G.nemesis.y, '#ff2a4a', 2); mk(p.x, p.y, '#ffffff', 1.5); }
+    if (t === 'map') { if (W.mapDirty) renderMap(); const c = document.getElementById('bigmap'), x = c.getContext('2d'); x.imageSmoothingEnabled = false; x.setTransform(1.5, .75, -1.5, .75, MH * 1.5, 2); x.drawImage(W.map, 0, 0); const mk = (wx, wy, col, s) => { x.fillStyle = '#07060a'; x.fillRect(wx - s - 1, wy - s - 1, s * 2 + 2, s * 2 + 2); x.fillStyle = col; x.fillRect(wx - s, wy - s, s * 2, s * 2); }; if (!W.dun) { mk(TOWN.x, TOWN.y, '#c9a0ff', 2); if (W.seen[tIdx(LAIR.x, LAIR.y)]) mk(LAIR.x, LAIR.y, '#ff7a1a', 2); } for (const k of W.crypts) if (W.seen[tIdx(k.x, k.y)]) mk(k.x, k.y, '#b04ad8', 2); for (const k of W.camps) if (W.seen[tIdx(k.x, k.y)] && !k.cleared) mk(k.x, k.y, '#c82a3a', 1.5); if (G.nemesis && !G.nemesis.dead && !W.dun) mk(G.nemesis.x, G.nemesis.y, '#ff2a4a', 2); mk(p.x, p.y, '#ffffff', 1.5); }
   }
   function tabSouls(p) {
     let h = '<div class="slots">' + p.slots.map((id, i) => '<div class="slot" data-a="slot" data-v="' + i + '"><i>' + (i + 1) + '</i>' + (id ? '<img src="' + iconUrl(soulDef(id).icon) + '"><br>' + esc(soulDef(id).abName) : '<br><span class="q">пусто</span>') + '</div>').join('') + '</div>';
     const ids = Object.keys(p.souls); if (st.sel && !p.souls[st.sel]) st.sel = null;
     h += '<div class="grid">' + ids.map(id => card(id, p.souls[id], (st.sel === id ? 'sel' : ''), 'sel')).join('') + '</div>';
+    h += '<!--R-->';
     if (st.sel) {
       const d = soulDef(st.sel), n = p.souls[st.sel], sN = starsOf(n);
       h += '<div class="det"><b style="font-size:16px">' + esc(d.name) + '</b> ' + stars(n) + '<br>' + d.els.map(elChip).join(' ') + ' · перезарядка ' + AB[d.ab].cd + ' с<br>' + esc(d.desc) + '<br>' +
@@ -57,6 +67,7 @@ const Menus = (() => {
     const g = p.gs; let h = '<div class="slots">' + ISLOTS.map(s => { const it = p.equip[s]; return '<div class="slot" data-a="isel" data-v="' + (it ? it.uid : '') + '" style="' + (it ? 'border-color:' + RANKS[it.rank].c : '') + '"><i>' + ISLOT_N[s] + '</i><br>' + (it ? '<img src="' + iconUrl(itemIcon(it)) + '"><br><span style="color:' + RANKS[it.rank].c + '">' + esc(itemName(it)) + '</span>' : '<span class="q">пусто</span>') + '</div>'; }).join('') + '</div>';
     h += '<div class="det" style="margin:0 0 8px">Здоровье <b>' + p.maxHp + '</b> · Урон <b>' + Math.round(p.atk) + '</b> · Крит <b>' + Math.round(p.crit * 100) + '%</b> · Скорость <b>+' + Math.min(30, g.spd) + '%</b> · Перезарядка <b>−' + Math.min(40, g.cdr) + '%</b> · Урон душ <b>+' + g.soul + '%</b>' + Object.keys(g.el).map(e => ' · ' + EL[e].n + ' <b>+' + g.el[e] + '%</b>').join('') + '</div>';
     h += '<h3>Сумка (' + p.bag.length + '/' + BAG_MAX + ')</h3><div class="grid" style="grid-template-columns:repeat(auto-fill,minmax(180px,1fr))">' + (p.bag.length ? p.bag.slice().sort((a, b) => itemScore(b) - itemScore(a)).map(it => icard(it, st.isel === it.uid ? 'sel' : '')).join('') : '<span class="q">Пусто. Предметы падают с врагов — чаще с проклятых и вожаков.</span>') + '</div>';
+    h += '<!--R-->';
     const it = st.isel && findItem(p, st.isel);
     if (it) {
       const worn = p.equip[it.slot] === it; h += idet(it, worn ? 'Надето' : 'В сумке'); if (!worn && p.equip[it.slot]) h += idet(p.equip[it.slot], 'Сейчас надето');
@@ -70,9 +81,10 @@ const Menus = (() => {
   function openSmith() { if (!G.started || G.me.dead) return; st = { kind: 'smith', tab: 'forge', isel: null, esel: null, msg: '' }; drawSmith(); }
   function drawSmith() {
     const p = G.me, all = ISLOTS.map(s => p.equip[s]).filter(Boolean).concat(p.bag.slice().sort((a, b) => itemScore(b) - itemScore(a)));
-    let h = '<button class="btn x" data-a="close">✕</button><h2>Кузнец <span class="gd" style="font-size:14px">● ' + p.gold + '</span> <span style="font-size:14px;color:#8ad0ff">◆ ' + (p.shards | 0) + '</span></h2>';
+    let h = '<button class="btn x" data-a="close">✕</button><h2>Кузнец' + res(p) + '</h2>';
     h += '<div class="tabs">' + [['forge', 'Ковка'], ['ench', 'Зачарование']].map(x => '<button class="btn ' + (st.tab === x[0] ? 'act' : '') + '" data-a="stab" data-v="' + x[0] + '">' + x[1] + '</button>').join('') + '</div>';
     h += '<div class="grid" style="grid-template-columns:repeat(auto-fill,minmax(180px,1fr));max-height:190px;overflow:auto">' + (all.length ? all.map(it => icard(it, st.isel === it.uid ? 'sel' : '')).join('') : '<span class="q">«Принеси железо — поговорим.» У тебя нет вещей.</span>') + '</div>';
+    h += '<!--R-->';
     const it = st.isel && findItem(p, st.isel);
     if (st.msg) h += '<div class="det" style="font-size:16px">' + st.msg + '</div>';
     if (!it) h += '<div class="det q">' + (st.tab === 'forge' ? 'Ковка усиливает основное свойство вещи: +10% за уровень, до +10. Нужны золото и осколки (◆) — их дают проклятые, вожаки, боссы и разбор вещей. С +4 ковка может провалиться, а с +7 провал ещё и ослабляет вещь.' : 'Зачарование вплавляет душу в вещь и даёт ей стихию. Тратит одну копию души и ' + ENCH_COST + ' золота. Новое зачарование заменяет старое.') + '</div>';
@@ -98,7 +110,7 @@ const Menus = (() => {
     if (st.fa && st.fb) { const known = G.J.recipes[recipeKey(st.fa, st.fb)] && CHIMERAS[G.J.recipes[recipeKey(st.fa, st.fb)]] ? G.J.recipes[recipeKey(st.fa, st.fb)] : G.J.recipes[st.fa + '>' + st.fb]; if (known) { const d = soulDef(known); res = '<img src="' + iconUrl(d.icon) + '"><br>' + esc(d.name); } for (const id of [st.fa, st.fb]) if (p.souls[id] === 1) warn += '<div class="bad">Последняя копия: «' + esc(SOULS[id].name) + '» исчезнет.</div>'; }
     let h = '<div class="slots" style="align-items:center">' + box(st.fa, 'a') + '<b style="font-size:22px">+</b>' + box(st.fb, 'b') + '<b style="font-size:22px">=</b><div class="slot" style="min-height:66px;border-color:#ffd870">' + res + '</div></div>';
     h += '<div class="grid">' + (base.length ? base.map(id => card(id, p.souls[id], (st.fa === id || st.fb === id ? 'sel' : ''), 'pick')).join('') : '<span class="q">Нет базовых душ</span>') + '</div>';
-    h += '<div class="det">Слияние тратит по одной копии каждой души и <span class="gd">' + FUSE_COST + ' золота</span>. Рецепты скрыты — открытые попадают в Журнал. Порядок душ бывает важен.' + warn + '</div>';
+    h += '<!--R--><div class="det">Слияние тратит по одной копии каждой души и <span class="gd">' + FUSE_COST + ' золота</span>. Рецепты скрыты — открытые попадают в Журнал. Порядок душ бывает важен.' + warn + '</div>';
     h += '<button class="btn gold" style="width:100%;margin-top:8px" data-a="fuse"' + (canFuse(p, st.fa, st.fb) ? '' : ' disabled') + '>Слить души' + (p.gold < FUSE_COST ? ' (не хватает золота)' : '') + '</button>';
     return h;
   }
@@ -120,7 +132,7 @@ const Menus = (() => {
   function openShop() { if (!G.started || G.me.dead) return; st = { kind: 'shop' }; drawShop(); }
   function drawShop() {
     const p = G.me, mx = Math.min(POTION_MAX - p.potions, Math.floor(p.gold / POTION_COST));
-    show('<button class="btn x" data-a="close">✕</button><h2>Торговец зельями</h2><div class="det">«Свежие зелья! Тени в лесу сами себя не убьют.»<br><br>Зелье лечения: восстанавливает 35% здоровья.<br>Цена: <span class="gd">' + POTION_COST + ' золота</span>. В сумке: <b>' + p.potions + ' / ' + POTION_MAX + '</b>. Золото: <span class="gd">● ' + p.gold + '</span></div>' +
+    show('<button class="btn x" data-a="close">✕</button><h2>Торговец' + res(p) + '</h2><div class="det">«Свежие зелья! Тени в лесу сами себя не убьют.»<br><br>Зелье лечения: восстанавливает 35% здоровья.<br>Цена: <span class="gd">' + POTION_COST + ' золота</span>. В сумке: <b>' + p.potions + ' / ' + POTION_MAX + '</b>. Золото: <span class="gd">● ' + p.gold + '</span></div>' +
       '<div class="row" style="margin-top:8px"><button class="btn gold" data-a="buy" data-v="1"' + (mx >= 1 ? '' : ' disabled') + '>Купить 1</button><button class="btn gold" data-a="buy" data-v="' + mx + '"' + (mx >= 2 ? '' : ' disabled') + '>Купить ' + (mx >= 2 ? mx : 'все') + ' (' + Math.max(0, mx) * POTION_COST + ')</button><button class="btn" data-a="close">Уйти</button></div><h3>Твои вещи</h3>' + tabGear(p, true));
   }
 
@@ -160,9 +172,11 @@ const Menus = (() => {
   window.addEventListener('keydown', e => {
     if (!st) return;
     if (st.kind === 'title') { if (e.code === 'Enter') { const s = loadSave(); if (s && !(document.getElementById('nm').value.trim())) begin(s); else if (!s) begin(null); } return; }
-    if (e.code === 'Escape' || e.code === 'Tab' || e.code === 'KeyE' || e.code === 'KeyI') { e.preventDefault(); close(); }
+    const hk = { KeyI: 'gear', KeyK: 'souls', KeyJ: 'journal', KeyM: 'map' }[e.code];
+    if (hk && st.kind === 'altar') { e.preventDefault(); if (st.tab === hk) close(); else { st.tab = hk; st.res = null; drawAltar(); } return; }
+    if (e.code === 'Escape' || e.code === 'Tab' || e.code === 'KeyE') { e.preventDefault(); close(); }
   });
-  Bus.on('menuKey', () => openAltar(false));
+  Bus.on('menuKey', (t) => openAltar(false, t || lastTab));
   Bus.on('interact', (p, n) => {
     if (p !== G.me) return;
     if (n.o === O.ALTAR) openAltar(true); else if (n.o === O.MERCH) openShop(); else if (n.o === O.SMITH) openSmith();

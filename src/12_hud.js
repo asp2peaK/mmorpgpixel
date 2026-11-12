@@ -21,12 +21,12 @@ function drawHud(b) {
   // слоты душ (на ПК — снизу по центру; на телефоне это кнопки справа)
   if (!V.touch) {
     const x0 = Math.round(V.w / 2 - 44);
-    for (let s = 0; s < 4; s++) { const x = x0 + s * 23, y = V.h - 25; b.globalAlpha = .7; b.fillStyle = '#0b0810'; b.fillRect(x - 2, y - 2, 20, 23); b.globalAlpha = 1; b.fillStyle = '#3a2a5a'; b.fillRect(x - 1, y - 1, 18, 18); b.fillStyle = '#120c1c'; b.fillRect(x, y, 16, 16); drawSlotIcon(b, p, s, x, y); txt(String(s + 1), x - 1, y - 8, '#c9a0ff', 5); }
+    for (let s = 0; s < 4; s++) { const x = x0 + s * 23, y = V.h - 25; b.globalAlpha = .7; b.fillStyle = '#0b0810'; b.fillRect(x - 2, y - 2, 20, 23); b.globalAlpha = 1; b.fillStyle = '#6b5638'; b.fillRect(x - 1, y - 1, 18, 18); b.fillStyle = '#120c1c'; b.fillRect(x, y, 16, 16); drawSlotIcon(b, p, s, x, y); txt(String(s + 1), x - 1, y - 8, '#c8a850', 5); }
   }
   // миникарта
   const ms = 58, mx = V.w - ms - 4, my = 4, cx = mx + ms / 2, cy = my + ms / 2;
   if (W.mapDirty) renderMap();
-  b.fillStyle = '#0b0810'; b.fillRect(mx - 2, my - 2, ms + 4, ms + 4); b.fillStyle = '#6a4a9a'; b.fillRect(mx - 1, my - 1, ms + 2, ms + 2); b.fillStyle = '#120c1c'; b.fillRect(mx, my, ms, ms);
+  b.fillStyle = '#0b0810'; b.fillRect(mx - 2, my - 2, ms + 4, ms + 4); b.fillStyle = '#6b5638'; b.fillRect(mx - 1, my - 1, ms + 2, ms + 2); b.fillStyle = '#120c1c'; b.fillRect(mx, my, ms, ms);
   b.save(); b.beginPath(); b.rect(mx, my, ms, ms); b.clip(); b.imageSmoothingEnabled = false; b.transform(1, .5, -1, .5, cx, cy); b.drawImage(W.map, -p.x, -p.y); b.restore();
   const mk = (x, y, c, s, blink) => { const q = mmPos(cx, cy, p, x, y, ms / 2 - 3); if (blink && Math.floor(G.time * 4) % 2) return; b.fillStyle = '#0b0810'; b.fillRect(q[0] - s, q[1] - s, s * 2 + 1, s * 2 + 1); b.fillStyle = c; b.fillRect(q[0] - s + 1, q[1] - s + 1, s * 2 - 1, s * 2 - 1); };
   for (const e of G.ents) if (e.ai && !e.dead && !e.boss && !e.isNemesis && e.team !== p.team && dist(e.x, e.y, p.x, p.y) < 22) { const q = mmPos(cx, cy, p, e.x, e.y, ms / 2 - 2); if (!q[2]) { b.fillStyle = '#ff5a5a'; b.fillRect(q[0], q[1], 1, 1); } }
@@ -56,7 +56,7 @@ function drawHud(b) {
     else if (!H.altar && Object.keys(p.souls).length >= 2) setHint('altar', 'Две души! На Алтаре в городе их можно слить в химеру. Рецепты скрыты — экспериментируй', 10);
     else if (!H.react && Object.keys(p.souls).length >= 3) setHint('react', 'Стихии вступают в реакции: огонь жжёт траву, молния бьёт по мокрым, огонь взрывает яд...', 10);
   }
-  if (hint) { hint.t -= dtf; const a = clamp(hint.t, 0, 1), y = V.h - (V.touch ? 16 : 44), w = Math.min(V.w - 8, hint.s.length * 3.3 + 12); b.globalAlpha = .7 * a; b.fillStyle = '#0b0810'; b.fillRect(Math.round(V.w / 2 - w / 2), y - 2, Math.round(w), 11); b.globalAlpha = 1; txt(hint.s, V.w / 2, y, '#ffe9a0', 5.5, 'center', a); if (hint.t <= 0) hint = null; }
+  if (hint) { hint.t -= dtf; const a = clamp(hint.t, 0, 1), y = V.h - (V.touch ? 16 : 44), w = Math.min(V.w - 8, hint.s.length * 3.45 + 12); b.globalAlpha = .7 * a; b.fillStyle = '#0b0810'; b.fillRect(Math.round(V.w / 2 - w / 2), y - 2, Math.round(w), 11); b.globalAlpha = 1; txt(hint.s, V.w / 2, y, '#ffe9a0', 5.5, 'center', a); if (hint.t <= 0) hint = null; }
   // «E — использовать»
   const n = !p.dead && nearInteract(p); if (n) { const s = w2s(p.x, p.y); txt((V.touch ? '' : 'E — ') + n.label, s[0], s[1] - 36, '#ffd870', 6.5, 'center'); }
   if (p.dead) { b.globalAlpha = .6; b.fillStyle = '#1a0408'; b.fillRect(0, 0, V.w, V.h); b.globalAlpha = 1; txt('ТЫ ПОГИБ', V.w / 2, V.h / 2 - 22, '#ff4a5a', 16, 'center'); txt(G.deathMsg || 'Возрождение в городе...', V.w / 2, V.h / 2 + 2, '#fff', 7, 'center'); if (G.deathMsg2) txt(G.deathMsg2, V.w / 2, V.h / 2 + 14, '#ffb0b8', 6, 'center'); }

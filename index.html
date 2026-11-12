@@ -5,39 +5,50 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
 <title>Пожиратель Душ</title>
 <style>
-html,body{margin:0;height:100%;background:#0b0810;overflow:hidden;touch-action:none;-webkit-user-select:none;user-select:none;-webkit-tap-highlight-color:transparent;font-family:"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;color:#e8e0f0}
+html,body{margin:0;height:100%;background:#07060a;overflow:hidden;touch-action:none;-webkit-user-select:none;user-select:none;-webkit-tap-highlight-color:transparent;font-family:"Lucida Console","DejaVu Sans Mono","Liberation Mono","Courier New",monospace;color:#d6cdb8}
 #c{position:fixed;left:0;top:0;width:100vw;height:100vh;image-rendering:pixelated;image-rendering:crisp-edges;display:block}
-#ui{position:fixed;inset:0;display:none;align-items:center;justify-content:center;background:rgba(8,5,14,.72);z-index:5;padding:8px;box-sizing:border-box}
+#ui{position:fixed;inset:0;display:none;align-items:center;justify-content:center;background:rgba(4,3,6,.8);z-index:5;padding:8px;box-sizing:border-box}
 #ui.on{display:flex}
-.panel{background:#1a1424;border:3px solid #6a4a9a;box-shadow:0 0 0 3px #0b0810,0 0 40px rgba(140,90,255,.25);width:min(640px,100%);max-height:100%;overflow:auto;box-sizing:border-box;padding:14px;font-size:15px}
-.panel h1{margin:0 0 4px;font-size:28px;letter-spacing:2px;color:#c9a0ff;text-shadow:2px 2px 0 #3a1a6a;text-align:center}
-.panel h2{margin:0 0 10px;font-size:19px;color:#c9a0ff}
-.panel h3{margin:12px 0 6px;font-size:15px;color:#ffd870}
-.sub{color:#9a8ab0;font-size:13px;text-align:center;margin-bottom:10px}
+.panel{background:#16130f;border:3px solid #6b5638;outline:3px solid #07060a;box-shadow:inset 0 0 0 3px #231d15,0 0 60px #000;width:min(600px,100%);max-height:100%;overflow:auto;box-sizing:border-box;padding:16px;font-size:14px;line-height:1.35}
+.panel.wide{width:min(940px,100%)}
+.panel h1{margin:0 0 4px;font-size:30px;letter-spacing:5px;color:#b8323a;text-shadow:3px 3px 0 #000;text-align:center}
+.panel h2{margin:0 0 12px;font-size:18px;letter-spacing:2px;text-transform:uppercase;color:#c8a850;border-bottom:2px solid #3a3024;padding-bottom:8px}
+.panel h3{margin:14px 0 6px;font-size:13px;letter-spacing:1px;text-transform:uppercase;color:#a8946a}
+.sub{color:#7d7462;font-size:12px;text-align:center;margin-bottom:10px;letter-spacing:1px}
 .row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
-.btn{background:#3a2a5a;border:2px solid #8a6aca;color:#fff;padding:9px 14px;font:inherit;font-weight:700;cursor:pointer;border-radius:0}
-.btn:hover{background:#4c3878}.btn:active{background:#2a1e42}
-.btn.gold{background:#6a4a10;border-color:#ffd870}.btn.red{background:#5a1a22;border-color:#ff6a6a}
-.btn[disabled]{opacity:.4;cursor:default}
-.tabs{display:flex;gap:4px;margin-bottom:10px}.tabs .btn{flex:1;padding:8px 4px}.tabs .btn.act{background:#8a6aca;color:#0b0810}
-.x{float:right;margin:-4px -4px 0 8px;padding:4px 10px}
-input.name{background:#0b0810;border:2px solid #8a6aca;color:#fff;font:inherit;font-size:18px;padding:8px;width:100%;box-sizing:border-box;text-align:center;-webkit-user-select:text;user-select:text}
-.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(132px,1fr));gap:6px}
-.soul{display:flex;gap:6px;align-items:center;background:#241a34;border:2px solid #3a2a5a;padding:5px;cursor:pointer;min-height:44px}
-.soul.sel{border-color:#ffd870;background:#3a2a4a}.soul.dim{opacity:.45}
+.res{float:right;font-size:13px;letter-spacing:0;text-transform:none;display:flex;gap:14px;margin-right:44px}
+.btn{background:#2a231a;border:2px solid #6b5638;box-shadow:inset 0 -3px 0 #1c1711;color:#e6dcc4;padding:9px 14px;font:inherit;font-weight:700;cursor:pointer;border-radius:0;letter-spacing:1px}
+.btn:hover{background:#3a3024;border-color:#c8a850}.btn:active{box-shadow:none;transform:translateY(1px)}
+.btn.gold{background:#4a3a14;border-color:#c8a850;color:#ffe9a0}.btn.red{background:#3a1418;border-color:#a8323a;color:#ffb0b0}
+.btn[disabled]{opacity:.35;cursor:default}
+.tabs{display:flex;gap:0;margin-bottom:12px;border-bottom:3px solid #6b5638}
+.tabs .btn{flex:1;padding:9px 2px;border-bottom:none;margin-right:-2px;background:#1c1711;color:#8a7f68;box-shadow:none;font-size:13px}
+.tabs .btn.act{background:#6b5638;color:#fff3d0;border-color:#c8a850}
+.tabs .btn small{display:block;font-size:10px;opacity:.6;font-weight:400}
+.x{float:right;margin:-6px -6px 0 8px;padding:5px 11px}
+.cols{display:grid;grid-template-columns:1.2fr 1fr;gap:14px;align-items:start}
+.cl,.cr{max-height:calc(100vh - 190px);overflow:auto;padding-right:4px}
+.cr{position:sticky;top:0}
+@media(max-width:720px){.cols{grid-template-columns:1fr}.cl,.cr{max-height:none}.cr{position:static}.res{float:none;margin:6px 0 0;gap:12px;font-size:12px}.panel{padding:10px}.panel h2{font-size:15px}.tabs .btn{font-size:10px;letter-spacing:0;padding:9px 0}}
+input.name{background:#07060a;border:2px solid #6b5638;color:#fff3d0;font:inherit;font-size:18px;padding:9px;width:100%;box-sizing:border-box;text-align:center;letter-spacing:2px;-webkit-user-select:text;user-select:text}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(138px,1fr));gap:6px}
+.soul{display:flex;gap:7px;align-items:center;background:#1c1711;border:2px solid #3a3024;padding:5px;cursor:pointer;min-height:44px}
+.soul:hover{background:#2a231a}.soul.sel{border-color:#ffe9a0!important;background:#3a3024;box-shadow:0 0 0 2px #c8a850}.soul.dim{opacity:.45}
 .soul img,.slot img,.big img{image-rendering:pixelated;width:32px;height:32px;flex:none}
-.soul b{display:block;font-size:13px;line-height:1.15}.soul small{color:#ffd870;font-size:12px}
+.soul b{display:block;font-size:12px;line-height:1.2}.soul small{color:#c8a850;font-size:11px}
 .slots{display:flex;gap:6px;margin-bottom:10px}
-.slot{flex:1;background:#120c1c;border:2px solid #4a3a6a;min-height:58px;text-align:center;padding:4px;font-size:11px;cursor:pointer;position:relative}
-.slot i{position:absolute;left:3px;top:1px;color:#9a8ab0;font-style:normal}
-.det{background:#120c1c;border:2px solid #3a2a5a;padding:8px;margin-top:8px;font-size:14px;line-height:1.4}
-.det .el{display:inline-block;padding:0 6px;color:#0b0810;font-weight:700}
-.q{color:#6a5a80}.ok{color:#8fe08a}.bad{color:#ff7a7a}.gd{color:#ffd870}
-.big{display:flex;align-items:center;justify-content:center;gap:12px;font-size:22px;margin:10px 0}
-.big img{width:48px;height:48px}
-ul.j{margin:0;padding:0;list-style:none}ul.j li{padding:4px 0;border-bottom:1px solid #2a2038;font-size:14px}
-.help{font-size:13px;color:#b0a0c8;line-height:1.5;margin-top:10px}
-kbd{background:#3a2a5a;padding:0 5px;border:1px solid #8a6aca;font:inherit;font-size:12px}
+.slot{flex:1;background:#0d0b08;border:2px solid #4a3e2c;min-height:62px;text-align:center;padding:4px;font-size:11px;cursor:pointer;position:relative}
+.slot:hover{border-color:#c8a850}
+.slot i{position:absolute;left:4px;top:2px;color:#7d7462;font-style:normal;font-size:10px;text-transform:uppercase}
+.det{background:#0d0b08;border:2px solid #3a3024;border-left:4px solid #6b5638;padding:10px;margin-top:8px;font-size:13px;line-height:1.5}
+.det .el{display:inline-block;padding:0 6px;color:#07060a;font-weight:700}
+.q{color:#6a6252}.ok{color:#8fd07a}.bad{color:#e06a6a}.gd{color:#e0c060}.sh{color:#8ad0ff}
+.big{display:flex;align-items:center;justify-content:center;gap:12px;font-size:20px;margin:10px 0}
+.big img{width:64px;height:64px}
+ul.j{margin:0;padding:0;list-style:none}ul.j li{padding:5px 0;border-bottom:1px solid #2a231a;font-size:13px}
+.help{font-size:12px;color:#8a7f68;line-height:1.6;margin-top:12px;border-top:2px solid #3a3024;padding-top:10px}
+kbd{background:#2a231a;padding:0 5px;border:1px solid #6b5638;font:inherit;font-size:11px;color:#e0c060}
+::-webkit-scrollbar{width:8px}::-webkit-scrollbar-thumb{background:#6b5638}::-webkit-scrollbar-track{background:#0d0b08}
 </style>
 </head>
 <body>
@@ -1789,7 +1800,7 @@ const Input = (() => {
     return {
       mx: m[0], my: m[1], ax, ay, atk: mdown || !!held.atk, roll: !!(pr.Space || pr.Troll),
       cast: [!!(pr.Digit1 || pr.Ts0), !!(pr.Digit2 || pr.Ts1), !!(pr.Digit3 || pr.Ts2), !!(pr.Digit4 || pr.Ts3)],
-      potion: !!(pr.KeyQ || pr.Tpot), interact: !!(pr.KeyE || pr.Tuse), menu: !!(pr.Tab || pr.KeyI || pr.Tmenu), esc: !!pr.Escape
+      potion: !!(pr.KeyQ || pr.Tpot), interact: !!(pr.KeyE || pr.Tuse), menu: !!(pr.Tab || pr.KeyI || pr.KeyK || pr.KeyJ || pr.KeyM || pr.Tmenu), mtab: pr.KeyI ? 'gear' : pr.KeyK ? 'souls' : pr.KeyJ ? 'journal' : pr.KeyM ? 'map' : null, esc: !!pr.Escape
     };
   }
   function endFrame() { for (const k in pr) delete pr[k]; }
@@ -1822,12 +1833,12 @@ function drawHud(b) {
   // слоты душ (на ПК — снизу по центру; на телефоне это кнопки справа)
   if (!V.touch) {
     const x0 = Math.round(V.w / 2 - 44);
-    for (let s = 0; s < 4; s++) { const x = x0 + s * 23, y = V.h - 25; b.globalAlpha = .7; b.fillStyle = '#0b0810'; b.fillRect(x - 2, y - 2, 20, 23); b.globalAlpha = 1; b.fillStyle = '#3a2a5a'; b.fillRect(x - 1, y - 1, 18, 18); b.fillStyle = '#120c1c'; b.fillRect(x, y, 16, 16); drawSlotIcon(b, p, s, x, y); txt(String(s + 1), x - 1, y - 8, '#c9a0ff', 5); }
+    for (let s = 0; s < 4; s++) { const x = x0 + s * 23, y = V.h - 25; b.globalAlpha = .7; b.fillStyle = '#0b0810'; b.fillRect(x - 2, y - 2, 20, 23); b.globalAlpha = 1; b.fillStyle = '#6b5638'; b.fillRect(x - 1, y - 1, 18, 18); b.fillStyle = '#120c1c'; b.fillRect(x, y, 16, 16); drawSlotIcon(b, p, s, x, y); txt(String(s + 1), x - 1, y - 8, '#c8a850', 5); }
   }
   // миникарта
   const ms = 58, mx = V.w - ms - 4, my = 4, cx = mx + ms / 2, cy = my + ms / 2;
   if (W.mapDirty) renderMap();
-  b.fillStyle = '#0b0810'; b.fillRect(mx - 2, my - 2, ms + 4, ms + 4); b.fillStyle = '#6a4a9a'; b.fillRect(mx - 1, my - 1, ms + 2, ms + 2); b.fillStyle = '#120c1c'; b.fillRect(mx, my, ms, ms);
+  b.fillStyle = '#0b0810'; b.fillRect(mx - 2, my - 2, ms + 4, ms + 4); b.fillStyle = '#6b5638'; b.fillRect(mx - 1, my - 1, ms + 2, ms + 2); b.fillStyle = '#120c1c'; b.fillRect(mx, my, ms, ms);
   b.save(); b.beginPath(); b.rect(mx, my, ms, ms); b.clip(); b.imageSmoothingEnabled = false; b.transform(1, .5, -1, .5, cx, cy); b.drawImage(W.map, -p.x, -p.y); b.restore();
   const mk = (x, y, c, s, blink) => { const q = mmPos(cx, cy, p, x, y, ms / 2 - 3); if (blink && Math.floor(G.time * 4) % 2) return; b.fillStyle = '#0b0810'; b.fillRect(q[0] - s, q[1] - s, s * 2 + 1, s * 2 + 1); b.fillStyle = c; b.fillRect(q[0] - s + 1, q[1] - s + 1, s * 2 - 1, s * 2 - 1); };
   for (const e of G.ents) if (e.ai && !e.dead && !e.boss && !e.isNemesis && e.team !== p.team && dist(e.x, e.y, p.x, p.y) < 22) { const q = mmPos(cx, cy, p, e.x, e.y, ms / 2 - 2); if (!q[2]) { b.fillStyle = '#ff5a5a'; b.fillRect(q[0], q[1], 1, 1); } }
@@ -1857,7 +1868,7 @@ function drawHud(b) {
     else if (!H.altar && Object.keys(p.souls).length >= 2) setHint('altar', 'Две души! На Алтаре в городе их можно слить в химеру. Рецепты скрыты — экспериментируй', 10);
     else if (!H.react && Object.keys(p.souls).length >= 3) setHint('react', 'Стихии вступают в реакции: огонь жжёт траву, молния бьёт по мокрым, огонь взрывает яд...', 10);
   }
-  if (hint) { hint.t -= dtf; const a = clamp(hint.t, 0, 1), y = V.h - (V.touch ? 16 : 44), w = Math.min(V.w - 8, hint.s.length * 3.3 + 12); b.globalAlpha = .7 * a; b.fillStyle = '#0b0810'; b.fillRect(Math.round(V.w / 2 - w / 2), y - 2, Math.round(w), 11); b.globalAlpha = 1; txt(hint.s, V.w / 2, y, '#ffe9a0', 5.5, 'center', a); if (hint.t <= 0) hint = null; }
+  if (hint) { hint.t -= dtf; const a = clamp(hint.t, 0, 1), y = V.h - (V.touch ? 16 : 44), w = Math.min(V.w - 8, hint.s.length * 3.45 + 12); b.globalAlpha = .7 * a; b.fillStyle = '#0b0810'; b.fillRect(Math.round(V.w / 2 - w / 2), y - 2, Math.round(w), 11); b.globalAlpha = 1; txt(hint.s, V.w / 2, y, '#ffe9a0', 5.5, 'center', a); if (hint.t <= 0) hint = null; }
   // «E — использовать»
   const n = !p.dead && nearInteract(p); if (n) { const s = w2s(p.x, p.y); txt((V.touch ? '' : 'E — ') + n.label, s[0], s[1] - 36, '#ffd870', 6.5, 'center'); }
   if (p.dead) { b.globalAlpha = .6; b.fillStyle = '#1a0408'; b.fillRect(0, 0, V.w, V.h); b.globalAlpha = 1; txt('ТЫ ПОГИБ', V.w / 2, V.h / 2 - 22, '#ff4a5a', 16, 'center'); txt(G.deathMsg || 'Возрождение в городе...', V.w / 2, V.h / 2 + 2, '#fff', 7, 'center'); if (G.deathMsg2) txt(G.deathMsg2, V.w / 2, V.h / 2 + 14, '#ffb0b8', 6, 'center'); }
@@ -1871,7 +1882,16 @@ const Menus = (() => {
   const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
   const stars = n => '★'.repeat(starsOf(n)) + '<span class="q">' + '★'.repeat(3 - starsOf(n)) + '</span>';
   const elChip = el => '<span class="el" style="background:' + EL[el].c + '">' + EL[el].n + '</span>';
-  function show(html) { ui.innerHTML = '<div class="panel">' + html + '</div>'; ui.classList.add('on'); G.paused = true; Input.clear(); }
+  let lastKey = '', lastTab = 'gear';
+  const res = p => '<span class="res"><span>Ур. ' + p.lvl + '</span><span class="gd">● ' + p.gold + '</span><span class="sh">◆ ' + (p.shards | 0) + '</span><span class="bad">✚ ' + p.potions + '</span></span>';
+  // Окно: шапка сверху, слева список, справа детали выбранного. Прокрутка не сбрасывается при клике.
+  function show(html) {
+    const key = st ? st.kind + ':' + (st.tab || '') : '', sc = {}; if (key === lastKey) for (const c of ['panel', 'cl', 'cr']) { const e = ui.querySelector('.' + c); if (e) sc[c] = e.scrollTop; }
+    let wide = false, ti = html.indexOf('<div class="tabs">'), ci = ti >= 0 ? html.indexOf('</div>', ti) + 6 : (html.indexOf('</h2>') >= 0 ? html.indexOf('</h2>') + 5 : -1);
+    if (ci >= 0) { const body = html.slice(ci), ri = body.indexOf('<!--R-->'); if (ri >= 0) { wide = true; html = html.slice(0, ci) + '<div class="cols"><div class="cl">' + body.slice(0, ri) + '</div><div class="cr">' + body.slice(ri + 8) + '</div></div>'; } else if (body.indexOf('bigmap') >= 0) wide = true; }
+    ui.innerHTML = '<div class="panel' + (wide ? ' wide' : '') + '">' + html + '</div>'; ui.classList.add('on'); G.paused = true; Input.clear();
+    for (const c in sc) { const e = ui.querySelector('.' + c); if (e) e.scrollTop = sc[c]; } lastKey = key;
+  }
   function close() { if (!st || st.kind === 'title') return; ui.classList.remove('on'); ui.innerHTML = ''; st = null; G.paused = false; Input.clear(); G.noKeyUntil = performance.now() + 250; Bus.emit('menuClosed'); }
   const isOpen = () => !!st;
   function card(id, n, cls, act) { const d = soulDef(id); return '<div class="soul ' + (cls || '') + '" data-a="' + act + '" data-v="' + id + '"><img src="' + iconUrl(d.icon) + '"><div><b>' + esc(d.abName) + '</b><small>' + stars(n) + ' ×' + n + '</small></div></div>'; }
@@ -1879,14 +1899,14 @@ const Menus = (() => {
   // ---------- Старт ----------
   function title() {
     st = { kind: 'title', confirm: false, look: (st && st.look) || { cloak: 0, skin: 0, eyes: 0, scarf: 0 } }; const s = loadSave(); applyLook(st.look);
-    const pv = scaled(SPR.hero_i.c, 6), sw = (k, nm) => '<div class="row" style="margin:5px 0"><span style="width:64px;font-size:13px;color:#9a8ab0">' + nm + '</span>' + LOOKS[k].map((o, i) => '<button class="btn" title="' + o[0] + '" data-a="look" data-v="' + k + ':' + i + '" style="width:30px;height:30px;padding:0;background:' + o[1] + ';border-color:' + (st.look[k] === i ? '#ffd870' : '#3a2a5a') + '"></button>').join('') + '</div>';
+    const pv = scaled(SPR.hero_i.c, 6), sw = (k, nm) => '<div class="row" style="margin:5px 0"><span style="width:64px;font-size:13px;color:#7d7462">' + nm + '</span>' + LOOKS[k].map((o, i) => '<button class="btn" title="' + o[0] + '" data-a="look" data-v="' + k + ':' + i + '" style="width:30px;height:30px;padding:0;background:' + o[1] + ';border-color:' + (st.look[k] === i ? '#ffd870' : '#3a3024') + '"></button>').join('') + '</div>';
     const keepName = document.getElementById('nm') ? document.getElementById('nm').value : null;
     show('<h1>ПОЖИРАТЕЛЬ ДУШ</h1><div class="sub">изометрическая экшн-RPG · души вместо классов</div>' +
       (s ? '<button class="btn gold" style="width:100%;margin-bottom:10px" data-a="cont">Продолжить: ' + esc(s.name) + ', ур. ' + (s.lvl | 0) + '</button>' : '') +
-      '<h3>Создание героя</h3><div class="row" style="align-items:flex-start;flex-wrap:nowrap"><img src="' + pv.toDataURL() + '" style="image-rendering:pixelated;width:84px;flex:none;background:#0b0810;border:2px solid #3a2a5a;padding:6px"><div style="flex:1">' + sw('cloak', 'Плащ') + sw('skin', 'Кожа') + sw('eyes', 'Глаза') + sw('scarf', 'Шарф') + '</div></div>' +
+      '<h3>Создание героя</h3><div class="row" style="align-items:flex-start;flex-wrap:nowrap"><img src="' + pv.toDataURL() + '" style="image-rendering:pixelated;width:84px;flex:none;background:#07060a;border:2px solid #3a3024;padding:6px"><div style="flex:1">' + sw('cloak', 'Плащ') + sw('skin', 'Кожа') + sw('eyes', 'Глаза') + sw('scarf', 'Шарф') + '</div></div>' +
       '<input class="name" id="nm" maxlength="12" placeholder="Имя героя" value="' + esc(keepName !== null ? keepName : (s ? '' : 'Герой')) + '" style="margin-top:8px">' +
       '<button class="btn" style="width:100%;margin-top:8px" data-a="new" id="newb">' + (s ? 'Новая игра (сотрёт сохранение)' : 'Начать игру') + '</button>' +
-      '<div class="help"><b>ПК:</b> <kbd>WASD</kbd> движение · <kbd>мышь</kbd> прицел · <kbd>ЛКМ</kbd> удар · <kbd>Пробел</kbd> перекат · <kbd>1</kbd>–<kbd>4</kbd> души · <kbd>Q</kbd> зелье · <kbd>E</kbd> взаимодействие · <kbd>Tab</kbd> души и журнал<br>' +
+      '<div class="help"><b>ПК:</b> <kbd>WASD</kbd> движение · <kbd>мышь</kbd> прицел · <kbd>ЛКМ</kbd> удар · <kbd>Пробел</kbd> перекат · <kbd>1</kbd>–<kbd>4</kbd> души · <kbd>Q</kbd> зелье · <kbd>E</kbd> взаимодействие · <kbd>I</kbd> снаряжение · <kbd>K</kbd> души · <kbd>J</kbd> журнал · <kbd>M</kbd> карта<br>' +
       '<b>Телефон:</b> джойстик слева, кнопки справа, автоприцел на ближайшего врага.<br><br>' +
       'Мобы роняют свои <b>души</b> — способность + стихия. Стихии вступают в <b>реакции</b>. На Алтаре души сливаются в <b>химер</b>. А если погибнешь — твой труп встанет <b>Тенью</b> с твоими же душами.</div>');
   }
@@ -1897,18 +1917,19 @@ const Menus = (() => {
   }
 
   // ---------- Алтарь ----------
-  function openAltar(atAltar, tab) { if (!G.started || G.me.dead) return; st = { kind: 'altar', tab: tab || 'souls', sel: null, fa: null, fb: null, atAltar, res: null }; drawAltar(); }
+  function openAltar(atAltar, tab) { if (!G.started || G.me.dead) return; st = { kind: 'altar', tab: tab || (atAltar ? 'souls' : lastTab), sel: null, fa: null, fb: null, atAltar, res: null }; drawAltar(); }
   function drawAltar() {
-    const p = G.me, t = st.tab; let h = '<button class="btn x" data-a="close">✕</button><h2>' + (st.atAltar ? 'Алтарь душ' : 'Души и журнал') + ' <span class="gd" style="font-size:14px">● ' + p.gold + '</span></h2>';
-    h += '<div class="tabs">' + [['souls', 'Души'], ['gear', 'Снаряжение'], ['fuse', 'Слияние'], ['journal', 'Журнал'], ['map', 'Карта']].map(x => '<button class="btn ' + (t === x[0] ? 'act' : '') + '" data-a="tab" data-v="' + x[0] + '">' + x[1] + '</button>').join('') + '</div>';
-    if (t === 'souls') h += tabSouls(p); else if (t === 'gear') h += tabGear(p, false); else if (t === 'fuse') h += tabFuse(p); else if (t === 'map') h += '<canvas id="bigmap" width="570" height="285" style="width:100%;image-rendering:pixelated;background:#0b0810;border:2px solid #3a2a5a"></canvas><div class="det"><span style="color:#fff">■</span> ты · <span style="color:#c9a0ff">■</span> город · <span style="color:#c82a3a">■</span> лагерь врагов · <span style="color:#ff7a1a">■</span> логово · <span style="color:#ff2a4a">■</span> Тень. Разведано: ' + Math.round(W.seen.reduce((a, c) => a + c, 0) / W.seen.length * 100) + '%. Лагерей зачищено: ' + (G.J.camps || 0) + '</div>'; else h += tabJournal(p);
+    const p = G.me, t = st.tab; let h = '<button class="btn x" data-a="close">✕</button><h2>' + (st.atAltar ? 'Алтарь душ' : 'Герой: ' + esc(p.name)) + res(p) + '</h2>'; if (!st.atAltar) lastTab = t;
+    h += '<div class="tabs">' + [['souls', 'Души', 'K'], ['gear', 'Снаряжение', 'I'], ['fuse', 'Слияние', ''], ['journal', 'Журнал', 'J'], ['map', 'Карта', 'M']].map(x => '<button class="btn ' + (t === x[0] ? 'act' : '') + '" data-a="tab" data-v="' + x[0] + '">' + x[1] + (x[2] && !V.touch ? '<small>[' + x[2] + ']</small>' : '') + '</button>').join('') + '</div>';
+    if (t === 'souls') h += tabSouls(p); else if (t === 'gear') h += tabGear(p, false); else if (t === 'fuse') h += tabFuse(p); else if (t === 'map') h += '<canvas id="bigmap" width="570" height="285" style="width:100%;image-rendering:pixelated;background:#07060a;border:2px solid #3a3024"></canvas><div class="det"><span style="color:#fff">■</span> ты · <span style="color:#c9a0ff">■</span> город · <span style="color:#c82a3a">■</span> лагерь врагов · <span style="color:#ff7a1a">■</span> логово · <span style="color:#ff2a4a">■</span> Тень. Разведано: ' + Math.round(W.seen.reduce((a, c) => a + c, 0) / W.seen.length * 100) + '%. Лагерей зачищено: ' + (G.J.camps || 0) + '</div>'; else h += tabJournal(p);
     show(h);
-    if (t === 'map') { if (W.mapDirty) renderMap(); const c = document.getElementById('bigmap'), x = c.getContext('2d'); x.imageSmoothingEnabled = false; x.setTransform(1.5, .75, -1.5, .75, MH * 1.5, 2); x.drawImage(W.map, 0, 0); const mk = (wx, wy, col, s) => { x.fillStyle = '#0b0810'; x.fillRect(wx - s - 1, wy - s - 1, s * 2 + 2, s * 2 + 2); x.fillStyle = col; x.fillRect(wx - s, wy - s, s * 2, s * 2); }; if (!W.dun) { mk(TOWN.x, TOWN.y, '#c9a0ff', 2); if (W.seen[tIdx(LAIR.x, LAIR.y)]) mk(LAIR.x, LAIR.y, '#ff7a1a', 2); } for (const k of W.crypts) if (W.seen[tIdx(k.x, k.y)]) mk(k.x, k.y, '#b04ad8', 2); for (const k of W.camps) if (W.seen[tIdx(k.x, k.y)] && !k.cleared) mk(k.x, k.y, '#c82a3a', 1.5); if (G.nemesis && !G.nemesis.dead && !W.dun) mk(G.nemesis.x, G.nemesis.y, '#ff2a4a', 2); mk(p.x, p.y, '#ffffff', 1.5); }
+    if (t === 'map') { if (W.mapDirty) renderMap(); const c = document.getElementById('bigmap'), x = c.getContext('2d'); x.imageSmoothingEnabled = false; x.setTransform(1.5, .75, -1.5, .75, MH * 1.5, 2); x.drawImage(W.map, 0, 0); const mk = (wx, wy, col, s) => { x.fillStyle = '#07060a'; x.fillRect(wx - s - 1, wy - s - 1, s * 2 + 2, s * 2 + 2); x.fillStyle = col; x.fillRect(wx - s, wy - s, s * 2, s * 2); }; if (!W.dun) { mk(TOWN.x, TOWN.y, '#c9a0ff', 2); if (W.seen[tIdx(LAIR.x, LAIR.y)]) mk(LAIR.x, LAIR.y, '#ff7a1a', 2); } for (const k of W.crypts) if (W.seen[tIdx(k.x, k.y)]) mk(k.x, k.y, '#b04ad8', 2); for (const k of W.camps) if (W.seen[tIdx(k.x, k.y)] && !k.cleared) mk(k.x, k.y, '#c82a3a', 1.5); if (G.nemesis && !G.nemesis.dead && !W.dun) mk(G.nemesis.x, G.nemesis.y, '#ff2a4a', 2); mk(p.x, p.y, '#ffffff', 1.5); }
   }
   function tabSouls(p) {
     let h = '<div class="slots">' + p.slots.map((id, i) => '<div class="slot" data-a="slot" data-v="' + i + '"><i>' + (i + 1) + '</i>' + (id ? '<img src="' + iconUrl(soulDef(id).icon) + '"><br>' + esc(soulDef(id).abName) : '<br><span class="q">пусто</span>') + '</div>').join('') + '</div>';
     const ids = Object.keys(p.souls); if (st.sel && !p.souls[st.sel]) st.sel = null;
     h += '<div class="grid">' + ids.map(id => card(id, p.souls[id], (st.sel === id ? 'sel' : ''), 'sel')).join('') + '</div>';
+    h += '<!--R-->';
     if (st.sel) {
       const d = soulDef(st.sel), n = p.souls[st.sel], sN = starsOf(n);
       h += '<div class="det"><b style="font-size:16px">' + esc(d.name) + '</b> ' + stars(n) + '<br>' + d.els.map(elChip).join(' ') + ' · перезарядка ' + AB[d.ab].cd + ' с<br>' + esc(d.desc) + '<br>' +
@@ -1924,6 +1945,7 @@ const Menus = (() => {
     const g = p.gs; let h = '<div class="slots">' + ISLOTS.map(s => { const it = p.equip[s]; return '<div class="slot" data-a="isel" data-v="' + (it ? it.uid : '') + '" style="' + (it ? 'border-color:' + RANKS[it.rank].c : '') + '"><i>' + ISLOT_N[s] + '</i><br>' + (it ? '<img src="' + iconUrl(itemIcon(it)) + '"><br><span style="color:' + RANKS[it.rank].c + '">' + esc(itemName(it)) + '</span>' : '<span class="q">пусто</span>') + '</div>'; }).join('') + '</div>';
     h += '<div class="det" style="margin:0 0 8px">Здоровье <b>' + p.maxHp + '</b> · Урон <b>' + Math.round(p.atk) + '</b> · Крит <b>' + Math.round(p.crit * 100) + '%</b> · Скорость <b>+' + Math.min(30, g.spd) + '%</b> · Перезарядка <b>−' + Math.min(40, g.cdr) + '%</b> · Урон душ <b>+' + g.soul + '%</b>' + Object.keys(g.el).map(e => ' · ' + EL[e].n + ' <b>+' + g.el[e] + '%</b>').join('') + '</div>';
     h += '<h3>Сумка (' + p.bag.length + '/' + BAG_MAX + ')</h3><div class="grid" style="grid-template-columns:repeat(auto-fill,minmax(180px,1fr))">' + (p.bag.length ? p.bag.slice().sort((a, b) => itemScore(b) - itemScore(a)).map(it => icard(it, st.isel === it.uid ? 'sel' : '')).join('') : '<span class="q">Пусто. Предметы падают с врагов — чаще с проклятых и вожаков.</span>') + '</div>';
+    h += '<!--R-->';
     const it = st.isel && findItem(p, st.isel);
     if (it) {
       const worn = p.equip[it.slot] === it; h += idet(it, worn ? 'Надето' : 'В сумке'); if (!worn && p.equip[it.slot]) h += idet(p.equip[it.slot], 'Сейчас надето');
@@ -1937,9 +1959,10 @@ const Menus = (() => {
   function openSmith() { if (!G.started || G.me.dead) return; st = { kind: 'smith', tab: 'forge', isel: null, esel: null, msg: '' }; drawSmith(); }
   function drawSmith() {
     const p = G.me, all = ISLOTS.map(s => p.equip[s]).filter(Boolean).concat(p.bag.slice().sort((a, b) => itemScore(b) - itemScore(a)));
-    let h = '<button class="btn x" data-a="close">✕</button><h2>Кузнец <span class="gd" style="font-size:14px">● ' + p.gold + '</span> <span style="font-size:14px;color:#8ad0ff">◆ ' + (p.shards | 0) + '</span></h2>';
+    let h = '<button class="btn x" data-a="close">✕</button><h2>Кузнец' + res(p) + '</h2>';
     h += '<div class="tabs">' + [['forge', 'Ковка'], ['ench', 'Зачарование']].map(x => '<button class="btn ' + (st.tab === x[0] ? 'act' : '') + '" data-a="stab" data-v="' + x[0] + '">' + x[1] + '</button>').join('') + '</div>';
     h += '<div class="grid" style="grid-template-columns:repeat(auto-fill,minmax(180px,1fr));max-height:190px;overflow:auto">' + (all.length ? all.map(it => icard(it, st.isel === it.uid ? 'sel' : '')).join('') : '<span class="q">«Принеси железо — поговорим.» У тебя нет вещей.</span>') + '</div>';
+    h += '<!--R-->';
     const it = st.isel && findItem(p, st.isel);
     if (st.msg) h += '<div class="det" style="font-size:16px">' + st.msg + '</div>';
     if (!it) h += '<div class="det q">' + (st.tab === 'forge' ? 'Ковка усиливает основное свойство вещи: +10% за уровень, до +10. Нужны золото и осколки (◆) — их дают проклятые, вожаки, боссы и разбор вещей. С +4 ковка может провалиться, а с +7 провал ещё и ослабляет вещь.' : 'Зачарование вплавляет душу в вещь и даёт ей стихию. Тратит одну копию души и ' + ENCH_COST + ' золота. Новое зачарование заменяет старое.') + '</div>';
@@ -1965,7 +1988,7 @@ const Menus = (() => {
     if (st.fa && st.fb) { const known = G.J.recipes[recipeKey(st.fa, st.fb)] && CHIMERAS[G.J.recipes[recipeKey(st.fa, st.fb)]] ? G.J.recipes[recipeKey(st.fa, st.fb)] : G.J.recipes[st.fa + '>' + st.fb]; if (known) { const d = soulDef(known); res = '<img src="' + iconUrl(d.icon) + '"><br>' + esc(d.name); } for (const id of [st.fa, st.fb]) if (p.souls[id] === 1) warn += '<div class="bad">Последняя копия: «' + esc(SOULS[id].name) + '» исчезнет.</div>'; }
     let h = '<div class="slots" style="align-items:center">' + box(st.fa, 'a') + '<b style="font-size:22px">+</b>' + box(st.fb, 'b') + '<b style="font-size:22px">=</b><div class="slot" style="min-height:66px;border-color:#ffd870">' + res + '</div></div>';
     h += '<div class="grid">' + (base.length ? base.map(id => card(id, p.souls[id], (st.fa === id || st.fb === id ? 'sel' : ''), 'pick')).join('') : '<span class="q">Нет базовых душ</span>') + '</div>';
-    h += '<div class="det">Слияние тратит по одной копии каждой души и <span class="gd">' + FUSE_COST + ' золота</span>. Рецепты скрыты — открытые попадают в Журнал. Порядок душ бывает важен.' + warn + '</div>';
+    h += '<!--R--><div class="det">Слияние тратит по одной копии каждой души и <span class="gd">' + FUSE_COST + ' золота</span>. Рецепты скрыты — открытые попадают в Журнал. Порядок душ бывает важен.' + warn + '</div>';
     h += '<button class="btn gold" style="width:100%;margin-top:8px" data-a="fuse"' + (canFuse(p, st.fa, st.fb) ? '' : ' disabled') + '>Слить души' + (p.gold < FUSE_COST ? ' (не хватает золота)' : '') + '</button>';
     return h;
   }
@@ -1987,7 +2010,7 @@ const Menus = (() => {
   function openShop() { if (!G.started || G.me.dead) return; st = { kind: 'shop' }; drawShop(); }
   function drawShop() {
     const p = G.me, mx = Math.min(POTION_MAX - p.potions, Math.floor(p.gold / POTION_COST));
-    show('<button class="btn x" data-a="close">✕</button><h2>Торговец зельями</h2><div class="det">«Свежие зелья! Тени в лесу сами себя не убьют.»<br><br>Зелье лечения: восстанавливает 35% здоровья.<br>Цена: <span class="gd">' + POTION_COST + ' золота</span>. В сумке: <b>' + p.potions + ' / ' + POTION_MAX + '</b>. Золото: <span class="gd">● ' + p.gold + '</span></div>' +
+    show('<button class="btn x" data-a="close">✕</button><h2>Торговец' + res(p) + '</h2><div class="det">«Свежие зелья! Тени в лесу сами себя не убьют.»<br><br>Зелье лечения: восстанавливает 35% здоровья.<br>Цена: <span class="gd">' + POTION_COST + ' золота</span>. В сумке: <b>' + p.potions + ' / ' + POTION_MAX + '</b>. Золото: <span class="gd">● ' + p.gold + '</span></div>' +
       '<div class="row" style="margin-top:8px"><button class="btn gold" data-a="buy" data-v="1"' + (mx >= 1 ? '' : ' disabled') + '>Купить 1</button><button class="btn gold" data-a="buy" data-v="' + mx + '"' + (mx >= 2 ? '' : ' disabled') + '>Купить ' + (mx >= 2 ? mx : 'все') + ' (' + Math.max(0, mx) * POTION_COST + ')</button><button class="btn" data-a="close">Уйти</button></div><h3>Твои вещи</h3>' + tabGear(p, true));
   }
 
@@ -2027,9 +2050,11 @@ const Menus = (() => {
   window.addEventListener('keydown', e => {
     if (!st) return;
     if (st.kind === 'title') { if (e.code === 'Enter') { const s = loadSave(); if (s && !(document.getElementById('nm').value.trim())) begin(s); else if (!s) begin(null); } return; }
-    if (e.code === 'Escape' || e.code === 'Tab' || e.code === 'KeyE' || e.code === 'KeyI') { e.preventDefault(); close(); }
+    const hk = { KeyI: 'gear', KeyK: 'souls', KeyJ: 'journal', KeyM: 'map' }[e.code];
+    if (hk && st.kind === 'altar') { e.preventDefault(); if (st.tab === hk) close(); else { st.tab = hk; st.res = null; drawAltar(); } return; }
+    if (e.code === 'Escape' || e.code === 'Tab' || e.code === 'KeyE') { e.preventDefault(); close(); }
   });
-  Bus.on('menuKey', () => openAltar(false));
+  Bus.on('menuKey', (t) => openAltar(false, t || lastTab));
   Bus.on('interact', (p, n) => {
     if (p !== G.me) return;
     if (n.o === O.ALTAR) openAltar(true); else if (n.o === O.MERCH) openShop(); else if (n.o === O.SMITH) openSmith();
@@ -2045,7 +2070,7 @@ function txt(s, x, y, c, size, align, alpha) { TXT.push([s, x, y, c || '#fff', s
 function flushTxt(ctx) {
   const k = V.scale; ctx.textBaseline = 'top'; ctx.lineJoin = 'round';
   for (const t of TXT) {
-    const px = Math.max(9, Math.round(t[4] * k)); ctx.font = 'bold ' + px + 'px "Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif';
+    const px = Math.max(9, Math.round(t[4] * k)); ctx.font = 'bold ' + px + 'px "Lucida Console","DejaVu Sans Mono","Liberation Mono","Courier New",monospace';
     ctx.textAlign = t[5]; ctx.globalAlpha = t[6]; ctx.lineWidth = Math.max(2, px * .22); ctx.strokeStyle = '#0b0810';
     ctx.strokeText(t[0], t[1] * k, t[2] * k); ctx.fillStyle = t[3]; ctx.fillText(t[0], t[1] * k, t[2] * k);
   }
@@ -2305,7 +2330,7 @@ function update(dt) {
   G.time += dt;
   const I = Input.intent(G.me);
   if (performance.now() < (G.noKeyUntil || 0)) { I.menu = I.interact = false; }
-  if (I.menu) Bus.emit('menuKey');
+  if (I.menu) Bus.emit('menuKey', I.mtab);
   for (const e of G.ents) {
     if (e.isPlayer) { if (!e.dead) updateEntCommon(e, dt); updatePlayer(e, dt, e === G.me ? I : (e.intent || NO_INTENT)); continue; }
     if (e.dead || nearestPlayerDist(e) > 30) continue;

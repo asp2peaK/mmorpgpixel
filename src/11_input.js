@@ -48,7 +48,7 @@ const Input = (() => {
     return {
       mx: m[0], my: m[1], ax, ay, atk: mdown || !!held.atk, roll: !!(pr.Space || pr.Troll),
       cast: [!!(pr.Digit1 || pr.Ts0), !!(pr.Digit2 || pr.Ts1), !!(pr.Digit3 || pr.Ts2), !!(pr.Digit4 || pr.Ts3)],
-      potion: !!(pr.KeyQ || pr.Tpot), interact: !!(pr.KeyE || pr.Tuse), menu: !!(pr.Tab || pr.KeyI || pr.Tmenu), esc: !!pr.Escape
+      potion: !!(pr.KeyQ || pr.Tpot), interact: !!(pr.KeyE || pr.Tuse), menu: !!(pr.Tab || pr.KeyI || pr.KeyK || pr.KeyJ || pr.KeyM || pr.Tmenu), mtab: pr.KeyI ? 'gear' : pr.KeyK ? 'souls' : pr.KeyJ ? 'journal' : pr.KeyM ? 'map' : null, esc: !!pr.Escape
     };
   }
   function endFrame() { for (const k in pr) delete pr[k]; }
