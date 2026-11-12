@@ -42,6 +42,9 @@ function drawObj(b, i, j, o, k) {
     case O.HOUSE: drawSpr(b, 'house' + (i > 14 ? 1 : 0), sx, sy + 6); break;
     case O.SMITH: drawSpr(b, 'smith_i', sx, sy - 2); break;
     case O.ANVIL: drawSpr(b, 'anvil', sx, sy + 1); break;
+    case O.WALL: b.drawImage(WALLSPR, sx - 16, sy - 28); break;
+    case O.CRYPT: case O.EXIT: drawSpr(b, 'crypt', sx, sy + 2); break;
+    case O.CHEST: drawSpr(b, 'chest', sx, sy + 1); break;
     case O.TOMB: drawSpr(b, 'tomb', sx, sy); break;
     case O.TOTEM: drawSpr(b, 'totem', sx, sy + 1); break;
     case O.STAKE: drawSpr(b, 'stake', sx, sy + 1); break;
@@ -148,12 +151,13 @@ function render() {
     if (sx < -32 || sx > V.w || sy < -18 || sy > V.h + 70) continue;
     const k = j * MW + i, g = W.g[k], v = ((i * 73856093) ^ (j * 19349663)) & 3;
     if (sy < V.h + 2) {
-      b.drawImage(((g === T.SHALLOW || g === T.DEEP) && ((wf + i + j) & 1)) ? TILE_W2[g][v] : TILE[g][v], sx, sy);
+      if (g !== T.VOID) b.drawImage(((g === T.SHALLOW || g === T.DEEP) && ((wf + i + j) & 1)) ? TILE_W2[g][v] : TILE[g][v], sx, sy);
       if (W.puddle[k] > 0) { b.globalAlpha = Math.min(.8, W.puddle[k] * .4); b.drawImage(TILE[T.SHALLOW][v], sx + 5, sy + 2, 22, 11); b.globalAlpha = 1; }
+      if (W.trap && W.trap[k]) { b.fillStyle = '#1a1420'; b.fillRect(sx + 9, sy + 5, 14, 6); b.fillStyle = (W.trapT % 4.5) > 2.2 ? '#ff5a1a' : '#4a2a20'; for (let q = 0; q < 4; q++) b.fillRect(sx + 10 + q * 3, sy + 6, 2, 4); }
       const ts = TALLSPR[g]; if (ts) b.drawImage(ts[v % 3], sx + (Math.sin(G.time * 2 + i * .7 + j * .9) > .55 ? 1 : 0), sy - 8);
     }
     if (W.fire[k] > 0) { D.push([i + j + 1.2, 3, i, j, W.o[k] === O.TREE ? 1 : 0]); if (sy < V.h + 20) glows.push(sx + 16, sy + 8); }
-    const o = W.o[k]; if (o && o !== O.BLOCK) { D.push([i + j + 1, 0, i, j, o, k]); if (o === O.LAMP || o === O.ALTAR || o === O.STONE || o === O.ANVIL) glows.push(sx + 16, sy - 6); else if (o === O.TOTEM) glows.push(sx + 16, sy); }
+    const o = W.o[k]; if (o && o !== O.BLOCK) { D.push([i + j + 1, 0, i, j, o, k]); if (o === O.LAMP || o === O.ALTAR || o === O.STONE || o === O.ANVIL || o === O.CRYPT || o === O.EXIT || o === O.CHEST) glows.push(sx + 16, sy - 6); else if (o === O.TOTEM) glows.push(sx + 16, sy); }
   }
   // декали на земле: зоны и телеграфы
   for (const z of G.zones) { const K = ZK[z.kind]; if (K.draw) K.draw(b, z); if (K.top) D.push([z.x + z.y + (z.topD || 0), 5, z]); }

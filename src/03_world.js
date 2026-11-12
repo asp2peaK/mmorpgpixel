@@ -1,6 +1,6 @@
 // Мир: генерация карты шумом, зоны, огонь/лужи/зарастание, точки спавна
 const MW = 210, MH = 170, MIDY = 85.5;
-const O = { NONE: 0, TREE: 1, DEAD: 2, ROCK: 3, ALTAR: 4, STONE: 5, MERCH: 6, HOUSE: 7, CRATE: 8, LAMP: 9, BLOCK: 10, TOMB: 11, TOTEM: 12, STAKE: 13, SMITH: 14, ANVIL: 15 };
+const O = { NONE: 0, TREE: 1, DEAD: 2, ROCK: 3, ALTAR: 4, STONE: 5, MERCH: 6, HOUSE: 7, CRATE: 8, LAMP: 9, BLOCK: 10, TOMB: 11, TOTEM: 12, STAKE: 13, SMITH: 14, ANVIL: 15, WALL: 16, CRYPT: 17, EXIT: 18, CHEST: 19 };
 const TOWN = { x: 14.5, y: MIDY, r: 11 }, LAIR = { x: 196.5, y: MIDY, r: 8.5 };
 const ZNAME = { town: 'Город', edge: 'Опушка', thicket: 'Чаща', scorch: 'Выжженная поляна', bog: 'Гнилые топи', grave: 'Костяной погост', lair: 'Логово Пепельного Волка' };
 const ZLVL = { town: '', edge: 'ур. 1–3', thicket: 'ур. 3–6', scorch: 'ур. 6–9', bog: 'ур. 4–7', grave: 'ур. 5–8', lair: 'босс, ур. 10' };
@@ -9,10 +9,11 @@ const FL = {}; FL[T.TALL] = { fuel: 5, sp: .2 }; FL[T.DTALL] = { fuel: 5, sp: .1
 let W = null;
 
 function pathY(x) { const t = clamp((x - 26) / 22, 0, 1) * clamp((184 - x) / 16, 0, 1), s = t * t * (3 - 2 * t); return MIDY + (vnoise(x * .045, 3.3, SEED) - .5) * 46 * s; }
-const ZDARK = { town: .34, edge: .5, thicket: .64, scorch: .52, bog: .62, grave: .68, lair: .56 };
+const ZDARK = { dungeon: .8, town: .34, edge: .5, thicket: .64, scorch: .52, bog: .62, grave: .68, lair: .56 };
 function zoneLvl(z, x) { return z === 'edge' ? clamp(1 + Math.floor((x - 26) / 18), 1, 3) : z === 'thicket' ? clamp(3 + Math.floor((x - 80) / 14), 3, 6) : z === 'bog' ? clamp(4 + Math.floor((x - 36) / 45), 4, 7) : z === 'grave' ? clamp(5 + Math.floor((x - 46) / 42), 5, 8) : clamp(6 + Math.floor((x - 136) / 12), 6, 9); }
 const ZTYPES = { edge: ['wolf', 'slime', 'shroom'], thicket: ['root', 'bat', 'skel'], scorch: ['imp', 'falcon'], bog: ['shroom', 'slime', 'root'], grave: ['skel', 'bat', 'wolf'] };
 function zoneAt(x, y) {
+  if (W && W.dun) return 'dungeon';
   if (dist(x, y, TOWN.x, TOWN.y) < TOWN.r + 1) return 'town';
   if (dist(x, y, LAIR.x, LAIR.y) < LAIR.r + 3) return 'lair';
   if (x > 46 && x < 190 && y < 52 + (vnoise(x * .06, 1.1, SEED + 7) - .5) * 14) return 'grave';
@@ -73,6 +74,7 @@ function genWorld() {
     W.spawns.push({ x: x + .5, y: y + 1.6, camp: W.camps.length, types: ZTYPES[z], lvl: Math.min(9, zoneLvl(z, x) + 1), n: 5, list: [], t: 0 });
     W.camps.push({ x: x + .5, y: y + .5, z, cleared: false });
   }
+  placeCrypts();
   // Город
   const put = (x, y, o) => { W.o[(y + 35) * MW + x] = o; };
   put(14, 50, O.STONE); put(10, 46, O.ALTAR); put(18, 45, O.MERCH); put(9, 51, O.SMITH); put(10, 52, O.ANVIL); put(19, 46, O.CRATE);
@@ -165,7 +167,7 @@ function renderMap() {
   const x = W.map.getContext('2d'), im = x.createImageData(MW, MH), d = im.data;
   for (let i = 0; i < MW * MH; i++) {
     let c = TMAP[W.g[i]]; const o = W.o[i];
-    if (!W.seen[i]) c = '#0b0810'; else if (o === O.STAKE || o === O.TOTEM) c = '#c82a3a'; else if (o === O.TOMB) c = '#8a8a98'; else
+    if (!W.seen[i]) c = '#0b0810'; else if (o === O.WALL) c = '#2c2634'; else if (o === O.BLOCK && W.dun) c = '#0b0810'; else if (o === O.CRYPT || o === O.EXIT) c = '#b04ad8'; else if (o === O.CHEST) c = '#ffd870'; else if (o === O.STAKE || o === O.TOTEM) c = '#c82a3a'; else if (o === O.TOMB) c = '#8a8a98'; else
     if (o === O.TREE) c = W.zi[i] === 2 ? '#8a6a2a' : '#1f5a2c'; else if (o === O.DEAD) c = '#2a2428'; else if (o === O.ROCK) c = '#6a6a78'; else if (o >= O.ALTAR) c = '#c8b890';
     const v = parseInt(c.slice(1), 16); d[i * 4] = v >> 16; d[i * 4 + 1] = (v >> 8) & 255; d[i * 4 + 2] = v & 255; d[i * 4 + 3] = 255;
   }

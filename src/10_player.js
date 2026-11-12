@@ -42,8 +42,8 @@ function nearInteract(p) {
   let best = null, bd = 2.3;
   for (let j = -2; j <= 2; j++) for (let i = -2; i <= 2; i++) {
     const tx = (p.x | 0) + i, ty = (p.y | 0) + j, o = W.o[ty * MW + tx];
-    if (o !== O.ALTAR && o !== O.MERCH && o !== O.STONE && o !== O.SMITH) continue;
-    const d = dist(p.x, p.y, tx + .5, ty + .5); if (d < bd) { bd = d; best = { o, x: tx + .5, y: ty + .5, label: o === O.ALTAR ? 'Алтарь душ' : o === O.MERCH ? 'Торговец' : o === O.SMITH ? 'Кузнец' : 'Камень возрождения' }; }
+    if (o !== O.ALTAR && o !== O.MERCH && o !== O.STONE && o !== O.SMITH && o !== O.CRYPT && o !== O.EXIT && o !== O.CHEST) continue;
+    const d = dist(p.x, p.y, tx + .5, ty + .5); if (d < bd) { bd = d; best = { o, x: tx + .5, y: ty + .5, label: o === O.ALTAR ? 'Алтарь душ' : o === O.MERCH ? 'Торговец' : o === O.SMITH ? 'Кузнец' : o === O.CRYPT ? 'Спуститься в подземелье' : o === O.EXIT ? 'Выйти наружу' : o === O.CHEST ? 'Открыть сундук' : 'Камень возрождения' }; }
   }
   return best;
 }

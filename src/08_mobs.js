@@ -9,7 +9,10 @@ const MOBS = {
   water: { name: 'Водяной дух', hp: 48, atk: 7, spd: 2.6, abils: ['wave'], el: 'water', soul: 'water', keep: 3.2, weak: 'storm', immune: { burn: 1 }, blood: '#5aa8f0' },
   imp: { name: 'Огненный бес', hp: 44, atk: 8, spd: 3.2, abils: ['ball'], el: 'fire', soul: 'imp', keep: 4.6, weak: 'water', immune: { burn: 1 }, blood: '#e8502a' },
   falcon: { name: 'Ветряной сокол', hp: 40, atk: 8, spd: 4.4, abils: ['whirl', 'bite'], el: 'wind', soul: 'falcon', fly: true, keep: 4, blood: '#7ae0c8' },
-  ashwolf: { name: 'Пепельный Волк', hp: 1500, atk: 25, spd: 3.5, abils: [{ ab: 'blazedash', el: 'fire', cdm: 1 }, { ab: 'ashstorm', el: 'ash', cdm: .5 }, { ab: 'bite', el: 'ash', cdm: 1 }], el: 'ash', soul: 'ashwolf', boss: true, r: .7, immune: { burn: 1, blind: 1 }, aggro: 9, leash: 13, blood: '#ff7a1a', scale: 1 },
+  ashwolf: { summon: ['imp', 3, 8, 'Он призывает бесов!'], name: 'Пепельный Волк', hp: 1500, atk: 25, spd: 3.5, abils: [{ ab: 'blazedash', el: 'fire', cdm: 1 }, { ab: 'ashstorm', el: 'ash', cdm: .5 }, { ab: 'bite', el: 'ash', cdm: 1 }], el: 'ash', soul: 'ashwolf', boss: true, r: .7, immune: { burn: 1, blind: 1 }, aggro: 9, leash: 13, blood: '#ff7a1a', scale: 1 },
+  boneking: { name: 'Костяной Король', hp: 1700, atk: 24, spd: 2.6, abils: [{ ab: 'bonecage', el: 'bone', cdm: .6 }, { ab: 'arrows', el: 'bone', cdm: .8 }, { ab: 'roots', el: 'bone', cdm: .9 }, { ab: 'bite', el: 'bone', cdm: 1 }], el: 'bone', soul: 'boneking', boss: true, r: .6, immune: { poison: 1, bleed: 1 }, aggro: 9, leash: 12, blood: '#f0ecd8', summon: ['skel', 3, 7, 'Он поднимает мертвецов!'] },
+  slimequeen: { name: 'Матерь Слизи', hp: 1500, atk: 19, spd: 2.4, hop: true, abils: [{ ab: 'tidal', el: 'poison', cdm: .6 }, { ab: 'cloud', el: 'poison', cdm: .8 }, { ab: 'shield', el: 'slime', cdm: 1 }, { ab: 'bite', el: 'slime', cdm: 1 }], el: 'slime', soul: 'slimequeen', boss: true, r: .8, immune: { poison: 1, slow: 1 }, aggro: 9, leash: 12, blood: '#6fe0a0', weak: 'fire', summon: ['slime', 4, 5, 'Она распадается на слизней!'] },
+  stormmother: { name: 'Грозовая Матка', hp: 1100, atk: 17, spd: 4, fly: true, keep: 3.5, abils: [{ ab: 'tempest', el: 'storm', cdm: .6 }, { ab: 'chain', el: 'storm', cdm: .8 }, { ab: 'whirl', el: 'wind', cdm: 1 }], el: 'storm', soul: 'stormmother', boss: true, r: .6, immune: { stun: 1 }, aggro: 9, leash: 12, blood: '#ffe95a', summon: ['bat', 4, 4, 'Она зовёт выводок!'] },
   spirit: { name: 'Призрачный волк', spr: 'spirit', hp: 30, atk: 5, spd: 5, abils: [{ ab: 'dash', cdm: .6 }, { ab: 'bite', cdm: .7 }], el: 'beast', aggro: 9, leash: 99, blood: '#a8f0ff' },
   nemesis: { name: 'Тень', spr: 'nem', hp: 100, atk: 10, spd: 3.6, abils: [], el: 'phys', aggro: 8.5, leash: 14, heavy: .5, blood: '#8a1a2a' }
 };
@@ -118,8 +121,8 @@ G.systems.push(updateSpawner);
 function setupBoss(m) {
   m.onUpdate = (b) => {
     if (!b.enraged && b.target && b.hp <= b.maxHp * .5) {
-      b.enraged = true; banner('ПЕПЕЛЬНЫЙ ВОЛК В ЯРОСТИ', 'Он призывает бесов!', '#ff5a3a'); Sfx.play('howl'); shake(8); fxRing(b.x, b.y, .5, 6, '#ff5a3a', .6);
-      for (let i = 0; i < 3; i++) { const a = i * TAU / 3 + rand(.5), x = b.x + Math.cos(a) * 3, y = b.y + Math.sin(a) * 3; const im = mkMob('imp', blocked(x, y) ? b.x : x, blocked(x, y) ? b.y : y, 8, { summoned: true }); im.target = b.target; im.hx = LAIR.x; im.hy = LAIR.y; burst(im.x, im.y, ['#ff7a2a', '#ffe04a'], 14, 4, { glow: 1 }); }
+      const S = MOBS[b.type].summon; b.enraged = true; banner(b.name.toUpperCase() + ' — ЯРОСТЬ', S[3], '#ff5a3a'); Sfx.play('howl'); shake(8); fxRing(b.x, b.y, .5, 6, '#ff5a3a', .6);
+      for (let i = 0; i < S[1]; i++) { const a = i * TAU / S[1] + rand(.5), x = b.x + Math.cos(a) * 3, y = b.y + Math.sin(a) * 3; const im = mkMob(S[0], blocked(x, y) ? b.x : x, blocked(x, y) ? b.y : y, S[2], { summoned: true }); im.target = b.target; im.hx = b.hx; im.hy = b.hy; im.leash = 40; burst(im.x, im.y, ['#ff7a2a', '#ffe04a'], 14, 4, { glow: 1 }); }
     }
     if (!b.target && b.hp >= b.maxHp) b.enraged = false;
   };
@@ -137,7 +140,7 @@ Bus.on('mobDeath', (m, src) => {
   const g = m.boss ? 250 : randi(2, 4) * m.lvl * (m.elite ? 3 : 1); for (let i = 0, n = m.boss ? 10 : 1 + (g > 12 ? 1 : 0); i < n; i++) dropPickup('gold', m.x, m.y, Math.ceil(g / n));
   const soul = MOBS[m.type].soul;
   if (soul && !m.summoned) { const ch = m.boss ? (G.J.obtained[soul] ? .35 : 1) : (m.chief ? 1 : m.elite ? .5 : G.J.obtained[soul] ? .15 : .6); if (chance(ch)) dropPickup('soul', m.x, m.y, soul); }
-  if (m.boss) { G.J.bossKills++; banner('ПЕПЕЛЬНЫЙ ВОЛК ПОВЕРЖЕН', 'Шепчущий лес свободен... пока что', '#ffd870'); Sfx.play('levelup'); shake(10); for (let i = 0; i < 5; i++) fxRing(m.x, m.y, .5, 4 + i * 1.5, '#ff7a2a', .5 + i * .15); Bus.emit('bossDeath', m, p); }
+  if (m.boss) { G.J.bossKills++; banner(m.name.toUpperCase() + ' — ПОВЕРЖЕН', m.dunBoss ? 'В зале появился сундук. Выход — у входа в подземелье' : 'Шепчущий лес свободен... пока что', '#ffd870'); Sfx.play('levelup'); shake(10); for (let i = 0; i < 5; i++) fxRing(m.x, m.y, .5, 4 + i * 1.5, '#ff7a2a', .5 + i * .15); Bus.emit('bossDeath', m, p); }
 });
 Bus.on('campClear', (s) => {
   const c = W.camps[s.camp], p = G.me; if (!p || dist(p.x, p.y, c.x, c.y) > 25) return;

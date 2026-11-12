@@ -4,7 +4,7 @@ function saveGame() {
   if (!G.started || !G.me) return; const p = G.me, n = G.nemesis && !G.nemesis.dead ? Object.assign({}, G.nemesis.nd, { x: G.nemesis.x, y: G.nemesis.y }) : null;
   try { localStorage.setItem(SAVE_KEY, JSON.stringify({ v: 1, name: p.name, lvl: p.lvl, xp: p.xp, gold: p.gold, potions: p.potions, souls: p.souls, slots: p.slots, J: G.J, equip: p.equip, bag: p.bag, shards: p.shards | 0, nem: n, look: p.look || {}, seen: packSeen() })); } catch (e) { }
 }
-function packSeen() { let s = ''; const a = W.seen; for (let i = 0; i < a.length; i += 6) { let v = 0; for (let k = 0; k < 6; k++) if (a[i + k]) v |= 1 << k; s += String.fromCharCode(48 + v); } return s; }
+function packSeen() { let s = ''; const a = (G.over ? G.over.W : W).seen; for (let i = 0; i < a.length; i += 6) { let v = 0; for (let k = 0; k < 6; k++) if (a[i + k]) v |= 1 << k; s += String.fromCharCode(48 + v); } return s; }
 function unpackSeen(s) { if (typeof s !== 'string') return; const a = W.seen; for (let i = 0, j = 0; i < a.length && j < s.length; i += 6, j++) { const v = s.charCodeAt(j) - 48; for (let k = 0; k < 6 && i + k < a.length; k++) a[i + k] = (v >> k) & 1; } W.mapDirty = true; }
 function loadSave() { try { const s = JSON.parse(localStorage.getItem(SAVE_KEY)); return s && s.v === 1 && s.name ? s : null; } catch (e) { return null; } }
 function wipeSave() { try { localStorage.removeItem(SAVE_KEY); } catch (e) { } }

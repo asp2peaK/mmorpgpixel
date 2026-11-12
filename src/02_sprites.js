@@ -248,6 +248,22 @@ reg('house0', genHouse('#b8463a', '#8a2e28')); reg('house1', genHouse('#4a6ab8',
 
 regHumanoid('smith', { h: '#3a2a20', H: '#2a1c14', s: '#c89870', e: '#1a1014', m: '#5a3a22', c: '#6a4a3a', C: '#4a3226', b: '#8a8a98', p: '#2a2630', B: '#1a1620' });
 reg('anvil', ascii(['.kkkkkkkkk..', 'kKKKKKKKKKkk', '.kKKKKKKKKk.', '...kKKKk....', '...kKKKk....', '..kKKKKKk...', '.kkkkkkkkk..'], { k: '#2a2a34', K: '#6a6a7a' }));
+function tinted(c, col, a) { const o = mkCanvas(c.width, c.height), x = o.getContext('2d'); x.drawImage(c, 0, 0); x.globalCompositeOperation = 'source-atop'; x.globalAlpha = a; x.fillStyle = col; x.fillRect(0, 0, o.width, o.height); return o; }
+reg('boneking', tinted(scaled(SPR.skel.c, 2), '#8a3ae8', .28)); reg('slimequeen', tinted(scaled(SPR.slime.c, 3), '#3a1a4a', .35)); reg('stormmother', tinted(scaled(SPR.bat.c, 2), '#ffe95a', .22));
+reg('crypt', ascii(['....ssssssss....', '..ssSSSSSSSSss..', '.sSSSSssssSSSSs.', '.sSSssvvvvssSSs.', 'sSSsvvkkkkvvsSSs', 'sSSsvkkkkkkvsSSs', 'sSSsvkkkkkkvsSSs', 'sSSsvkkkkkkvsSSs', 'sSSsvkkkkkkvsSSs', 'sSSsvkkkkkkvsSSs', 'sSSsvkkkkkkvsSSs', 'ssssssssssssssss'], { s: '#3a3640', S: '#6a6470', v: '#8a3ae8', k: '#0a0610' }));
+reg('chest', ascii(['.bbbbbbbbbb.', 'bBBBBggBBBBb', 'bBBBBggBBBBb', 'bbbbbggbbbbb', 'bBBBBgGBBBBb', 'bBBBBBBBBBBb', 'bBBBBBBBBBBb', 'bbbbbbbbbbbb'], { b: '#4a2e18', B: '#8a5a2a', g: '#c8a850', G: '#fff0a0' }));
+function genWall() {
+  const c = mkCanvas(32, 32), x = c.getContext('2d');
+  for (let py = 0; py < 32; py++) for (let px = 0; px < 32; px++) {
+    const dx = Math.abs(px + .5 - 16) / 16, top = dx + Math.abs(py + .5 - 8) / 8 <= 1, e0 = 8 + (1 - dx) * 8, side = !top && py >= e0 - 1 && py < e0 + 16;
+    if (!top && !side) continue; const r = hash2(px, py, 91); let col;
+    if (top) col = r < .8 ? '#4a4452' : '#3e3846';
+    else { const d = Math.floor(py - e0), row = d >> 2, brick = (row + ((px + row * 4) >> 3)) & 1, seam = (d & 3) === 3 || ((px + row * 4) & 7) === 0; col = px < 16 ? (seam ? '#1e1a24' : brick ? '#342e3c' : '#2c2634') : (seam ? '#120e16' : brick ? '#241f2a' : '#1e1a24'); }
+    x.fillStyle = col; x.fillRect(px, py, 1, 1);
+  }
+  return c;
+}
+const WALLSPR = genWall();
 reg('tomb', ascii(['..ssss..', '.sSSSSs.', '.sSkkSs.', '.sSSSSs.', '.sSkSSs.', '.sSSSSs.', '.sSSSSs.', 'ssssssss'], { s: '#3a3a48', S: '#6a6a7a', k: '#2a2a36' }));
 reg('totem', ascii(['..r..r..', '.rRr.rRr', '..bbbb..', '.bWkkWb.', '.bWWWWb.', '.bkWWkb.', '..bWWb..', '..bbbb..', '...bb...', '...bb...', '..rbbr..', '...bb...', '...bb...', '..bbbb..'], { r: '#8a1a2a', R: '#ff2a4a', b: '#3a2a20', W: '#d8d0b8', k: '#1a1014' }));
 reg('stake', ascii(['..w..', '.wWw.', '.bBb.', '.bBb.', '.bBb.', '.bBb.', '.bBb.', '.bBb.', '.bBb.', 'bbBbb'], { w: '#b8b4a0', W: '#e8e4d0', b: '#2e2018', B: '#4a3626' }));
@@ -290,15 +306,15 @@ function genRock(seed) {
 reg('rock0', genRock(3)); reg('rock1', genRock(8));
 
 // ---------- Тайлы ----------
-const T = { GRASS: 0, TALL: 1, DIRT: 2, SHALLOW: 3, DEEP: 4, PLAZA: 5, ASH: 6, DRY: 7, DRYTALL: 8, SCORCH: 9, LAIR: 10, DGRASS: 11, DTALL: 12, MUD: 13, GRAVE: 14 };
+const T = { GRASS: 0, TALL: 1, DIRT: 2, SHALLOW: 3, DEEP: 4, PLAZA: 5, ASH: 6, DRY: 7, DRYTALL: 8, SCORCH: 9, LAIR: 10, DGRASS: 11, DTALL: 12, MUD: 13, GRAVE: 14, DFLOOR: 15, VOID: 16 };
 const TPAL = [
   ['#4a9a3c', '#3f8a36', '#5aac46'], null, ['#a8845a', '#96744c', '#ba966a'], ['#4a9ad8', '#3f8cc8', '#7ac0f0'], ['#2a5aa0', '#244e8e', '#3a70b8'],
   ['#8a8a96', '#74747f', '#9c9ca8'], ['#3a3436', '#2a2628', '#4c4240'], ['#b0a04a', '#9c8c3e', '#c4b45c'], null, ['#6a4a38', '#583c2e', '#7c5844'],
-  ['#4a3038', '#3c262e', '#5c3c44'], ['#357a3a', '#2a6832', '#408a40'], null, ['#4a4a34', '#3a3c2a', '#5a5a3e'], ['#5a5e5a', '#4a4e4c', '#6a6e68']];
+  ['#4a3038', '#3c262e', '#5c3c44'], ['#357a3a', '#2a6832', '#408a40'], null, ['#4a4a34', '#3a3c2a', '#5a5a3e'], ['#5a5e5a', '#4a4e4c', '#6a6e68'], ['#5a5460', '#48424e', '#6a6470'], ['#05040a', '#05040a', '#05040a']];
 // мрачная гамма: всё приглушено
 for (let i = 0; i < TPAL.length; i++) if (TPAL[i]) TPAL[i] = TPAL[i].map(c => { const v = parseInt(c.slice(1), 16), r = v >> 16, g = (v >> 8) & 255, b = v & 255, l = (r + g + b) / 3, f = x => Math.round((x * .72 + l * .28) * .8); return '#' + ((1 << 24) | (f(r) << 16) | (f(g) << 8) | Math.min(255, f(b) + 6)).toString(16).slice(1); });
 TPAL[T.TALL] = TPAL[T.GRASS]; TPAL[T.DRYTALL] = TPAL[T.DRY]; TPAL[T.DTALL] = TPAL[T.DGRASS];
-const TMAP = ['#3a7a34', '#2e6a2c', '#8a6c4c', '#3a7ab0', '#224a84', '#74747e', '#3a3436', '#8e8240', '#a08a34', '#5a4032', '#4a3038', '#2c6232', '#24562a', '#4a4a34', '#5a5e5a'];
+const TMAP = ['#3a7a34', '#2e6a2c', '#8a6c4c', '#3a7ab0', '#224a84', '#74747e', '#3a3436', '#8e8240', '#a08a34', '#5a4032', '#4a3038', '#2c6232', '#24562a', '#4a4a34', '#5a5e5a', '#5a5460', '#0b0810'];
 function genTile(pal, seed, style) {
   const c = mkCanvas(32, 16), x = c.getContext('2d');
   for (let py = 0; py < 16; py++) {
@@ -313,7 +329,7 @@ function genTile(pal, seed, style) {
   return c;
 }
 const TILE = [], TILE_W2 = [];
-for (let t = 0; t < TPAL.length; t++) { TILE[t] = []; for (let v = 0; v < 4; v++) TILE[t][v] = genTile(TPAL[t], t * 13 + v + 1, t === T.SHALLOW || t === T.DEEP ? 'water' : t === T.PLAZA ? 'plaza' : ''); }
+for (let t = 0; t < TPAL.length; t++) { TILE[t] = []; for (let v = 0; v < 4; v++) TILE[t][v] = genTile(TPAL[t], t * 13 + v + 1, t === T.SHALLOW || t === T.DEEP ? 'water' : t === T.PLAZA || t === T.DFLOOR ? 'plaza' : ''); }
 for (const t of [T.SHALLOW, T.DEEP]) { TILE_W2[t] = []; for (let v = 0; v < 4; v++) TILE_W2[t][v] = genTile(TPAL[t], t * 13 + v + 40, 'water'); }
 // Высокая трава — накладка поверх тайла
 function genTall(pal, seed) {
@@ -377,6 +393,7 @@ const GLYPH = {
   bubble: ['..###..', '.#...#.', '#..#..#', '#.###.#', '#..#..#', '.#...#.', '..###..'],
   paw: ['.#.#.#.', '.#.#.#.', '.......', '..###..', '.#####.', '.#####.', '..###..'],
   i_weapon: ['......##', '.....###', '....###.', '#..###..', '.####...', '.###....', '#.##....', '...#....'], i_armor: ['##.#.##', '#######', '#######', '.#####.', '.#####.', '.#####.', '.#####.'], i_amulet: ['.#...#.', '#.....#', '#.....#', '.#...#.', '..###..', '.#####.', '..###..'], i_ring: ['..###..', '.#####.', '..###..', '.#...#.', '#.....#', '.#...#.', '..###..'],
+  bonecage: ['#.#.#.#', '#.#.#.#', '#.#.#.#', '#.#.#.#', '#.#.#.#', '#######'], tidal: ['#....#...', '.#..#.#..', '..##...##', '#....#...', '.#..#.#..', '..##...##', '#########'], tempest: ['.#####.', '#######', '.#####.', '..#.#..', '.#.#...', '..#.#..', '.#.#...'],
   geyser: ['#..#..#', '.#.#.#.', '..###..', '..###..', '..###..', '.#####.', '#######']
 };
 const ICONC = {};

@@ -6,7 +6,7 @@ function mkEnt(o) {
   return Object.assign({ id: ++G.nid, x: 0, y: 0, r: .32, team: 2, hp: 10, maxHp: 10, atk: 5, spd: 3, face: 1, dirx: 1, diry: 0, st: {}, kx: 0, ky: 0, flash: 0, inv: 0, dead: false, shield: 0, shieldT: 0, shieldEl: null, anim: rand(9), toss: 0, immune: {}, dotT: rand(.5), moving: false }, o);
 }
 const hostile = (a, b) => a.team !== b.team;
-const inTown = e => dist(e.x, e.y, TOWN.x, TOWN.y) < TOWN.r;
+const inTown = e => !W.dun && dist(e.x, e.y, TOWN.x, TOWN.y) < TOWN.r;
 const ownerOf = e => e ? (e.owner || e) : null;
 
 // ---------- Статусы ----------

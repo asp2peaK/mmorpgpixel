@@ -36,7 +36,7 @@ function frame(t) {
 }
 // Старт: новая игра или загрузка сохранения
 function startGame(o) {
-  G.ents = []; G.projs = []; G.zones = []; G.parts = []; G.texts = []; G.fx = []; G.pickups = []; G.players = []; G.nemesis = null; G.time = 0;
+  G.ents = []; G.projs = []; G.zones = []; G.parts = []; G.texts = []; G.fx = []; G.pickups = []; G.players = []; G.nemesis = null; G.time = 0; G.over = null; G.pendingLeave = false;
   genWorld(); G.J = newJournal();
   const look = (o && o.save && o.save.look) || (o && o.look) || {}; applyLook(look);
   const p = mkPlayer(o && o.name); p.look = look; G.me = p; G.dark = undefined; G.players.push(p); G.ents.push(p);
@@ -53,5 +53,5 @@ function boot() {
   requestAnimationFrame(frame);
 }
 window.__G = G; // для отладки и автотестов
-G.dbg = { makeItem, giveItem, dropItem, recalc, Menus, saveGame, loadSave, spawnNemesis, castSoul, soulDef, mkMob, giveSoul, addSt, damage, fuse, SOULS, CHIMERAS, T, O, tIdx, getW: () => W, ignite, addPuddle, kill, gainXp, zoneAt };
+G.dbg = { enterDungeon, leaveDungeon, DUNGEONS, makeItem, giveItem, dropItem, recalc, Menus, saveGame, loadSave, spawnNemesis, castSoul, soulDef, mkMob, giveSoul, addSt, damage, fuse, SOULS, CHIMERAS, T, O, tIdx, getW: () => W, ignite, addPuddle, kill, gainXp, zoneAt };
 boot();

@@ -30,13 +30,15 @@ function drawHud(b) {
   b.save(); b.beginPath(); b.rect(mx, my, ms, ms); b.clip(); b.imageSmoothingEnabled = false; b.transform(1, .5, -1, .5, cx, cy); b.drawImage(W.map, -p.x, -p.y); b.restore();
   const mk = (x, y, c, s, blink) => { const q = mmPos(cx, cy, p, x, y, ms / 2 - 3); if (blink && Math.floor(G.time * 4) % 2) return; b.fillStyle = '#0b0810'; b.fillRect(q[0] - s, q[1] - s, s * 2 + 1, s * 2 + 1); b.fillStyle = c; b.fillRect(q[0] - s + 1, q[1] - s + 1, s * 2 - 1, s * 2 - 1); };
   for (const e of G.ents) if (e.ai && !e.dead && !e.boss && !e.isNemesis && e.team !== p.team && dist(e.x, e.y, p.x, p.y) < 22) { const q = mmPos(cx, cy, p, e.x, e.y, ms / 2 - 2); if (!q[2]) { b.fillStyle = '#ff5a5a'; b.fillRect(q[0], q[1], 1, 1); } }
-  mk(TOWN.x, TOWN.y, '#c9a0ff', 2); if (W.seen[tIdx(LAIR.x, LAIR.y)]) mk(LAIR.x, LAIR.y, '#ff7a1a', 2);
+  if (!W.dun) { mk(TOWN.x, TOWN.y, '#c9a0ff', 2); if (W.seen[tIdx(LAIR.x, LAIR.y)]) mk(LAIR.x, LAIR.y, '#ff7a1a', 2); } else mk(W.start[0] - 3, W.start[1] - 3, '#b04ad8', 2);
+  for (const c of W.crypts) if (W.seen[tIdx(c.x, c.y)]) mk(c.x, c.y, '#b04ad8', 2);
   for (const c of W.camps) if (!c.cleared && W.seen[tIdx(c.x, c.y)] && dist(c.x, c.y, p.x, p.y) < 40) mk(c.x, c.y, '#c82a3a', 1);
-  if (G.nemesis && !G.nemesis.dead) mk(G.nemesis.x, G.nemesis.y, '#ff2a4a', 2, true);
+  if (G.nemesis && !G.nemesis.dead && !W.dun) mk(G.nemesis.x, G.nemesis.y, '#ff2a4a', 2, true);
   b.fillStyle = '#fff'; b.fillRect(cx - 1, cy - 1, 3, 3);
   const z = zoneAt(p.x, p.y); if (z !== zoneShown) { zoneShown = z; zoneT = 4; }
-  txt(ZNAME[z], V.w - 4, my + ms + 3, '#d8d0e0', 5, 'right');
-  if (zoneT > 0) { zoneT -= dtf; const a = clamp(zoneT, 0, 1) * clamp((4 - zoneT) * 2, 0, 1); txt(ZNAME[z], V.w / 2, 30, '#fff', 11, 'center', a); if (ZLVL[z]) txt(ZLVL[z], V.w / 2, 44, '#ffd870', 6, 'center', a); }
+  const zn = W.dun ? W.dun.name : ZNAME[z], zl = W.dun ? 'подземелье · ур. ' + W.dun.lvl : ZLVL[z];
+  txt(zn, V.w - 4, my + ms + 3, '#d8d0e0', 5, 'right');
+  if (zoneT > 0) { zoneT -= dtf; const a = clamp(zoneT, 0, 1) * clamp((4 - zoneT) * 2, 0, 1); txt(zn, V.w / 2, 30, '#fff', 11, 'center', a); if (zl) txt(zl, V.w / 2, 44, '#ffd870', 6, 'center', a); }
   // босс
   const boss = activeBoss();
   if (boss && boss.target) { const w = Math.min(170, V.w - 150), x = Math.round(V.w / 2 - w / 2); bar(b, x, 14, w, 5, boss.hp / boss.maxHp, boss.enraged ? '#ff5a1a' : '#c82a3a'); b.fillStyle = '#ffd870'; b.fillRect(x + Math.round(w / 2), 13, 1, 7); txt(boss.name + (boss.enraged ? ' — ЯРОСТЬ' : ''), V.w / 2, 4, '#ffb090', 6.5, 'center'); }

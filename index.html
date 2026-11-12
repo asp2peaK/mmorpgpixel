@@ -387,6 +387,22 @@ reg('house0', genHouse('#b8463a', '#8a2e28')); reg('house1', genHouse('#4a6ab8',
 
 regHumanoid('smith', { h: '#3a2a20', H: '#2a1c14', s: '#c89870', e: '#1a1014', m: '#5a3a22', c: '#6a4a3a', C: '#4a3226', b: '#8a8a98', p: '#2a2630', B: '#1a1620' });
 reg('anvil', ascii(['.kkkkkkkkk..', 'kKKKKKKKKKkk', '.kKKKKKKKKk.', '...kKKKk....', '...kKKKk....', '..kKKKKKk...', '.kkkkkkkkk..'], { k: '#2a2a34', K: '#6a6a7a' }));
+function tinted(c, col, a) { const o = mkCanvas(c.width, c.height), x = o.getContext('2d'); x.drawImage(c, 0, 0); x.globalCompositeOperation = 'source-atop'; x.globalAlpha = a; x.fillStyle = col; x.fillRect(0, 0, o.width, o.height); return o; }
+reg('boneking', tinted(scaled(SPR.skel.c, 2), '#8a3ae8', .28)); reg('slimequeen', tinted(scaled(SPR.slime.c, 3), '#3a1a4a', .35)); reg('stormmother', tinted(scaled(SPR.bat.c, 2), '#ffe95a', .22));
+reg('crypt', ascii(['....ssssssss....', '..ssSSSSSSSSss..', '.sSSSSssssSSSSs.', '.sSSssvvvvssSSs.', 'sSSsvvkkkkvvsSSs', 'sSSsvkkkkkkvsSSs', 'sSSsvkkkkkkvsSSs', 'sSSsvkkkkkkvsSSs', 'sSSsvkkkkkkvsSSs', 'sSSsvkkkkkkvsSSs', 'sSSsvkkkkkkvsSSs', 'ssssssssssssssss'], { s: '#3a3640', S: '#6a6470', v: '#8a3ae8', k: '#0a0610' }));
+reg('chest', ascii(['.bbbbbbbbbb.', 'bBBBBggBBBBb', 'bBBBBggBBBBb', 'bbbbbggbbbbb', 'bBBBBgGBBBBb', 'bBBBBBBBBBBb', 'bBBBBBBBBBBb', 'bbbbbbbbbbbb'], { b: '#4a2e18', B: '#8a5a2a', g: '#c8a850', G: '#fff0a0' }));
+function genWall() {
+  const c = mkCanvas(32, 32), x = c.getContext('2d');
+  for (let py = 0; py < 32; py++) for (let px = 0; px < 32; px++) {
+    const dx = Math.abs(px + .5 - 16) / 16, top = dx + Math.abs(py + .5 - 8) / 8 <= 1, e0 = 8 + (1 - dx) * 8, side = !top && py >= e0 - 1 && py < e0 + 16;
+    if (!top && !side) continue; const r = hash2(px, py, 91); let col;
+    if (top) col = r < .8 ? '#4a4452' : '#3e3846';
+    else { const d = Math.floor(py - e0), row = d >> 2, brick = (row + ((px + row * 4) >> 3)) & 1, seam = (d & 3) === 3 || ((px + row * 4) & 7) === 0; col = px < 16 ? (seam ? '#1e1a24' : brick ? '#342e3c' : '#2c2634') : (seam ? '#120e16' : brick ? '#241f2a' : '#1e1a24'); }
+    x.fillStyle = col; x.fillRect(px, py, 1, 1);
+  }
+  return c;
+}
+const WALLSPR = genWall();
 reg('tomb', ascii(['..ssss..', '.sSSSSs.', '.sSkkSs.', '.sSSSSs.', '.sSkSSs.', '.sSSSSs.', '.sSSSSs.', 'ssssssss'], { s: '#3a3a48', S: '#6a6a7a', k: '#2a2a36' }));
 reg('totem', ascii(['..r..r..', '.rRr.rRr', '..bbbb..', '.bWkkWb.', '.bWWWWb.', '.bkWWkb.', '..bWWb..', '..bbbb..', '...bb...', '...bb...', '..rbbr..', '...bb...', '...bb...', '..bbbb..'], { r: '#8a1a2a', R: '#ff2a4a', b: '#3a2a20', W: '#d8d0b8', k: '#1a1014' }));
 reg('stake', ascii(['..w..', '.wWw.', '.bBb.', '.bBb.', '.bBb.', '.bBb.', '.bBb.', '.bBb.', '.bBb.', 'bbBbb'], { w: '#b8b4a0', W: '#e8e4d0', b: '#2e2018', B: '#4a3626' }));
@@ -429,15 +445,15 @@ function genRock(seed) {
 reg('rock0', genRock(3)); reg('rock1', genRock(8));
 
 // ---------- Тайлы ----------
-const T = { GRASS: 0, TALL: 1, DIRT: 2, SHALLOW: 3, DEEP: 4, PLAZA: 5, ASH: 6, DRY: 7, DRYTALL: 8, SCORCH: 9, LAIR: 10, DGRASS: 11, DTALL: 12, MUD: 13, GRAVE: 14 };
+const T = { GRASS: 0, TALL: 1, DIRT: 2, SHALLOW: 3, DEEP: 4, PLAZA: 5, ASH: 6, DRY: 7, DRYTALL: 8, SCORCH: 9, LAIR: 10, DGRASS: 11, DTALL: 12, MUD: 13, GRAVE: 14, DFLOOR: 15, VOID: 16 };
 const TPAL = [
   ['#4a9a3c', '#3f8a36', '#5aac46'], null, ['#a8845a', '#96744c', '#ba966a'], ['#4a9ad8', '#3f8cc8', '#7ac0f0'], ['#2a5aa0', '#244e8e', '#3a70b8'],
   ['#8a8a96', '#74747f', '#9c9ca8'], ['#3a3436', '#2a2628', '#4c4240'], ['#b0a04a', '#9c8c3e', '#c4b45c'], null, ['#6a4a38', '#583c2e', '#7c5844'],
-  ['#4a3038', '#3c262e', '#5c3c44'], ['#357a3a', '#2a6832', '#408a40'], null, ['#4a4a34', '#3a3c2a', '#5a5a3e'], ['#5a5e5a', '#4a4e4c', '#6a6e68']];
+  ['#4a3038', '#3c262e', '#5c3c44'], ['#357a3a', '#2a6832', '#408a40'], null, ['#4a4a34', '#3a3c2a', '#5a5a3e'], ['#5a5e5a', '#4a4e4c', '#6a6e68'], ['#5a5460', '#48424e', '#6a6470'], ['#05040a', '#05040a', '#05040a']];
 // мрачная гамма: всё приглушено
 for (let i = 0; i < TPAL.length; i++) if (TPAL[i]) TPAL[i] = TPAL[i].map(c => { const v = parseInt(c.slice(1), 16), r = v >> 16, g = (v >> 8) & 255, b = v & 255, l = (r + g + b) / 3, f = x => Math.round((x * .72 + l * .28) * .8); return '#' + ((1 << 24) | (f(r) << 16) | (f(g) << 8) | Math.min(255, f(b) + 6)).toString(16).slice(1); });
 TPAL[T.TALL] = TPAL[T.GRASS]; TPAL[T.DRYTALL] = TPAL[T.DRY]; TPAL[T.DTALL] = TPAL[T.DGRASS];
-const TMAP = ['#3a7a34', '#2e6a2c', '#8a6c4c', '#3a7ab0', '#224a84', '#74747e', '#3a3436', '#8e8240', '#a08a34', '#5a4032', '#4a3038', '#2c6232', '#24562a', '#4a4a34', '#5a5e5a'];
+const TMAP = ['#3a7a34', '#2e6a2c', '#8a6c4c', '#3a7ab0', '#224a84', '#74747e', '#3a3436', '#8e8240', '#a08a34', '#5a4032', '#4a3038', '#2c6232', '#24562a', '#4a4a34', '#5a5e5a', '#5a5460', '#0b0810'];
 function genTile(pal, seed, style) {
   const c = mkCanvas(32, 16), x = c.getContext('2d');
   for (let py = 0; py < 16; py++) {
@@ -452,7 +468,7 @@ function genTile(pal, seed, style) {
   return c;
 }
 const TILE = [], TILE_W2 = [];
-for (let t = 0; t < TPAL.length; t++) { TILE[t] = []; for (let v = 0; v < 4; v++) TILE[t][v] = genTile(TPAL[t], t * 13 + v + 1, t === T.SHALLOW || t === T.DEEP ? 'water' : t === T.PLAZA ? 'plaza' : ''); }
+for (let t = 0; t < TPAL.length; t++) { TILE[t] = []; for (let v = 0; v < 4; v++) TILE[t][v] = genTile(TPAL[t], t * 13 + v + 1, t === T.SHALLOW || t === T.DEEP ? 'water' : t === T.PLAZA || t === T.DFLOOR ? 'plaza' : ''); }
 for (const t of [T.SHALLOW, T.DEEP]) { TILE_W2[t] = []; for (let v = 0; v < 4; v++) TILE_W2[t][v] = genTile(TPAL[t], t * 13 + v + 40, 'water'); }
 // Высокая трава — накладка поверх тайла
 function genTall(pal, seed) {
@@ -516,6 +532,7 @@ const GLYPH = {
   bubble: ['..###..', '.#...#.', '#..#..#', '#.###.#', '#..#..#', '.#...#.', '..###..'],
   paw: ['.#.#.#.', '.#.#.#.', '.......', '..###..', '.#####.', '.#####.', '..###..'],
   i_weapon: ['......##', '.....###', '....###.', '#..###..', '.####...', '.###....', '#.##....', '...#....'], i_armor: ['##.#.##', '#######', '#######', '.#####.', '.#####.', '.#####.', '.#####.'], i_amulet: ['.#...#.', '#.....#', '#.....#', '.#...#.', '..###..', '.#####.', '..###..'], i_ring: ['..###..', '.#####.', '..###..', '.#...#.', '#.....#', '.#...#.', '..###..'],
+  bonecage: ['#.#.#.#', '#.#.#.#', '#.#.#.#', '#.#.#.#', '#.#.#.#', '#######'], tidal: ['#....#...', '.#..#.#..', '..##...##', '#....#...', '.#..#.#..', '..##...##', '#########'], tempest: ['.#####.', '#######', '.#####.', '..#.#..', '.#.#...', '..#.#..', '.#.#...'],
   geyser: ['#..#..#', '.#.#.#.', '..###..', '..###..', '..###..', '.#####.', '#######']
 };
 const ICONC = {};
@@ -533,7 +550,7 @@ function iconUrl(c) { return c.url || (c.url = c.toDataURL()); }
 // ===== 03_world.js =====
 // Мир: генерация карты шумом, зоны, огонь/лужи/зарастание, точки спавна
 const MW = 210, MH = 170, MIDY = 85.5;
-const O = { NONE: 0, TREE: 1, DEAD: 2, ROCK: 3, ALTAR: 4, STONE: 5, MERCH: 6, HOUSE: 7, CRATE: 8, LAMP: 9, BLOCK: 10, TOMB: 11, TOTEM: 12, STAKE: 13, SMITH: 14, ANVIL: 15 };
+const O = { NONE: 0, TREE: 1, DEAD: 2, ROCK: 3, ALTAR: 4, STONE: 5, MERCH: 6, HOUSE: 7, CRATE: 8, LAMP: 9, BLOCK: 10, TOMB: 11, TOTEM: 12, STAKE: 13, SMITH: 14, ANVIL: 15, WALL: 16, CRYPT: 17, EXIT: 18, CHEST: 19 };
 const TOWN = { x: 14.5, y: MIDY, r: 11 }, LAIR = { x: 196.5, y: MIDY, r: 8.5 };
 const ZNAME = { town: 'Город', edge: 'Опушка', thicket: 'Чаща', scorch: 'Выжженная поляна', bog: 'Гнилые топи', grave: 'Костяной погост', lair: 'Логово Пепельного Волка' };
 const ZLVL = { town: '', edge: 'ур. 1–3', thicket: 'ур. 3–6', scorch: 'ур. 6–9', bog: 'ур. 4–7', grave: 'ур. 5–8', lair: 'босс, ур. 10' };
@@ -542,10 +559,11 @@ const FL = {}; FL[T.TALL] = { fuel: 5, sp: .2 }; FL[T.DTALL] = { fuel: 5, sp: .1
 let W = null;
 
 function pathY(x) { const t = clamp((x - 26) / 22, 0, 1) * clamp((184 - x) / 16, 0, 1), s = t * t * (3 - 2 * t); return MIDY + (vnoise(x * .045, 3.3, SEED) - .5) * 46 * s; }
-const ZDARK = { town: .34, edge: .5, thicket: .64, scorch: .52, bog: .62, grave: .68, lair: .56 };
+const ZDARK = { dungeon: .8, town: .34, edge: .5, thicket: .64, scorch: .52, bog: .62, grave: .68, lair: .56 };
 function zoneLvl(z, x) { return z === 'edge' ? clamp(1 + Math.floor((x - 26) / 18), 1, 3) : z === 'thicket' ? clamp(3 + Math.floor((x - 80) / 14), 3, 6) : z === 'bog' ? clamp(4 + Math.floor((x - 36) / 45), 4, 7) : z === 'grave' ? clamp(5 + Math.floor((x - 46) / 42), 5, 8) : clamp(6 + Math.floor((x - 136) / 12), 6, 9); }
 const ZTYPES = { edge: ['wolf', 'slime', 'shroom'], thicket: ['root', 'bat', 'skel'], scorch: ['imp', 'falcon'], bog: ['shroom', 'slime', 'root'], grave: ['skel', 'bat', 'wolf'] };
 function zoneAt(x, y) {
+  if (W && W.dun) return 'dungeon';
   if (dist(x, y, TOWN.x, TOWN.y) < TOWN.r + 1) return 'town';
   if (dist(x, y, LAIR.x, LAIR.y) < LAIR.r + 3) return 'lair';
   if (x > 46 && x < 190 && y < 52 + (vnoise(x * .06, 1.1, SEED + 7) - .5) * 14) return 'grave';
@@ -606,6 +624,7 @@ function genWorld() {
     W.spawns.push({ x: x + .5, y: y + 1.6, camp: W.camps.length, types: ZTYPES[z], lvl: Math.min(9, zoneLvl(z, x) + 1), n: 5, list: [], t: 0 });
     W.camps.push({ x: x + .5, y: y + .5, z, cleared: false });
   }
+  placeCrypts();
   // Город
   const put = (x, y, o) => { W.o[(y + 35) * MW + x] = o; };
   put(14, 50, O.STONE); put(10, 46, O.ALTAR); put(18, 45, O.MERCH); put(9, 51, O.SMITH); put(10, 52, O.ANVIL); put(19, 46, O.CRATE);
@@ -698,7 +717,7 @@ function renderMap() {
   const x = W.map.getContext('2d'), im = x.createImageData(MW, MH), d = im.data;
   for (let i = 0; i < MW * MH; i++) {
     let c = TMAP[W.g[i]]; const o = W.o[i];
-    if (!W.seen[i]) c = '#0b0810'; else if (o === O.STAKE || o === O.TOTEM) c = '#c82a3a'; else if (o === O.TOMB) c = '#8a8a98'; else
+    if (!W.seen[i]) c = '#0b0810'; else if (o === O.WALL) c = '#2c2634'; else if (o === O.BLOCK && W.dun) c = '#0b0810'; else if (o === O.CRYPT || o === O.EXIT) c = '#b04ad8'; else if (o === O.CHEST) c = '#ffd870'; else if (o === O.STAKE || o === O.TOTEM) c = '#c82a3a'; else if (o === O.TOMB) c = '#8a8a98'; else
     if (o === O.TREE) c = W.zi[i] === 2 ? '#8a6a2a' : '#1f5a2c'; else if (o === O.DEAD) c = '#2a2428'; else if (o === O.ROCK) c = '#6a6a78'; else if (o >= O.ALTAR) c = '#c8b890';
     const v = parseInt(c.slice(1), 16); d[i * 4] = v >> 16; d[i * 4 + 1] = (v >> 8) & 255; d[i * 4 + 2] = v & 255; d[i * 4 + 3] = 255;
   }
@@ -714,7 +733,7 @@ function mkEnt(o) {
   return Object.assign({ id: ++G.nid, x: 0, y: 0, r: .32, team: 2, hp: 10, maxHp: 10, atk: 5, spd: 3, face: 1, dirx: 1, diry: 0, st: {}, kx: 0, ky: 0, flash: 0, inv: 0, dead: false, shield: 0, shieldT: 0, shieldEl: null, anim: rand(9), toss: 0, immune: {}, dotT: rand(.5), moving: false }, o);
 }
 const hostile = (a, b) => a.team !== b.team;
-const inTown = e => dist(e.x, e.y, TOWN.x, TOWN.y) < TOWN.r;
+const inTown = e => !W.dun && dist(e.x, e.y, TOWN.x, TOWN.y) < TOWN.r;
 const ownerOf = e => e ? (e.owner || e) : null;
 
 // ---------- Статусы ----------
@@ -997,6 +1016,10 @@ const AB = {
   arrows: { noun: 'стрелы', g: 3, cd: 5, k: .6, ai: { range: 8, windup: .7, tele: 'cone', len: 8, ang: .34 }, cast(c, x) { doArrows(c, x, this.k, false); } },
   shield: { noun: 'щит', g: 0, cd: 12, k: 0, ai: { range: 99, windup: .35, tele: 'self', cond: 'hurt' }, cast(c, x) { c.shield = Math.round(c.maxHp * (.3 + .1 * (x.stars - 1)) * Math.min(1.5, x.mult)); c.shieldMax = c.shield; c.shieldT = 6; c.shieldEl = (x.el === 'slime' && x.stars < 3) ? null : x.el; c.shieldDmg = c.atk * .5; Sfx.play('shield'); fxRing(c.x, c.y, .2, 1.4, EL[x.el].c, .35); } },
   ashstorm: { noun: 'буря', g: 1, cd: 22, k: 1.3, maxRange: 6, ai: { range: 8, windup: 1.3, tele: 'circle', r: 5 }, cast(c, x) { const p = clampPt(c, x, 8); addZone({ kind: 'ashstorm', x: p[0], y: p[1], r: 5, life: 2.7, tick: x.stars >= 3 ? .15 : .22, team: c.team, src: c, dmg: c.atk * this.k * x.mult, el: x.el }); Sfx.play('howl'); shake(4); } },
+  // --- души боссов подземелий ---
+  bonecage: { noun: 'клеть', g: 1, cd: 16, k: 1.2, maxRange: 6, ai: { range: 7, windup: .9, tele: 'circle', r: 3 }, cast(c, x) { const p = clampPt(c, x, 7), n = x.stars >= 3 ? 12 : 8; for (let i = 0; i <= n; i++) { const a = i / n * TAU, r = i === n ? 0 : 2.5; addZone({ kind: 'blast', x: p[0] + Math.cos(a) * r, y: p[1] + Math.sin(a) * r, r: 1.1, life: .6 + i * .03, max: .6 + i * .03, team: c.team, src: c, dmg: c.atk * this.k * x.mult, el: x.el, stun: .8 }); } Sfx.play('roots'); } },
+  tidal: { noun: 'прилив', g: 0, cd: 14, k: 1, ai: { range: 6, windup: .8, tele: 'cone', len: 6, ang: .6 }, cast(c, x) { const a0 = Math.atan2(x.dy, x.dx), n = x.stars >= 3 ? 5 : 3; for (let i = 0; i < n; i++) { const a = a0 + (i - (n - 1) / 2) * .4; spawnProj({ kind: 'wave', x: c.x + Math.cos(a) * .5, y: c.y + Math.sin(a) * .5, vx: Math.cos(a) * 6.5, vy: Math.sin(a) * 6.5, r: 1.1, life: .9, team: c.team, src: c, dmg: c.atk * this.k * x.mult, el: x.el, color: EL[x.el].c, pierce: true, kb: 11, trail: true }); } Sfx.play('water'); Sfx.play('poison'); } },
+  tempest: { noun: 'гроза', g: 1, cd: 18, k: 1.5, ai: { range: 8, windup: 1, tele: 'self' }, cast(c, x) { const n = x.stars >= 3 ? 9 : 6; let k = 0; for (const e of G.ents) { if (k >= n) break; if (e.dead || !hostile(c, e) || dist(c.x, c.y, e.x, e.y) > 8) continue; addZone({ kind: 'blast', x: e.x, y: e.y, r: 1.3, life: .7 + k * .12, max: .7 + k * .12, sky: true, team: c.team, src: c, dmg: c.atk * this.k * x.mult, el: x.el }); k++; } for (; k < n; k++) { const a = rand(TAU), r = rand(1.5, 6); addZone({ kind: 'blast', x: c.x + Math.cos(a) * r, y: c.y + Math.sin(a) * r, r: 1.3, life: .7 + k * .12, max: .7 + k * .12, sky: true, team: c.team, src: c, dmg: c.atk * this.k * x.mult, el: x.el }); } Sfx.play('zap'); Sfx.play('howl'); } },
   // --- уникальные химеры ---
   blazedash: { noun: 'рывок', g: 0, cd: 4.5, k: 1.7, ai: { range: 6, min: 1.6, windup: .55, tele: 'line', len: 5.4, w: 1 }, cast(c, x) { doDash(c, x, this.k, 1.18, 3.5 + x.stars * .5); Sfx.play('fire'); } },
   thundercloud: { noun: 'туча', g: 1, cd: 16, k: .8, ai: { range: 6, windup: .5, tele: 'self' }, cast(c, x) { addZone({ kind: 'thundercloud', x: c.x, y: c.y, follow: c, r: 4.6, life: 8 + (x.stars - 1) * 1.5, tick: .7, team: c.team, src: c, dmg: c.atk * this.k * x.mult, el: 'storm' }); Sfx.play('zap'); } },
@@ -1187,6 +1210,9 @@ const SOULS = {
   root: { name: 'Душа корня-хваталы', mob: 'Корень', ab: 'roots', el: 'nature', abName: 'Хватка корней', desc: 'Линия корней бьёт и обездвиживает.', s3: 'Длиннее, держит 3 сек' },
   skel: { name: 'Душа скелета-лучника', mob: 'Скелет', ab: 'arrows', el: 'bone', abName: 'Веер стрел', desc: 'Пять стрел веером. Делают цель хрупкой.', s3: 'Пробивают насквозь' },
   slime: { name: 'Душа слизня', mob: 'Слизень', ab: 'shield', el: 'slime', abName: 'Щит слизи', desc: 'Щит поглощает урон 6 секунд.', s3: 'Замедляет атакующих' },
+  boneking: { name: 'Душа Костяного Короля', mob: 'Костяной Король', ab: 'bonecage', el: 'bone', abName: 'Костяная клеть', desc: 'Ульта: кольцо костяных шипов оглушает и ранит всех внутри.', s3: 'Больше шипов', boss: true },
+  slimequeen: { name: 'Душа Матери Слизи', mob: 'Матерь Слизи', ab: 'tidal', el: 'poison', abName: 'Гнилой прилив', desc: 'Ульта: три ядовитые волны веером отбрасывают врагов.', s3: 'Пять волн', boss: true },
+  stormmother: { name: 'Душа Грозовой Матки', mob: 'Грозовая Матка', ab: 'tempest', el: 'storm', abName: 'Гроза', desc: 'Ульта: молнии бьют с неба по всем врагам вокруг.', s3: 'Больше молний', boss: true },
   ashwolf: { name: 'Душа Пепельного Волка', mob: 'Пепельный Волк', ab: 'ashstorm', el: 'ash', abName: 'Пепельная буря', desc: 'Ульта: град горящего пепла по области.', s3: 'Больше ударов', boss: true }
 };
 const CHIMERAS = {
@@ -1303,7 +1329,10 @@ const MOBS = {
   water: { name: 'Водяной дух', hp: 48, atk: 7, spd: 2.6, abils: ['wave'], el: 'water', soul: 'water', keep: 3.2, weak: 'storm', immune: { burn: 1 }, blood: '#5aa8f0' },
   imp: { name: 'Огненный бес', hp: 44, atk: 8, spd: 3.2, abils: ['ball'], el: 'fire', soul: 'imp', keep: 4.6, weak: 'water', immune: { burn: 1 }, blood: '#e8502a' },
   falcon: { name: 'Ветряной сокол', hp: 40, atk: 8, spd: 4.4, abils: ['whirl', 'bite'], el: 'wind', soul: 'falcon', fly: true, keep: 4, blood: '#7ae0c8' },
-  ashwolf: { name: 'Пепельный Волк', hp: 1500, atk: 25, spd: 3.5, abils: [{ ab: 'blazedash', el: 'fire', cdm: 1 }, { ab: 'ashstorm', el: 'ash', cdm: .5 }, { ab: 'bite', el: 'ash', cdm: 1 }], el: 'ash', soul: 'ashwolf', boss: true, r: .7, immune: { burn: 1, blind: 1 }, aggro: 9, leash: 13, blood: '#ff7a1a', scale: 1 },
+  ashwolf: { summon: ['imp', 3, 8, 'Он призывает бесов!'], name: 'Пепельный Волк', hp: 1500, atk: 25, spd: 3.5, abils: [{ ab: 'blazedash', el: 'fire', cdm: 1 }, { ab: 'ashstorm', el: 'ash', cdm: .5 }, { ab: 'bite', el: 'ash', cdm: 1 }], el: 'ash', soul: 'ashwolf', boss: true, r: .7, immune: { burn: 1, blind: 1 }, aggro: 9, leash: 13, blood: '#ff7a1a', scale: 1 },
+  boneking: { name: 'Костяной Король', hp: 1700, atk: 24, spd: 2.6, abils: [{ ab: 'bonecage', el: 'bone', cdm: .6 }, { ab: 'arrows', el: 'bone', cdm: .8 }, { ab: 'roots', el: 'bone', cdm: .9 }, { ab: 'bite', el: 'bone', cdm: 1 }], el: 'bone', soul: 'boneking', boss: true, r: .6, immune: { poison: 1, bleed: 1 }, aggro: 9, leash: 12, blood: '#f0ecd8', summon: ['skel', 3, 7, 'Он поднимает мертвецов!'] },
+  slimequeen: { name: 'Матерь Слизи', hp: 1500, atk: 19, spd: 2.4, hop: true, abils: [{ ab: 'tidal', el: 'poison', cdm: .6 }, { ab: 'cloud', el: 'poison', cdm: .8 }, { ab: 'shield', el: 'slime', cdm: 1 }, { ab: 'bite', el: 'slime', cdm: 1 }], el: 'slime', soul: 'slimequeen', boss: true, r: .8, immune: { poison: 1, slow: 1 }, aggro: 9, leash: 12, blood: '#6fe0a0', weak: 'fire', summon: ['slime', 4, 5, 'Она распадается на слизней!'] },
+  stormmother: { name: 'Грозовая Матка', hp: 1100, atk: 17, spd: 4, fly: true, keep: 3.5, abils: [{ ab: 'tempest', el: 'storm', cdm: .6 }, { ab: 'chain', el: 'storm', cdm: .8 }, { ab: 'whirl', el: 'wind', cdm: 1 }], el: 'storm', soul: 'stormmother', boss: true, r: .6, immune: { stun: 1 }, aggro: 9, leash: 12, blood: '#ffe95a', summon: ['bat', 4, 4, 'Она зовёт выводок!'] },
   spirit: { name: 'Призрачный волк', spr: 'spirit', hp: 30, atk: 5, spd: 5, abils: [{ ab: 'dash', cdm: .6 }, { ab: 'bite', cdm: .7 }], el: 'beast', aggro: 9, leash: 99, blood: '#a8f0ff' },
   nemesis: { name: 'Тень', spr: 'nem', hp: 100, atk: 10, spd: 3.6, abils: [], el: 'phys', aggro: 8.5, leash: 14, heavy: .5, blood: '#8a1a2a' }
 };
@@ -1412,8 +1441,8 @@ G.systems.push(updateSpawner);
 function setupBoss(m) {
   m.onUpdate = (b) => {
     if (!b.enraged && b.target && b.hp <= b.maxHp * .5) {
-      b.enraged = true; banner('ПЕПЕЛЬНЫЙ ВОЛК В ЯРОСТИ', 'Он призывает бесов!', '#ff5a3a'); Sfx.play('howl'); shake(8); fxRing(b.x, b.y, .5, 6, '#ff5a3a', .6);
-      for (let i = 0; i < 3; i++) { const a = i * TAU / 3 + rand(.5), x = b.x + Math.cos(a) * 3, y = b.y + Math.sin(a) * 3; const im = mkMob('imp', blocked(x, y) ? b.x : x, blocked(x, y) ? b.y : y, 8, { summoned: true }); im.target = b.target; im.hx = LAIR.x; im.hy = LAIR.y; burst(im.x, im.y, ['#ff7a2a', '#ffe04a'], 14, 4, { glow: 1 }); }
+      const S = MOBS[b.type].summon; b.enraged = true; banner(b.name.toUpperCase() + ' — ЯРОСТЬ', S[3], '#ff5a3a'); Sfx.play('howl'); shake(8); fxRing(b.x, b.y, .5, 6, '#ff5a3a', .6);
+      for (let i = 0; i < S[1]; i++) { const a = i * TAU / S[1] + rand(.5), x = b.x + Math.cos(a) * 3, y = b.y + Math.sin(a) * 3; const im = mkMob(S[0], blocked(x, y) ? b.x : x, blocked(x, y) ? b.y : y, S[2], { summoned: true }); im.target = b.target; im.hx = b.hx; im.hy = b.hy; im.leash = 40; burst(im.x, im.y, ['#ff7a2a', '#ffe04a'], 14, 4, { glow: 1 }); }
     }
     if (!b.target && b.hp >= b.maxHp) b.enraged = false;
   };
@@ -1431,13 +1460,103 @@ Bus.on('mobDeath', (m, src) => {
   const g = m.boss ? 250 : randi(2, 4) * m.lvl * (m.elite ? 3 : 1); for (let i = 0, n = m.boss ? 10 : 1 + (g > 12 ? 1 : 0); i < n; i++) dropPickup('gold', m.x, m.y, Math.ceil(g / n));
   const soul = MOBS[m.type].soul;
   if (soul && !m.summoned) { const ch = m.boss ? (G.J.obtained[soul] ? .35 : 1) : (m.chief ? 1 : m.elite ? .5 : G.J.obtained[soul] ? .15 : .6); if (chance(ch)) dropPickup('soul', m.x, m.y, soul); }
-  if (m.boss) { G.J.bossKills++; banner('ПЕПЕЛЬНЫЙ ВОЛК ПОВЕРЖЕН', 'Шепчущий лес свободен... пока что', '#ffd870'); Sfx.play('levelup'); shake(10); for (let i = 0; i < 5; i++) fxRing(m.x, m.y, .5, 4 + i * 1.5, '#ff7a2a', .5 + i * .15); Bus.emit('bossDeath', m, p); }
+  if (m.boss) { G.J.bossKills++; banner(m.name.toUpperCase() + ' — ПОВЕРЖЕН', m.dunBoss ? 'В зале появился сундук. Выход — у входа в подземелье' : 'Шепчущий лес свободен... пока что', '#ffd870'); Sfx.play('levelup'); shake(10); for (let i = 0; i < 5; i++) fxRing(m.x, m.y, .5, 4 + i * 1.5, '#ff7a2a', .5 + i * .15); Bus.emit('bossDeath', m, p); }
 });
 Bus.on('campClear', (s) => {
   const c = W.camps[s.camp], p = G.me; if (!p || dist(p.x, p.y, c.x, c.y) > 25) return;
   c.cleared = true; G.J.camps = (G.J.camps || 0) + 1; const g = 30 * s.lvl; for (let i = 0; i < 8; i++) dropPickup('gold', c.x, c.y + 1, Math.ceil(g / 8));
   if (p.potions < POTION_MAX) p.potions++; p.shards = (p.shards || 0) + 3;
   banner('ЛАГЕРЬ ЗАЧИЩЕН', 'Золото, зелье, осколки и душа вожака твои. Лагерь восстановится не скоро', '#ff5a6a'); Sfx.play('levelup'); fxRing(c.x, c.y, .5, 6, '#ff2a4a', .7); shake(5);
+});
+
+// ===== 08a_dungeon.js =====
+// Подземелья: отдельный экземпляр мира (W подменяется, наземный мир ждёт в G.over). Комнаты, коридоры, ловушки, сундуки, босс.
+const DUNGEONS = [
+  { id: 'nest', name: 'Гнездо Грозы', z: 'thicket', lvl: 5, types: ['bat', 'root', 'skel'], boss: 'stormmother' },
+  { id: 'mire', name: 'Утроба Топи', z: 'bog', lvl: 6, types: ['slime', 'shroom', 'root'], boss: 'slimequeen' },
+  { id: 'crypt', name: 'Склеп Костяного Короля', z: 'grave', lvl: 8, types: ['skel', 'bat', 'wolf'], boss: 'boneking' }
+];
+function placeCrypts() {
+  W.crypts = [];
+  for (const d of DUNGEONS) {
+    let best = null;
+    for (let t = 0; t < 4000 && !best; t++) {
+      const x = 20 + Math.floor(hash2(t, 1, SEED + 30 + d.lvl) * (MW - 40)), y = 12 + Math.floor(hash2(t, 2, SEED + 31 + d.lvl) * (MH - 24));
+      if (zoneAt(x + .5, y + .5) !== d.z || Math.abs(y - pathY(x)) < 8 || dist(x, y, LAIR.x, LAIR.y) < 20) continue;
+      let ok = true; for (const c of W.camps) if (dist(x, y, c.x, c.y) < 9) ok = false; if (ok) best = [x, y];
+    }
+    if (!best) continue; const x = best[0], y = best[1];
+    for (let j = -2; j <= 3; j++) for (let i = -2; i <= 2; i++) { const k = (y + j) * MW + x + i; W.o[k] = 0; if (W.g[k] === T.DEEP || W.g[k] === T.SHALLOW) W.g[k] = T.DIRT; if (Math.hypot(i, j) < 2.3) W.g[k] = T.DIRT; }
+    W.o[y * MW + x] = O.CRYPT; W.crypts.push({ x: x + .5, y: y + .5, id: d.id });
+  }
+}
+function genDungeon(def) {
+  const n = MW * MH, R = mulberry((Math.random() * 1e9) | 0);
+  const D = { g: new Uint8Array(n).fill(T.VOID), g0: new Uint8Array(n), o: new Uint8Array(n).fill(O.BLOCK), o0: new Uint8Array(n), zi: new Uint8Array(n).fill(1), fire: new Float32Array(n), puddle: new Float32Array(n), regrow: new Float32Array(n), burning: new Set(), puddles: new Set(), regrowing: new Set(), spawns: [], camps: [], crypts: [], seen: new Uint8Array(n), revT: 0, map: mkCanvas(MW, MH), mapDirty: true, tick: 0, dun: def, traps: [], trap: new Uint8Array(n), rooms: [], trapT: 0 };
+  const rooms = [{ x: 74, y: 81, w: 8, h: 8 }];
+  for (let t = 0; t < 200 && rooms.length < 7; t++) {
+    const w = 8 + (R() * 5 | 0), h = 8 + (R() * 5 | 0), r = { x: 86 + (R() * (46 - w) | 0), y: 56 + (R() * (58 - h) | 0), w, h };
+    if (rooms.every(q => r.x + r.w + 3 < q.x || q.x + q.w + 3 < r.x || r.y + r.h + 3 < q.y || q.y + q.h + 3 < r.y)) rooms.push(r);
+  }
+  rooms.sort((a, b) => a.x - b.x); rooms.push({ x: 136, y: 77, w: 15, h: 15 });
+  const carve = (x, y) => { const k = y * MW + x; D.g[k] = T.DFLOOR; D.o[k] = 0; };
+  for (const r of rooms) for (let j = 0; j < r.h; j++) for (let i = 0; i < r.w; i++) carve(r.x + i, r.y + j);
+  for (let i = 0; i + 1 < rooms.length; i++) {
+    const a = rooms[i], b = rooms[i + 1], ax = a.x + (a.w >> 1), ay = a.y + (a.h >> 1), bx = b.x + (b.w >> 1), by = b.y + (b.h >> 1);
+    for (let x = Math.min(ax, bx); x <= Math.max(ax, bx); x++) { carve(x, ay); carve(x, ay + 1); }
+    for (let y = Math.min(ay, by); y <= Math.max(ay, by) + 1; y++) { carve(bx, y); carve(bx + 1, y); }
+  }
+  for (let y = 2; y < MH - 2; y++) for (let x = 2; x < MW - 2; x++) { const k = y * MW + x; if (D.g[k] !== T.VOID) continue; let adj = false; for (let j = -1; j <= 1 && !adj; j++) for (let i = -1; i <= 1; i++) if (D.g[k + j * MW + i] === T.DFLOOR) { adj = true; break; } if (adj) D.o[k] = O.WALL; }
+  const E = rooms[0], B = rooms[rooms.length - 1];
+  D.o[(E.y + 1) * MW + E.x + 1] = O.EXIT; D.start = [E.x + 4, E.y + 4.5]; D.rooms = rooms; D.bossRoom = B;
+  for (const r of rooms) { D.o[(r.y) * MW + r.x] = O.LAMP; D.o[(r.y + r.h - 1) * MW + r.x + r.w - 1] = O.LAMP; D.o[(r.y) * MW + r.x + r.w - 1] = O.LAMP; }
+  D.pop = [];
+  for (let i = 1; i < rooms.length - 1; i++) {
+    const r = rooms[i], cnt = 3 + (R() * 3 | 0);
+    for (let m = 0; m < cnt; m++) D.pop.push({ t: def.types[(R() * def.types.length) | 0], x: r.x + 1.5 + R() * (r.w - 3), y: r.y + 1.5 + R() * (r.h - 3), elite: m === 0 && R() < .45 });
+    for (let t = 0; t < 3; t++) { const tx = r.x + 1 + (R() * (r.w - 2) | 0), ty = r.y + 1 + (R() * (r.h - 2) | 0), k = ty * MW + tx; if (!D.o[k]) { D.trap[k] = 1; D.traps.push(k); } }
+    if (i % 2 === 0) D.o[(r.y + r.h - 1) * MW + r.x] = O.CHEST;
+  }
+  D.g0.set(D.g); D.o0.set(D.o); return D;
+}
+function enterDungeon(def, c) {
+  const p = G.me; G.over = { W, ents: G.ents.filter(e => !e.isPlayer), zones: G.zones, projs: G.projs, pickups: G.pickups, px: c.x, py: c.y + 1.6 };
+  G.ents = G.players.slice(); G.zones = []; G.projs = []; G.pickups = []; G.parts = []; G.fx = [];
+  W = genDungeon(def); for (const q of G.players) { q.x = W.start[0]; q.y = W.start[1]; q.kx = q.ky = 0; q.dash = q.roll = null; }
+  for (const s of W.pop) { const m = mkMob(s.t, s.x, s.y, def.lvl); m.leash = 40; if (s.elite) makeElite(m); }
+  const B = W.bossRoom, b = mkMob(def.boss, B.x + B.w / 2 + 2, B.y + B.h / 2, def.lvl + 2); b.leash = 12; b.dunBoss = true; setupBoss(b);
+  G.cam.x = p.x; G.cam.y = p.y; G.dark = undefined; banner(def.name.toUpperCase(), 'Подземелье · ур. ' + def.lvl + ' · погибнешь — Тень встанет у входа', '#b04ad8'); Sfx.play('howl');
+}
+function leaveDungeon() {
+  const o = G.over; if (!o) return; const keep = G.ents.filter(e => e.isNemesis && !e.dead);
+  W = o.W; G.ents = G.players.concat(o.ents, keep); G.zones = o.zones; G.projs = o.projs; G.pickups = o.pickups; G.parts = []; G.fx = []; G.over = null;
+  for (const n of keep) { n.x = n.hx = o.px + 1; n.y = n.hy = o.py + 1; }
+  for (const q of G.players) if (!q.dead) { q.x = o.px; q.y = o.py; q.kx = q.ky = 0; q.dash = q.roll = null; }
+  G.cam.x = G.me.x; G.cam.y = G.me.y; G.dark = undefined; W.mapDirty = true;
+}
+function openChest(p, n, boss) {
+  W.o[tIdx(n.x, n.y)] = 0; const lvl = W.dun.lvl; Sfx.play('soul'); burst(n.x, n.y, ['#ffd870', '#ffffff'], 24, 5, { glow: 1 }); fxRing(n.x, n.y, .3, 2.5, '#ffd870', .5);
+  for (let i = 0; i < (boss ? 3 : 2); i++) dropItem(n.x, n.y + .6, makeItem(lvl + (boss ? 2 : 0), rollRank(boss ? [0, 20, 45, 25, 10] : [25, 45, 22, 7, 1])), p);
+  for (let i = 0; i < 5; i++) dropPickup('gold', n.x, n.y + .6, Math.ceil((boss ? 40 : 12) * lvl / 5)); const sh = boss ? 8 : randi(2, 3); p.shards = (p.shards || 0) + sh; floatText(n.x, n.y, '+' + sh + ' ◆', '#8ad0ff', 7);
+}
+Bus.on('interact', (p, n) => {
+  if (n.o === O.CRYPT) { const c = W.crypts.find(q => dist(q.x, q.y, n.x, n.y) < 1), d = c && DUNGEONS.find(q => q.id === c.id); if (d) G.pendingEnter = [d, c]; }
+  else if (n.o === O.EXIT) { G.pendingLeave = true; banner('ТЫ ВЫБРАЛСЯ', 'Подземелье изменится к следующему спуску', '#d8d0c0'); if (typeof saveGame === 'function') saveGame(); }
+  else if (n.o === O.CHEST) openChest(p, n, W.bossChest === tIdx(n.x, n.y));
+});
+// Смерть в подземелье: героя выбрасывает наружу, Тень встаёт у входа
+Bus.on('playerDeath', (p) => { if (W.dun && G.over) { p.x = G.over.px; p.y = G.over.py; G.pendingLeave = true; } });
+Bus.on('mobDeath', (m) => {
+  if (!m.dunBoss || !W.dun) return; const B = W.bossRoom, k = (B.y + (B.h >> 1)) * MW + B.x + (B.w >> 1); W.o[k] = O.CHEST; W.bossChest = k;
+  G.J.dungeons = G.J.dungeons || {}; G.J.dungeons[W.dun.id] = (G.J.dungeons[W.dun.id] || 0) + 1;
+});
+G.systems.push(dt => {
+  if (G.pendingLeave) { G.pendingLeave = false; leaveDungeon(); return; }
+  if (G.pendingEnter) { const e = G.pendingEnter; G.pendingEnter = null; if (!W.dun) enterDungeon(e[0], e[1]); return; }
+  if (!W.dun) return;
+  // ловушки: решётки в полу периодически извергают пламя
+  W.trapT += dt; const ph = W.trapT % 4.5;
+  if (ph > 3 && ph < 3.9) for (const k of W.traps) if (W.fire[k] <= 0) { W.fire[k] = .35; W.burning.add(k); }
 });
 
 // ===== 09_nemesis.js =====
@@ -1540,8 +1659,8 @@ function nearInteract(p) {
   let best = null, bd = 2.3;
   for (let j = -2; j <= 2; j++) for (let i = -2; i <= 2; i++) {
     const tx = (p.x | 0) + i, ty = (p.y | 0) + j, o = W.o[ty * MW + tx];
-    if (o !== O.ALTAR && o !== O.MERCH && o !== O.STONE && o !== O.SMITH) continue;
-    const d = dist(p.x, p.y, tx + .5, ty + .5); if (d < bd) { bd = d; best = { o, x: tx + .5, y: ty + .5, label: o === O.ALTAR ? 'Алтарь душ' : o === O.MERCH ? 'Торговец' : o === O.SMITH ? 'Кузнец' : 'Камень возрождения' }; }
+    if (o !== O.ALTAR && o !== O.MERCH && o !== O.STONE && o !== O.SMITH && o !== O.CRYPT && o !== O.EXIT && o !== O.CHEST) continue;
+    const d = dist(p.x, p.y, tx + .5, ty + .5); if (d < bd) { bd = d; best = { o, x: tx + .5, y: ty + .5, label: o === O.ALTAR ? 'Алтарь душ' : o === O.MERCH ? 'Торговец' : o === O.SMITH ? 'Кузнец' : o === O.CRYPT ? 'Спуститься в подземелье' : o === O.EXIT ? 'Выйти наружу' : o === O.CHEST ? 'Открыть сундук' : 'Камень возрождения' }; }
   }
   return best;
 }
@@ -1712,13 +1831,15 @@ function drawHud(b) {
   b.save(); b.beginPath(); b.rect(mx, my, ms, ms); b.clip(); b.imageSmoothingEnabled = false; b.transform(1, .5, -1, .5, cx, cy); b.drawImage(W.map, -p.x, -p.y); b.restore();
   const mk = (x, y, c, s, blink) => { const q = mmPos(cx, cy, p, x, y, ms / 2 - 3); if (blink && Math.floor(G.time * 4) % 2) return; b.fillStyle = '#0b0810'; b.fillRect(q[0] - s, q[1] - s, s * 2 + 1, s * 2 + 1); b.fillStyle = c; b.fillRect(q[0] - s + 1, q[1] - s + 1, s * 2 - 1, s * 2 - 1); };
   for (const e of G.ents) if (e.ai && !e.dead && !e.boss && !e.isNemesis && e.team !== p.team && dist(e.x, e.y, p.x, p.y) < 22) { const q = mmPos(cx, cy, p, e.x, e.y, ms / 2 - 2); if (!q[2]) { b.fillStyle = '#ff5a5a'; b.fillRect(q[0], q[1], 1, 1); } }
-  mk(TOWN.x, TOWN.y, '#c9a0ff', 2); if (W.seen[tIdx(LAIR.x, LAIR.y)]) mk(LAIR.x, LAIR.y, '#ff7a1a', 2);
+  if (!W.dun) { mk(TOWN.x, TOWN.y, '#c9a0ff', 2); if (W.seen[tIdx(LAIR.x, LAIR.y)]) mk(LAIR.x, LAIR.y, '#ff7a1a', 2); } else mk(W.start[0] - 3, W.start[1] - 3, '#b04ad8', 2);
+  for (const c of W.crypts) if (W.seen[tIdx(c.x, c.y)]) mk(c.x, c.y, '#b04ad8', 2);
   for (const c of W.camps) if (!c.cleared && W.seen[tIdx(c.x, c.y)] && dist(c.x, c.y, p.x, p.y) < 40) mk(c.x, c.y, '#c82a3a', 1);
-  if (G.nemesis && !G.nemesis.dead) mk(G.nemesis.x, G.nemesis.y, '#ff2a4a', 2, true);
+  if (G.nemesis && !G.nemesis.dead && !W.dun) mk(G.nemesis.x, G.nemesis.y, '#ff2a4a', 2, true);
   b.fillStyle = '#fff'; b.fillRect(cx - 1, cy - 1, 3, 3);
   const z = zoneAt(p.x, p.y); if (z !== zoneShown) { zoneShown = z; zoneT = 4; }
-  txt(ZNAME[z], V.w - 4, my + ms + 3, '#d8d0e0', 5, 'right');
-  if (zoneT > 0) { zoneT -= dtf; const a = clamp(zoneT, 0, 1) * clamp((4 - zoneT) * 2, 0, 1); txt(ZNAME[z], V.w / 2, 30, '#fff', 11, 'center', a); if (ZLVL[z]) txt(ZLVL[z], V.w / 2, 44, '#ffd870', 6, 'center', a); }
+  const zn = W.dun ? W.dun.name : ZNAME[z], zl = W.dun ? 'подземелье · ур. ' + W.dun.lvl : ZLVL[z];
+  txt(zn, V.w - 4, my + ms + 3, '#d8d0e0', 5, 'right');
+  if (zoneT > 0) { zoneT -= dtf; const a = clamp(zoneT, 0, 1) * clamp((4 - zoneT) * 2, 0, 1); txt(zn, V.w / 2, 30, '#fff', 11, 'center', a); if (zl) txt(zl, V.w / 2, 44, '#ffd870', 6, 'center', a); }
   // босс
   const boss = activeBoss();
   if (boss && boss.target) { const w = Math.min(170, V.w - 150), x = Math.round(V.w / 2 - w / 2); bar(b, x, 14, w, 5, boss.hp / boss.maxHp, boss.enraged ? '#ff5a1a' : '#c82a3a'); b.fillStyle = '#ffd870'; b.fillRect(x + Math.round(w / 2), 13, 1, 7); txt(boss.name + (boss.enraged ? ' — ЯРОСТЬ' : ''), V.w / 2, 4, '#ffb090', 6.5, 'center'); }
@@ -1782,7 +1903,7 @@ const Menus = (() => {
     h += '<div class="tabs">' + [['souls', 'Души'], ['gear', 'Снаряжение'], ['fuse', 'Слияние'], ['journal', 'Журнал'], ['map', 'Карта']].map(x => '<button class="btn ' + (t === x[0] ? 'act' : '') + '" data-a="tab" data-v="' + x[0] + '">' + x[1] + '</button>').join('') + '</div>';
     if (t === 'souls') h += tabSouls(p); else if (t === 'gear') h += tabGear(p, false); else if (t === 'fuse') h += tabFuse(p); else if (t === 'map') h += '<canvas id="bigmap" width="570" height="285" style="width:100%;image-rendering:pixelated;background:#0b0810;border:2px solid #3a2a5a"></canvas><div class="det"><span style="color:#fff">■</span> ты · <span style="color:#c9a0ff">■</span> город · <span style="color:#c82a3a">■</span> лагерь врагов · <span style="color:#ff7a1a">■</span> логово · <span style="color:#ff2a4a">■</span> Тень. Разведано: ' + Math.round(W.seen.reduce((a, c) => a + c, 0) / W.seen.length * 100) + '%. Лагерей зачищено: ' + (G.J.camps || 0) + '</div>'; else h += tabJournal(p);
     show(h);
-    if (t === 'map') { if (W.mapDirty) renderMap(); const c = document.getElementById('bigmap'), x = c.getContext('2d'); x.imageSmoothingEnabled = false; x.setTransform(1.5, .75, -1.5, .75, MH * 1.5, 2); x.drawImage(W.map, 0, 0); const mk = (wx, wy, col, s) => { x.fillStyle = '#0b0810'; x.fillRect(wx - s - 1, wy - s - 1, s * 2 + 2, s * 2 + 2); x.fillStyle = col; x.fillRect(wx - s, wy - s, s * 2, s * 2); }; mk(TOWN.x, TOWN.y, '#c9a0ff', 2); if (W.seen[tIdx(LAIR.x, LAIR.y)]) mk(LAIR.x, LAIR.y, '#ff7a1a', 2); for (const k of W.camps) if (W.seen[tIdx(k.x, k.y)] && !k.cleared) mk(k.x, k.y, '#c82a3a', 1.5); if (G.nemesis && !G.nemesis.dead) mk(G.nemesis.x, G.nemesis.y, '#ff2a4a', 2); mk(p.x, p.y, '#ffffff', 1.5); }
+    if (t === 'map') { if (W.mapDirty) renderMap(); const c = document.getElementById('bigmap'), x = c.getContext('2d'); x.imageSmoothingEnabled = false; x.setTransform(1.5, .75, -1.5, .75, MH * 1.5, 2); x.drawImage(W.map, 0, 0); const mk = (wx, wy, col, s) => { x.fillStyle = '#0b0810'; x.fillRect(wx - s - 1, wy - s - 1, s * 2 + 2, s * 2 + 2); x.fillStyle = col; x.fillRect(wx - s, wy - s, s * 2, s * 2); }; if (!W.dun) { mk(TOWN.x, TOWN.y, '#c9a0ff', 2); if (W.seen[tIdx(LAIR.x, LAIR.y)]) mk(LAIR.x, LAIR.y, '#ff7a1a', 2); } for (const k of W.crypts) if (W.seen[tIdx(k.x, k.y)]) mk(k.x, k.y, '#b04ad8', 2); for (const k of W.camps) if (W.seen[tIdx(k.x, k.y)] && !k.cleared) mk(k.x, k.y, '#c82a3a', 1.5); if (G.nemesis && !G.nemesis.dead && !W.dun) mk(G.nemesis.x, G.nemesis.y, '#ff2a4a', 2); mk(p.x, p.y, '#ffffff', 1.5); }
   }
   function tabSouls(p) {
     let h = '<div class="slots">' + p.slots.map((id, i) => '<div class="slot" data-a="slot" data-v="' + i + '"><i>' + (i + 1) + '</i>' + (id ? '<img src="' + iconUrl(soulDef(id).icon) + '"><br>' + esc(soulDef(id).abName) : '<br><span class="q">пусто</span>') + '</div>').join('') + '</div>';
@@ -1857,8 +1978,8 @@ const Menus = (() => {
     for (const id of uq) { const c = CHIMERAS[id]; h += found[id] ? '<li><img src="' + iconUrl(soulDef(id).icon) + '" style="width:16px;height:16px;image-rendering:pixelated;vertical-align:middle"> ' + SOULS[c.from[0]].mob + ' + ' + SOULS[c.from[1]].mob + ' = <b>' + c.name + '</b></li>' : '<li class="q">??? + ??? = ???</li>'; }
     const pr = Object.keys(J.recipes).filter(k => !CHIMERAS[J.recipes[k]]);
     h += '</ul><h3>Прочие химеры (' + pr.length + ')</h3><ul class="j">' + (pr.length ? pr.map(k => { const ab = k.split('>'); return '<li>' + SOULS[ab[0]].mob + ' + ' + SOULS[ab[1]].mob + ' = <b>' + esc(soulDef(J.recipes[k]).name) + '</b></li>'; }).join('') : '<li class="q">Пока ни одной</li>') + '</ul>';
-    h += '<h3>Души (' + Object.keys(SOULS).filter(id => J.obtained[id]).length + '/10)</h3><div class="row">' + Object.keys(SOULS).map(id => J.obtained[id] ? '<img title="' + SOULS[id].name + '" src="' + iconUrl(soulDef(id).icon) + '" style="width:32px;height:32px;image-rendering:pixelated">' : '<span class="q" style="width:32px;text-align:center;font-size:22px">?</span>').join('') + '</div>';
-    h += '<h3>Летопись</h3><ul class="j"><li>Убито врагов: ' + J.kills + '</li><li>Смертей: ' + J.deaths + '</li><li>Теней повержено: ' + J.nemKills + (G.nemesis && !G.nemesis.dead ? ' · <span class="bad">' + esc(G.nemesis.name) + ' ждёт (ур. ' + G.nemesis.lvl + ', держит ' + G.nemesis.nd.gold + ' зол.)</span>' : '') + '</li><li>Лагерей зачищено: ' + (J.camps || 0) + '</li><li>Пепельный Волк повержен: ' + J.bossKills + '</li></ul>';
+    h += '<h3>Души (' + Object.keys(SOULS).filter(id => J.obtained[id]).length + '/' + Object.keys(SOULS).length + ')</h3><div class="row">' + Object.keys(SOULS).map(id => J.obtained[id] ? '<img title="' + SOULS[id].name + '" src="' + iconUrl(soulDef(id).icon) + '" style="width:32px;height:32px;image-rendering:pixelated">' : '<span class="q" style="width:32px;text-align:center;font-size:22px">?</span>').join('') + '</div>';
+    h += '<h3>Летопись</h3><ul class="j"><li>Убито врагов: ' + J.kills + '</li><li>Смертей: ' + J.deaths + '</li><li>Теней повержено: ' + J.nemKills + (G.nemesis && !G.nemesis.dead ? ' · <span class="bad">' + esc(G.nemesis.name) + ' ждёт (ур. ' + G.nemesis.lvl + ', держит ' + G.nemesis.nd.gold + ' зол.)</span>' : '') + '</li><li>Подземелий пройдено: ' + Object.values(J.dungeons || {}).reduce((a, c) => a + c, 0) + ' (' + Object.keys(J.dungeons || {}).length + '/' + DUNGEONS.length + ' разных)</li><li>Лагерей зачищено: ' + (J.camps || 0) + '</li><li>Пепельный Волк повержен: ' + J.bossKills + '</li></ul>';
     return h;
   }
 
@@ -1912,7 +2033,7 @@ const Menus = (() => {
   Bus.on('interact', (p, n) => {
     if (p !== G.me) return;
     if (n.o === O.ALTAR) openAltar(true); else if (n.o === O.MERCH) openShop(); else if (n.o === O.SMITH) openSmith();
-    else { p.hp = p.maxHp; p.st = {}; floatText(p.x, p.y, 'Силы восстановлены. Игра сохранена', '#5af0ff', 7); Sfx.play('potion'); fxRing(n.x, n.y, .3, 2.5, '#5af0ff', .5); if (typeof saveGame === 'function') saveGame(); }
+    else if (n.o === O.STONE) { p.hp = p.maxHp; p.st = {}; floatText(p.x, p.y, 'Силы восстановлены. Игра сохранена', '#5af0ff', 7); Sfx.play('potion'); fxRing(n.x, n.y, .3, 2.5, '#5af0ff', .5); if (typeof saveGame === 'function') saveGame(); }
   });
   return { title, openAltar, openShop, close, isOpen };
 })();
@@ -1962,6 +2083,9 @@ function drawObj(b, i, j, o, k) {
     case O.HOUSE: drawSpr(b, 'house' + (i > 14 ? 1 : 0), sx, sy + 6); break;
     case O.SMITH: drawSpr(b, 'smith_i', sx, sy - 2); break;
     case O.ANVIL: drawSpr(b, 'anvil', sx, sy + 1); break;
+    case O.WALL: b.drawImage(WALLSPR, sx - 16, sy - 28); break;
+    case O.CRYPT: case O.EXIT: drawSpr(b, 'crypt', sx, sy + 2); break;
+    case O.CHEST: drawSpr(b, 'chest', sx, sy + 1); break;
     case O.TOMB: drawSpr(b, 'tomb', sx, sy); break;
     case O.TOTEM: drawSpr(b, 'totem', sx, sy + 1); break;
     case O.STAKE: drawSpr(b, 'stake', sx, sy + 1); break;
@@ -2068,12 +2192,13 @@ function render() {
     if (sx < -32 || sx > V.w || sy < -18 || sy > V.h + 70) continue;
     const k = j * MW + i, g = W.g[k], v = ((i * 73856093) ^ (j * 19349663)) & 3;
     if (sy < V.h + 2) {
-      b.drawImage(((g === T.SHALLOW || g === T.DEEP) && ((wf + i + j) & 1)) ? TILE_W2[g][v] : TILE[g][v], sx, sy);
+      if (g !== T.VOID) b.drawImage(((g === T.SHALLOW || g === T.DEEP) && ((wf + i + j) & 1)) ? TILE_W2[g][v] : TILE[g][v], sx, sy);
       if (W.puddle[k] > 0) { b.globalAlpha = Math.min(.8, W.puddle[k] * .4); b.drawImage(TILE[T.SHALLOW][v], sx + 5, sy + 2, 22, 11); b.globalAlpha = 1; }
+      if (W.trap && W.trap[k]) { b.fillStyle = '#1a1420'; b.fillRect(sx + 9, sy + 5, 14, 6); b.fillStyle = (W.trapT % 4.5) > 2.2 ? '#ff5a1a' : '#4a2a20'; for (let q = 0; q < 4; q++) b.fillRect(sx + 10 + q * 3, sy + 6, 2, 4); }
       const ts = TALLSPR[g]; if (ts) b.drawImage(ts[v % 3], sx + (Math.sin(G.time * 2 + i * .7 + j * .9) > .55 ? 1 : 0), sy - 8);
     }
     if (W.fire[k] > 0) { D.push([i + j + 1.2, 3, i, j, W.o[k] === O.TREE ? 1 : 0]); if (sy < V.h + 20) glows.push(sx + 16, sy + 8); }
-    const o = W.o[k]; if (o && o !== O.BLOCK) { D.push([i + j + 1, 0, i, j, o, k]); if (o === O.LAMP || o === O.ALTAR || o === O.STONE || o === O.ANVIL) glows.push(sx + 16, sy - 6); else if (o === O.TOTEM) glows.push(sx + 16, sy); }
+    const o = W.o[k]; if (o && o !== O.BLOCK) { D.push([i + j + 1, 0, i, j, o, k]); if (o === O.LAMP || o === O.ALTAR || o === O.STONE || o === O.ANVIL || o === O.CRYPT || o === O.EXIT || o === O.CHEST) glows.push(sx + 16, sy - 6); else if (o === O.TOTEM) glows.push(sx + 16, sy); }
   }
   // декали на земле: зоны и телеграфы
   for (const z of G.zones) { const K = ZK[z.kind]; if (K.draw) K.draw(b, z); if (K.top) D.push([z.x + z.y + (z.topD || 0), 5, z]); }
@@ -2143,7 +2268,7 @@ function saveGame() {
   if (!G.started || !G.me) return; const p = G.me, n = G.nemesis && !G.nemesis.dead ? Object.assign({}, G.nemesis.nd, { x: G.nemesis.x, y: G.nemesis.y }) : null;
   try { localStorage.setItem(SAVE_KEY, JSON.stringify({ v: 1, name: p.name, lvl: p.lvl, xp: p.xp, gold: p.gold, potions: p.potions, souls: p.souls, slots: p.slots, J: G.J, equip: p.equip, bag: p.bag, shards: p.shards | 0, nem: n, look: p.look || {}, seen: packSeen() })); } catch (e) { }
 }
-function packSeen() { let s = ''; const a = W.seen; for (let i = 0; i < a.length; i += 6) { let v = 0; for (let k = 0; k < 6; k++) if (a[i + k]) v |= 1 << k; s += String.fromCharCode(48 + v); } return s; }
+function packSeen() { let s = ''; const a = (G.over ? G.over.W : W).seen; for (let i = 0; i < a.length; i += 6) { let v = 0; for (let k = 0; k < 6; k++) if (a[i + k]) v |= 1 << k; s += String.fromCharCode(48 + v); } return s; }
 function unpackSeen(s) { if (typeof s !== 'string') return; const a = W.seen; for (let i = 0, j = 0; i < a.length && j < s.length; i += 6, j++) { const v = s.charCodeAt(j) - 48; for (let k = 0; k < 6 && i + k < a.length; k++) a[i + k] = (v >> k) & 1; } W.mapDirty = true; }
 function loadSave() { try { const s = JSON.parse(localStorage.getItem(SAVE_KEY)); return s && s.v === 1 && s.name ? s : null; } catch (e) { return null; } }
 function wipeSave() { try { localStorage.removeItem(SAVE_KEY); } catch (e) { } }
@@ -2206,7 +2331,7 @@ function frame(t) {
 }
 // Старт: новая игра или загрузка сохранения
 function startGame(o) {
-  G.ents = []; G.projs = []; G.zones = []; G.parts = []; G.texts = []; G.fx = []; G.pickups = []; G.players = []; G.nemesis = null; G.time = 0;
+  G.ents = []; G.projs = []; G.zones = []; G.parts = []; G.texts = []; G.fx = []; G.pickups = []; G.players = []; G.nemesis = null; G.time = 0; G.over = null; G.pendingLeave = false;
   genWorld(); G.J = newJournal();
   const look = (o && o.save && o.save.look) || (o && o.look) || {}; applyLook(look);
   const p = mkPlayer(o && o.name); p.look = look; G.me = p; G.dark = undefined; G.players.push(p); G.ents.push(p);
@@ -2223,7 +2348,7 @@ function boot() {
   requestAnimationFrame(frame);
 }
 window.__G = G; // для отладки и автотестов
-G.dbg = { makeItem, giveItem, dropItem, recalc, Menus, saveGame, loadSave, spawnNemesis, castSoul, soulDef, mkMob, giveSoul, addSt, damage, fuse, SOULS, CHIMERAS, T, O, tIdx, getW: () => W, ignite, addPuddle, kill, gainXp, zoneAt };
+G.dbg = { enterDungeon, leaveDungeon, DUNGEONS, makeItem, giveItem, dropItem, recalc, Menus, saveGame, loadSave, spawnNemesis, castSoul, soulDef, mkMob, giveSoul, addSt, damage, fuse, SOULS, CHIMERAS, T, O, tIdx, getW: () => W, ignite, addPuddle, kill, gainXp, zoneAt };
 boot();
 
 })();
