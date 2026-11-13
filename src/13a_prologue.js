@@ -23,7 +23,7 @@ function startPrologue() {
 }
 function resetHero(p) {
   const h = G.J.hints || {}; G.J = newJournal(); G.J.hints = h; G.J.prologue = 1; delete G.J.hints.soul; delete G.J.hints.drop;
-  p.lvl = 1; p.xp = 0; p.gold = 0; p.potions = 2; p.souls = {}; p.slots = [null, null, null, null]; p.bag = []; p.shards = 0; p.mpTrain = 0; p.mast = {};
+  p.lvl = 1; p.xp = 0; p.gold = 0; p.potions = 2; p.ess = 0; p.slv = {}; p.mpot = 1; p.scrolls = 0; p.souls = {}; p.slots = [null, null, null, null]; p.bag = []; p.shards = 0; p.mpTrain = 0; p.mast = {};
   for (const s of ISLOTS) p.equip[s] = null; recalc(p); giveSoul(p, 'wolf', 1, true); p.hp = p.maxHp; p.mp = p.maxMp; for (let i = 0; i < 4; i++) resetSlot(p, i);
 }
 const GUARD_SAY = [[2, 'Ты пришёл за последней душой.'], [11, 'Сотни голосов кричат в тебе. Ты их ещё слышишь?'], [21, 'Этот лес старше твоего голода.'], [32, 'Бей. Жги. Это ничего не изменит.']];

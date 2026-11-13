@@ -40,7 +40,7 @@ function startGame(o) {
   G.ents = []; G.projs = []; G.zones = []; G.parts = []; G.texts = []; G.fx = []; G.pickups = []; G.players = []; G.nemesis = null; G.time = 0; G.over = null; G.pendingLeave = false;
   genWorld(); G.J = newJournal();
   const look = (o && o.save && o.save.look) || (o && o.look) || {}; applyLook(look);
-  const p = mkPlayer(o && o.name); p.look = look; G.me = p; G.dark = undefined; G.players.push(p); G.ents.push(p);
+  const p = mkPlayer(o && o.name); p.look = look; p.style = look.style === 'ranged' ? 'ranged' : 'melee'; recalc(p); p.hp = p.maxHp; G.me = p; G.dark = undefined; G.players.push(p); G.ents.push(p);
   if (o && o.save && typeof applySave === 'function') applySave(p, o.save);
   else if (typeof giveSoul === 'function' && typeof soulDef === 'function') giveSoul(p, 'wolf', 1, true);
   G.cam.x = p.x; G.cam.y = p.y; G.started = true; G.paused = false; Input.clear();

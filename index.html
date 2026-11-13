@@ -564,6 +564,10 @@ const GLYPH = {
   i_weapon: ['......##', '.....###', '....###.', '#..###..', '.####...', '.###....', '#.##....', '...#....'], i_armor: ['##.#.##', '#######', '#######', '.#####.', '.#####.', '.#####.', '.#####.'], i_amulet: ['.#...#.', '#.....#', '#.....#', '.#...#.', '..###..', '.#####.', '..###..'], i_ring: ['..###..', '.#####.', '..###..', '.#...#.', '#.....#', '.#...#.', '..###..'],
   bonecage: ['#.#.#.#', '#.#.#.#', '#.#.#.#', '#.#.#.#', '#.#.#.#', '#######'], tidal: ['#....#...', '.#..#.#..', '..##...##', '#....#...', '.#..#.#..', '..##...##', '#########'], tempest: ['.#####.', '#######', '.#####.', '..#.#..', '.#.#...', '..#.#..', '.#.#...'],
   hook: ['..###..', '.#...#.', '.....#.', '....#..', '...#...', '...#...', '#..#...', '.###...'], drain: ['#.....#', '.#...#.', '..#.#..', '...#...', '..###..', '.#####.', '..###..'],
+  i_weapon0: ['......#', '.....##', '....##.', '.#.##..', '..##...', '.#.#...', '#......'], i_weapon1: ['......##', '.....###', '....###.', '#..###..', '.####...', '.###....', '#.##....', '...#....'], i_weapon2: ['.......#', '......##', '.....##.', '#...##..', '.#.##...', '..##....', '.#.#....', '#...#...'], i_weapon3: ['.#####.', '#....##', '......#', '.....#.', '....#..', '...#...', '..#....', '.#.....'],
+  i_armor0: ['..###..', '.#####.', '.#####.', '#######', '#######', '###.###', '##...##'], i_armor1: ['##.#.##', '#######', '#######', '.#####.', '.#####.', '.#####.', '.#####.'], i_armor2: ['##.#.##', '#######', '#.#.#.#', '.#.#.#.', '.#####.', '.#.#.#.', '.#####.'], i_armor3: ['###.###', '#######', '#######', '.#####.', '.##.##.', '.#####.', '..###..'],
+  i_amulet0: ['.#...#.', '#.....#', '#.....#', '.#...#.', '..###..', '.#####.', '..###..'], i_amulet1: ['.#...#.', '#.....#', '.#...#.', '..###..', '.#.#.#.', '.#####.', '..###..'],
+  i_ring0: ['..###..', '.#####.', '..###..', '.#...#.', '#.....#', '.#...#.', '..###..'], i_ring1: ['...#...', '..###..', '..###..', '.#...#.', '#.....#', '.#...#.', '..###..'],
   geyser: ['#..#..#', '.#.#.#.', '..###..', '..###..', '..###..', '.#####.', '#######']
 };
 const ICONC = {};
@@ -580,27 +584,27 @@ function iconUrl(c) { return c.url || (c.url = c.toDataURL()); }
 
 // ===== 03_world.js =====
 // Мир: генерация карты шумом, зоны, огонь/лужи/зарастание, точки спавна
-const MW = 210, MH = 170, MIDY = 85.5;
+const MW = 300, MH = 220, MIDY = 110.5, SX = MW / 210;
 const O = { NONE: 0, TREE: 1, DEAD: 2, ROCK: 3, ALTAR: 4, STONE: 5, MERCH: 6, HOUSE: 7, CRATE: 8, LAMP: 9, BLOCK: 10, TOMB: 11, TOTEM: 12, STAKE: 13, SMITH: 14, ANVIL: 15, WALL: 16, CRYPT: 17, EXIT: 18, CHEST: 19, ELDER: 20 };
-const TOWN = { x: 14.5, y: MIDY, r: 11 }, LAIR = { x: 196.5, y: MIDY, r: 8.5 };
+const TOWN = { x: 14.5, y: MIDY, r: 11 }, LAIR = { x: MW - 13.5, y: MIDY, r: 8.5 };
 const ZNAME = { town: 'Город', edge: 'Опушка', thicket: 'Чаща', scorch: 'Выжженная поляна', bog: 'Гнилые топи', grave: 'Костяной погост', lair: 'Логово Пепельного Волка' };
 const ZLVL = { town: '', edge: 'ур. 1–3', thicket: 'ур. 3–6', scorch: 'ур. 6–9', bog: 'ур. 4–7', grave: 'ур. 5–8', lair: 'босс, ур. 10' };
 // Горючесть тайлов: топливо (сек) и шанс перекинуться на соседа
 const FL = {}; FL[T.TALL] = { fuel: 5, sp: .2 }; FL[T.DTALL] = { fuel: 5, sp: .16 }; FL[T.DRY] = { fuel: 2.2, sp: .2 }; FL[T.DRYTALL] = { fuel: 4, sp: .45 };
 let W = null;
 
-function pathY(x) { const t = clamp((x - 26) / 22, 0, 1) * clamp((184 - x) / 16, 0, 1), s = t * t * (3 - 2 * t); return MIDY + (vnoise(x * .045, 3.3, SEED) - .5) * 46 * s; }
+function pathY(x) { const t = clamp((x - 26) / 22, 0, 1) * clamp((MW - 26 - x) / 16, 0, 1), s = t * t * (3 - 2 * t); return MIDY + (vnoise(x * .04, 3.3, SEED) - .5) * 62 * s; }
 const ZDARK = { dungeon: .8, town: .34, edge: .5, thicket: .64, scorch: .52, bog: .62, grave: .68, lair: .56 };
-function zoneLvl(z, x) { return z === 'edge' ? clamp(1 + Math.floor((x - 26) / 18), 1, 3) : z === 'thicket' ? clamp(3 + Math.floor((x - 80) / 14), 3, 6) : z === 'bog' ? clamp(4 + Math.floor((x - 36) / 45), 4, 7) : z === 'grave' ? clamp(5 + Math.floor((x - 46) / 42), 5, 8) : clamp(6 + Math.floor((x - 136) / 12), 6, 9); }
+function zoneLvl(z, x) { return z === 'edge' ? clamp(1 + Math.floor((x - 26) / (18 * SX)), 1, 3) : z === 'thicket' ? clamp(3 + Math.floor((x - 80 * SX) / (14 * SX)), 3, 6) : z === 'bog' ? clamp(4 + Math.floor((x - 36) / (45 * SX)), 4, 7) : z === 'grave' ? clamp(5 + Math.floor((x - 46) / (42 * SX)), 5, 8) : clamp(6 + Math.floor((x - 136 * SX) / (12 * SX)), 6, 9); }
 const ZTYPES = { edge: ['wolf', 'slime', 'shroom'], thicket: ['root', 'bat', 'skel'], scorch: ['imp', 'falcon'], bog: ['toad', 'shroom', 'slime', 'root'], grave: ['wraith', 'skel', 'bat', 'wolf'] };
 function zoneAt(x, y) {
   if (W && W.dun) return 'dungeon';
   if (dist(x, y, TOWN.x, TOWN.y) < TOWN.r + 1) return 'town';
   if (dist(x, y, LAIR.x, LAIR.y) < LAIR.r + 3) return 'lair';
-  if (x > 46 && x < 190 && y < 52 + (vnoise(x * .06, 1.1, SEED + 7) - .5) * 14) return 'grave';
-  if (x > 36 && x < 190 && y > 119 + (vnoise(x * .06, 5.1, SEED + 8) - .5) * 14) return 'bog';
+  if (x > 46 && x < MW - 20 && y < MIDY - 42 + (vnoise(x * .06, 1.1, SEED + 7) - .5) * 14) return 'grave';
+  if (x > 36 && x < MW - 20 && y > MIDY + 42 + (vnoise(x * .06, 5.1, SEED + 8) - .5) * 14) return 'bog';
   const w = x + (vnoise(y * .08, 7.7, SEED) - .5) * 8;
-  return w < 80 ? 'edge' : w < 136 ? 'thicket' : 'scorch';
+  return w < 80 * SX ? 'edge' : w < 136 * SX ? 'thicket' : 'scorch';
 }
 const tIdx = (x, y) => (y | 0) * MW + (x | 0);
 function blocked(x, y, fly) {
@@ -657,7 +661,7 @@ function genWorld() {
   }
   placeCrypts();
   // Город
-  const put = (x, y, o) => { W.o[(y + 35) * MW + x] = o; };
+  const put = (x, y, o) => { W.o[(y + MIDY - 50.5) * MW + x] = o; };
   put(14, 50, O.STONE); put(10, 46, O.ALTAR); put(18, 45, O.MERCH); put(16, 52, O.ELDER); put(9, 51, O.SMITH); put(10, 52, O.ANVIL); put(19, 46, O.CRATE);
   put(7, 53, O.HOUSE); put(6, 53, O.BLOCK); put(7, 52, O.BLOCK); put(6, 52, O.BLOCK);
   put(21, 54, O.HOUSE); put(20, 54, O.BLOCK); put(21, 53, O.BLOCK); put(20, 53, O.BLOCK);
@@ -665,9 +669,9 @@ function genWorld() {
   W.g0.set(W.g); W.o0.set(W.o);
 
   // Точки спавна мобов по сетке
-  const CS = 9, used = {};
+  const CS = 8, used = {};
   for (let cy = 0; cy * CS < MH; cy++) for (let cx = 0; cx * CS < MW; cx++) {
-    if (hash2(cx, cy, SEED + 9) > .7) continue;
+    if (hash2(cx, cy, SEED + 9) > .88) continue;
     for (let t = 0; t < 8; t++) {
       const x = cx * CS + 1 + Math.floor(hash2(cx * 7 + t, cy, SEED + 10) * (CS - 1)), y = cy * CS + 1 + Math.floor(hash2(cx, cy * 7 + t, SEED + 11) * (CS - 1));
       if (x < 4 || y < 4 || x >= MW - 4 || y >= MH - 4) continue;
@@ -1267,27 +1271,31 @@ const CHIMERAS = {
 };
 const RECIPES = {};
 for (const id in CHIMERAS) RECIPES[CHIMERAS[id].from.slice().sort().join('+')] = id;
-const FUSE_COST = 40;
+const FUSE_COST = 150;
+// Редкость душ и эссенция: лишние души сжигаются на Алтаре, за эссенцию любая душа усиливается
+const SRAR = [{ n: 'Обычная', c: '#c8c8d0', e: 1 }, { n: 'Редкая', c: '#4aa8ff', e: 3 }, { n: 'Эпическая', c: '#b04ad8', e: 8 }, { n: 'Легендарная', c: '#ffb02e', e: 20 }];
+const SLV_MAX = 10;
+const slvCost = (def, lv) => (lv + 1) * 2 * (def.rar + 1);
 const SDEF = {};
 function soulDef(id) {
   if (SDEF[id]) return SDEF[id]; let d = null;
-  if (SOULS[id]) { const s = SOULS[id]; d = Object.assign({ id, base: true, els: [s.el], icon: makeIcon(id, s.ab, EL[s.el].c) }, s); }
-  else if (CHIMERAS[id]) { const c = CHIMERAS[id]; d = Object.assign({ id, chimera: true, unique: true, abName: c.name, mult: 1.15, s3: 'Сильнее и дольше', icon: makeIcon(id, c.glyph, EL[c.els[0]].c, EL[c.els[1]].c) }, c); }
+  if (SOULS[id]) { const s = SOULS[id]; d = Object.assign({ id, base: true, rar: s.boss ? 3 : 0, els: [s.el], icon: makeIcon(id, s.ab, EL[s.el].c) }, s); }
+  else if (CHIMERAS[id]) { const c = CHIMERAS[id]; d = Object.assign({ id, chimera: true, unique: true, rar: 2, abName: c.name, mult: 1.3, s3: 'Сильнее и дольше', icon: makeIcon(id, c.glyph, EL[c.els[0]].c, EL[c.els[1]].c) }, c); }
   else if (id.slice(0, 2) === 'p_') {
     const pp = id.split('_'), a = SOULS[pp[1]], b = SOULS[pp[2]]; if (!a || !b) return SDEF[id] = soulDef('wolf');
     const A = AB[a.ab], nm = EL[b.el].adj[A.g] + ' ' + A.noun;
-    d = { id, chimera: true, name: nm, abName: nm, ab: a.ab, el: b.el, els: [a.el, b.el], mult: 1.3, from: [pp[1], pp[2]], desc: a.abName + ' со стихией «' + EL[b.el].n + '». Урон +30%.', s3: a.s3, icon: makeIcon(id, a.ab, EL[a.el].c, EL[b.el].c) };
+    d = { id, chimera: true, name: nm, abName: nm, ab: a.ab, el: b.el, els: [a.el, b.el], rar: a.boss || b.boss ? 3 : 1, mult: a.boss || b.boss ? 1.5 : 1.15, from: [pp[1], pp[2]], desc: a.abName + ' со стихией «' + EL[b.el].n + '». Урон +' + (a.boss || b.boss ? 50 : 15) + '%.', s3: a.s3, icon: makeIcon(id, a.ab, EL[a.el].c, EL[b.el].c) };
   } else return soulDef('wolf');
   return SDEF[id] = d;
 }
 const recipeKey = (a, b) => [a, b].sort().join('+');
 // Что получится из a+b (порядок важен только для процедурных)
 function fuseResult(a, b) { return RECIPES[recipeKey(a, b)] || ('p_' + a + '_' + b); }
-function canFuse(p, a, b) { return a && b && a !== b && SOULS[a] && SOULS[b] && p.souls[a] >= 1 && p.souls[b] >= 1 && p.gold >= FUSE_COST; }
+function canFuse(p, a, b) { return a && b && a !== b && SOULS[a] && SOULS[b] && p.souls[a] >= 2 && p.souls[b] >= 2 && p.gold >= FUSE_COST; }
 function fuse(p, a, b) {
   if (!canFuse(p, a, b)) return null;
   const id = fuseResult(a, b), isNew = !G.J.recipes[a + '>' + b] && !(CHIMERAS[id] && G.J.recipes[recipeKey(a, b)]);
-  p.gold -= FUSE_COST; takeSoul(p, a); takeSoul(p, b);
+  p.gold -= FUSE_COST; takeSoul(p, a); takeSoul(p, a); takeSoul(p, b); takeSoul(p, b);
   G.J.recipes[CHIMERAS[id] ? recipeKey(a, b) : a + '>' + b] = id;
   giveSoul(p, id, 1, true); Sfx.play('fuse'); Bus.emit('fused', id, isNew);
   return { id, isNew };
@@ -1313,17 +1321,17 @@ let itemUid = 1;
 function rollRank(w) { let r = rand(w.reduce((a, c) => a + c, 0)); for (let i = 0; i < w.length; i++) { r -= w[i]; if (r < 0) return i; } return 0; }
 function makeItem(lvl, rank, slot) {
   slot = slot || pick(ISLOTS); const R = RANKS[rank], m = R.m; lvl = clamp(lvl | 0, 1, 12);
-  const base = slot === 'weapon' ? ['atk', Math.round((3 + 1.5 * lvl) * m)] : slot === 'armor' ? ['hp', Math.round((15 + 8 * lvl) * m)] : slot === 'amulet' ? ['soul', Math.round((6 + .8 * lvl) * m)] : ['crit', Math.round((3 + .3 * lvl) * m)];
+  const base = slot === 'weapon' ? ['atk', Math.round((2 + .9 * lvl) * m)] : slot === 'armor' ? ['hp', Math.round((10 + 5 * lvl) * m)] : slot === 'amulet' ? ['soul', Math.round((4 + .5 * lvl) * m)] : ['crit', Math.round((2 + .25 * lvl) * m)];
   const keys = Object.keys(AFF).filter(k => k !== base[0]), aff = [];
   for (let i = 0; i < R.aff; i++) { const k = keys.splice(Math.floor(rand(keys.length)), 1)[0]; aff.push([k, Math.max(1, Math.round(AFF[k].f(lvl) * rand(.8, 1.2) * Math.pow(m, .6)))]); }
   const nm = INAMES[slot][clamp(Math.floor((lvl - 1) / 3), 0, 3)] + (aff.length ? ' ' + AFF[aff[0][0]].sx : '');
   return { uid: Date.now().toString(36) + (itemUid++), slot, rank, lvl, base, aff, name: nm, curse: rank === 4 };
 }
 // Ковка: +1..+10, каждый уровень даёт +10% к основному свойству. Зачарование: душа даёт предмету стихию.
-const FORGE_CH = [100, 100, 100, 80, 65, 50, 40, 30, 20, 10], ENCH_COST = 60;
-const baseVal = it => Math.round(it.base[1] * (1 + .1 * (it.plus | 0)));
+const FORGE_CH = [100, 100, 100, 80, 65, 50, 40, 30, 20, 10], ENCH_COST = 200;
+const baseVal = it => Math.round(it.base[1] * (1 + .06 * (it.plus | 0)));
 const itemName = it => it.name + (it.plus ? ' +' + it.plus : '');
-const forgeCost = it => ({ gold: 15 * ((it.plus | 0) + 1) * (it.rank + 1), sh: (it.plus | 0) + 1 });
+const forgeCost = it => ({ gold: 35 * ((it.plus | 0) + 1) * (it.rank + 1), sh: (it.plus | 0) + 1 });
 const shardsOf = it => (it.rank + 1) * (it.rank + 1) + (it.plus | 0) * 2;
 function enchDesc(slot, el) { const n = EL[el].n; return slot === 'weapon' ? 'Удары мечом бьют стихией «' + n + '»: накладывают её эффект и запускают реакции' : slot === 'armor' ? 'Урон стихии «' + n + '» по тебе вдвое слабее, её эффект на тебя не действует' : slot === 'amulet' ? 'Души стихии «' + n + '» наносят на 25% больше урона' : 'Души стихии «' + n + '» перезаряжаются на 20% быстрее'; }
 function itemLines(it) {
@@ -1333,9 +1341,10 @@ function itemLines(it) {
   if (it.curse) L.push('<span class="bad">Проклятие: −8% здоровья</span>');
   return L;
 }
-const itemPrice = it => Math.round((4 + 2 * it.lvl) * (it.rank + 1) * (it.rank + 1) * .5);
+const itemPrice = it => Math.round((4 + 2 * it.lvl) * (it.rank + 1) * (it.rank + 1) * .3);
 const itemScore = it => it.rank * 100 + it.lvl + (it.plus | 0) * 3 + (it.ench ? 5 : 0);
-function itemIcon(it) { return makeIcon('it_' + it.slot + it.rank, 'i_' + it.slot, RANKS[it.rank].c); }
+const itemTier = it => clamp(Math.floor((it.lvl - 1) / 3), 0, 3);
+function itemIcon(it) { const t = itemTier(it), g = 'i_' + it.slot + t; return makeIcon('it_' + it.slot + t + '_' + it.rank, GLYPH[g] ? g : 'i_' + it.slot + (t & 1), RANKS[it.rank].c); }
 // Суммарные бонусы надетого
 function gearStats(list) {
   const s = { atk: 0, hp: 0, spd: 0, cdr: 0, crit: 0, soul: 0, pot: 0, el: {}, curse: 0 };
@@ -1347,7 +1356,7 @@ function unequipItem(p, slot) { const it = p.equip[slot]; if (!it || p.bag.lengt
 function giveItem(p, it) { if (!p.equip[it.slot]) { p.equip[it.slot] = it; recalc(p); } else p.bag.push(it); }
 function dropItem(x, y, it, owner) { const a = rand(TAU); G.pickups.push({ kind: 'item', x, y, v: it, age: 0, vx: Math.cos(a) * 2.5, vy: Math.sin(a) * 2.5, owner: owner ? owner.id : 0 }); }
 // Дроп с мобов: ранг зависит от того, кого убил
-const DROP = { mob: [.09, [70, 24, 5, 1, 0]], elite: [.6, [30, 45, 20, 5, 0]], chief: [1, [0, 45, 38, 12, 5]], boss: [1, [0, 0, 50, 35, 15]] };
+const DROP = { mob: [.03, [85, 13, 2, 0, 0]], elite: [.3, [55, 35, 9, 1, 0]], chief: [1, [20, 50, 25, 5, 0]], boss: [1, [0, 25, 50, 22, 3]] };
 Bus.on('mobDeath', (m) => {
   if (m.owner || m.type === 'spirit' || m.isNemesis || m.summoned) return; const p = m.lastHitBy || G.me; if (!p || dist(p.x, p.y, m.x, m.y) > 22) return;
   const D = DROP[m.boss ? 'boss' : m.chief ? 'chief' : m.elite ? 'elite' : 'mob'];
@@ -1367,10 +1376,10 @@ const MOBS = {
   water: { name: 'Водяной дух', hp: 48, atk: 7, spd: 2.6, abils: ['wave'], el: 'water', soul: 'water', keep: 3.2, weak: 'storm', immune: { burn: 1 }, blood: '#5aa8f0' },
   imp: { name: 'Огненный бес', hp: 44, atk: 8, spd: 3.2, abils: ['ball'], el: 'fire', soul: 'imp', keep: 4.6, weak: 'water', immune: { burn: 1 }, blood: '#e8502a' },
   falcon: { name: 'Ветряной сокол', hp: 40, atk: 8, spd: 4.4, abils: ['whirl', 'bite'], el: 'wind', soul: 'falcon', fly: true, keep: 4, blood: '#7ae0c8' },
-  ashwolf: { summon: ['imp', 3, 8, 'Он призывает бесов!'], name: 'Пепельный Волк', hp: 1500, atk: 25, spd: 3.5, abils: [{ ab: 'blazedash', el: 'fire', cdm: 1 }, { ab: 'ashstorm', el: 'ash', cdm: .5 }, { ab: 'bite', el: 'ash', cdm: 1 }], el: 'ash', soul: 'ashwolf', boss: true, r: .7, immune: { burn: 1, blind: 1 }, aggro: 9, leash: 13, blood: '#ff7a1a', scale: 1 },
-  boneking: { name: 'Костяной Король', hp: 1700, atk: 24, spd: 2.6, abils: [{ ab: 'bonecage', el: 'bone', cdm: .6 }, { ab: 'arrows', el: 'bone', cdm: .8 }, { ab: 'roots', el: 'bone', cdm: .9 }, { ab: 'bite', el: 'bone', cdm: 1 }], el: 'bone', soul: 'boneking', boss: true, r: .6, immune: { poison: 1, bleed: 1 }, aggro: 9, leash: 12, blood: '#f0ecd8', summon: ['skel', 3, 7, 'Он поднимает мертвецов!'] },
-  slimequeen: { name: 'Матерь Слизи', hp: 1500, atk: 19, spd: 2.4, hop: true, abils: [{ ab: 'tidal', el: 'poison', cdm: .6 }, { ab: 'cloud', el: 'poison', cdm: .8 }, { ab: 'shield', el: 'slime', cdm: 1 }, { ab: 'bite', el: 'slime', cdm: 1 }], el: 'slime', soul: 'slimequeen', boss: true, r: .8, immune: { poison: 1, slow: 1 }, aggro: 9, leash: 12, blood: '#6fe0a0', weak: 'fire', summon: ['slime', 4, 5, 'Она распадается на слизней!'] },
-  stormmother: { name: 'Грозовая Матка', hp: 1100, atk: 17, spd: 4, fly: true, keep: 3.5, abils: [{ ab: 'tempest', el: 'storm', cdm: .6 }, { ab: 'chain', el: 'storm', cdm: .8 }, { ab: 'whirl', el: 'wind', cdm: 1 }], el: 'storm', soul: 'stormmother', boss: true, r: .6, immune: { stun: 1 }, aggro: 9, leash: 12, blood: '#ffe95a', summon: ['bat', 4, 4, 'Она зовёт выводок!'] },
+  ashwolf: { summon: ['imp', 3, 8, 'Он призывает бесов!'], name: 'Пепельный Волк', hp: 3600, atk: 25, spd: 3.5, abils: [{ ab: 'blazedash', el: 'fire', cdm: 1 }, { ab: 'ashstorm', el: 'ash', cdm: .5 }, { ab: 'bite', el: 'ash', cdm: 1 }], el: 'ash', soul: 'ashwolf', boss: true, r: .7, immune: { burn: 1, blind: 1 }, aggro: 9, leash: 13, blood: '#ff7a1a', scale: 1 },
+  boneking: { name: 'Костяной Король', hp: 3400, atk: 24, spd: 2.6, abils: [{ ab: 'bonecage', el: 'bone', cdm: .6 }, { ab: 'arrows', el: 'bone', cdm: .8 }, { ab: 'roots', el: 'bone', cdm: .9 }, { ab: 'bite', el: 'bone', cdm: 1 }], el: 'bone', soul: 'boneking', boss: true, r: .6, immune: { poison: 1, bleed: 1 }, aggro: 9, leash: 12, blood: '#f0ecd8', summon: ['skel', 3, 7, 'Он поднимает мертвецов!'] },
+  slimequeen: { name: 'Матерь Слизи', hp: 3000, atk: 19, spd: 2.4, hop: true, abils: [{ ab: 'tidal', el: 'poison', cdm: .6 }, { ab: 'cloud', el: 'poison', cdm: .8 }, { ab: 'shield', el: 'slime', cdm: 1 }, { ab: 'bite', el: 'slime', cdm: 1 }], el: 'slime', soul: 'slimequeen', boss: true, r: .8, immune: { poison: 1, slow: 1 }, aggro: 9, leash: 12, blood: '#6fe0a0', weak: 'fire', summon: ['slime', 4, 5, 'Она распадается на слизней!'] },
+  stormmother: { name: 'Грозовая Матка', hp: 2200, atk: 17, spd: 4, fly: true, keep: 3.5, abils: [{ ab: 'tempest', el: 'storm', cdm: .6 }, { ab: 'chain', el: 'storm', cdm: .8 }, { ab: 'whirl', el: 'wind', cdm: 1 }], el: 'storm', soul: 'stormmother', boss: true, r: .6, immune: { stun: 1 }, aggro: 9, leash: 12, blood: '#ffe95a', summon: ['bat', 4, 4, 'Она зовёт выводок!'] },
   toad: { name: 'Болотная жаба', hp: 62, atk: 8, spd: 2.4, hop: true, abils: ['hook', 'bite'], el: 'poison', soul: 'toad', immune: { poison: 1 }, weak: 'storm', blood: '#5a8a2a' },
   wraith: { name: 'Призрак', hp: 44, atk: 9, spd: 3.4, fly: true, abils: ['drain'], el: 'shadow', soul: 'wraith', immune: { poison: 1, bleed: 1, root: 1 }, weak: 'fire', blood: '#8a7ab8' },
   guardian: { name: 'Хранитель леса', hp: 32000, atk: 21, spd: 4, abils: [{ ab: 'dash', el: 'beast', cdm: .7 }, { ab: 'tempest', el: 'storm', cdm: .45 }, { ab: 'roots', el: 'nature', cdm: .7 }, { ab: 'bonecage', el: 'nature', cdm: .5 }, { ab: 'bite', el: 'beast', cdm: 1 }], el: 'nature', boss: true, r: 1, immune: { burn: 1, poison: 1, stun: 1, root: 1, slow: 1, blind: 1, bleed: 1, brittle: 1 }, aggro: 12, leash: 40, blood: '#fff8d0' },
@@ -1381,7 +1390,7 @@ function mkMob(type, x, y, lvl, o) {
   const d = MOBS[type], sc = d.boss || type === 'nemesis' || type === 'spirit';
   const m = mkEnt({
     ai: true, type, name: d.name, spr: d.spr || type, x, y, hx: x, hy: y, lvl, team: 2, r: d.r || .32, fly: !!d.fly, hop: !!d.hop, spd: d.spd, weak: d.weak, resist: d.resist, immune: d.immune || {}, heavy: d.heavy, blood: d.blood,
-    maxHp: Math.round(d.hp * (sc ? 1 : (1 + .32 * (lvl - 1)) * 1.25)), atk: d.atk * (sc ? 1 : (1 + .2 * (lvl - 1)) * 1.3), state: 'idle', stT: 0, target: null, wu: null, scanT: rand(.3), wt: rand(1, 3), wx: x, wy: y,
+    maxHp: Math.round(d.hp * (sc ? 1 : (1 + .32 * (lvl - 1)) * 1.6)), atk: d.atk * (sc ? 1 : (1 + .2 * (lvl - 1)) * 1.45), state: 'idle', stT: 0, target: null, wu: null, scanT: rand(.3), wt: rand(1, 3), wx: x, wy: y,
     abils: d.abils.map(a => ({ ab: a.ab || a, el: a.el || d.el, mult: a.mult || 1, stars: 1, cd: rand(.8, 2.5), cdm: a.cdm || 1.2 })), keep: d.keep || 0, aggro: d.aggro || 8.5, leash: d.leash || 15, boss: !!d.boss, scale: d.scale, humanoid: type === 'nemesis', stuck: 0, avoid: 0, strafe: chance(.5) ? 1 : -1, strT: rand(1, 3)
   });
   if (o) Object.assign(m, o);
@@ -1498,14 +1507,14 @@ Bus.on('mobDeath', (m, src) => {
   if (m.isNemesis) { Bus.emit('nemesisDeath', m, p); return; }
   G.J.kills++;
   gainXp(p, m.boss ? 400 : (5 + 5 * m.lvl) * (m.elite ? 3 : 1));
-  const g = m.boss ? 250 : randi(2, 4) * m.lvl * (m.elite ? 3 : 1); for (let i = 0, n = m.boss ? 10 : 1 + (g > 12 ? 1 : 0); i < n; i++) dropPickup('gold', m.x, m.y, Math.ceil(g / n));
+  const g = m.boss ? 140 : randi(1, 2) * m.lvl * (m.elite ? 3 : 1); for (let i = 0, n = m.boss ? 10 : 1 + (g > 12 ? 1 : 0); i < n; i++) dropPickup('gold', m.x, m.y, Math.ceil(g / n));
   const soul = MOBS[m.type].soul;
-  if (soul && !m.summoned) { const ch = m.boss ? (G.J.obtained[soul] ? .35 : 1) : (m.chief ? 1 : m.elite ? .5 : G.J.obtained[soul] ? .15 : .6); if (chance(ch)) dropPickup('soul', m.x, m.y, soul); }
+  if (soul && !m.summoned) { const ch = m.boss ? (G.J.obtained[soul] ? .25 : 1) : (m.chief ? .6 : m.elite ? .2 : G.J.obtained[soul] ? .07 : .25); if (chance(ch)) dropPickup('soul', m.x, m.y, soul); }
   if (m.boss) { G.J.bossKills++; banner(m.name.toUpperCase() + ' — ПОВЕРЖЕН', m.dunBoss ? 'В зале появился сундук. Выход — у входа в подземелье' : 'Шепчущий лес свободен... пока что', '#ffd870'); Sfx.play('levelup'); shake(10); for (let i = 0; i < 5; i++) fxRing(m.x, m.y, .5, 4 + i * 1.5, '#ff7a2a', .5 + i * .15); Bus.emit('bossDeath', m, p); }
 });
 Bus.on('campClear', (s) => {
   const c = W.camps[s.camp], p = G.me; if (!p || dist(p.x, p.y, c.x, c.y) > 25) return;
-  c.cleared = true; G.J.camps = (G.J.camps || 0) + 1; const g = 30 * s.lvl; for (let i = 0; i < 8; i++) dropPickup('gold', c.x, c.y + 1, Math.ceil(g / 8));
+  c.cleared = true; G.J.camps = (G.J.camps || 0) + 1; const g = 14 * s.lvl; for (let i = 0; i < 8; i++) dropPickup('gold', c.x, c.y + 1, Math.ceil(g / 8));
   if (p.potions < POTION_MAX) p.potions++; p.shards = (p.shards || 0) + 3;
   banner('ЛАГЕРЬ ЗАЧИЩЕН', 'Золото, зелье, осколки и душа вожака твои. Лагерь восстановится не скоро', '#ff5a6a'); Sfx.play('levelup'); fxRing(c.x, c.y, .5, 6, '#ff2a4a', .7); shake(5);
 });
@@ -1577,8 +1586,8 @@ function leaveDungeon() {
 }
 function openChest(p, n, boss) {
   W.o[tIdx(n.x, n.y)] = 0; const lvl = W.dun.lvl; Sfx.play('soul'); burst(n.x, n.y, ['#ffd870', '#ffffff'], 24, 5, { glow: 1 }); fxRing(n.x, n.y, .3, 2.5, '#ffd870', .5);
-  for (let i = 0; i < (boss ? 3 : 2); i++) dropItem(n.x, n.y + .6, makeItem(lvl + (boss ? 2 : 0), rollRank(boss ? [0, 20, 45, 25, 10] : [25, 45, 22, 7, 1])), p);
-  for (let i = 0; i < 5; i++) dropPickup('gold', n.x, n.y + .6, Math.ceil((boss ? 40 : 12) * lvl / 5)); const sh = boss ? 8 : randi(2, 3); p.shards = (p.shards || 0) + sh; floatText(n.x, n.y, '+' + sh + ' ◆', '#8ad0ff', 7);
+  for (let i = 0; i < (boss ? 3 : 2); i++) dropItem(n.x, n.y + .6, makeItem(lvl + (boss ? 2 : 0), rollRank(boss ? [0, 40, 40, 17, 3] : [50, 38, 10, 2, 0])), p);
+  for (let i = 0; i < 5; i++) dropPickup('gold', n.x, n.y + .6, Math.ceil((boss ? 18 : 5) * lvl / 5)); const sh = boss ? 8 : randi(2, 3); p.shards = (p.shards || 0) + sh; floatText(n.x, n.y, '+' + sh + ' ◆', '#8ad0ff', 7);
 }
 Bus.on('interact', (p, n) => {
   if (n.o === O.CRYPT) { const c = W.crypts.find(q => dist(q.x, q.y, n.x, n.y) < 1), d = c && DUNGEONS.find(q => q.id === c.id); if (d) G.pendingEnter = [d, c]; }
@@ -1588,11 +1597,11 @@ Bus.on('interact', (p, n) => {
 // Смерть в подземелье: героя выбрасывает наружу, Тень встаёт у входа
 Bus.on('playerDeath', (p) => { if (W.dun && G.over) { p.x = G.over.px; p.y = G.over.py; G.pendingLeave = true; } });
 Bus.on('mobDeath', (m) => {
-  if (!m.dunBoss || !W.dun) return; const B = W.bossRoom, k = (B.y + (B.h >> 1)) * MW + B.x + (B.w >> 1); W.o[k] = O.CHEST; W.bossChest = k;
+  if (!m.dunBoss || !W.dun) return; const B = W.bossRoom, k = (B.y + (B.h >> 1)) * MW + B.x + (B.w >> 1); W.o[k] = O.CHEST; W.bossChest = k; W.o[k + 3] = O.EXIT; W.g[k + 3] = T.DFLOOR; // портал наружу прямо в зале босса
   G.J.dungeons = G.J.dungeons || {}; G.J.dungeons[W.dun.id] = (G.J.dungeons[W.dun.id] || 0) + 1;
 });
 G.systems.push(dt => {
-  if (G.pendingLeave) { G.pendingLeave = false; leaveDungeon(); return; }
+  if (G.pendingLeave) { G.pendingLeave = false; leaveDungeon(); if (G.tpAfter) { G.tpAfter = false; const p = G.me; if (!p.dead) { p.x = TOWN.x; p.y = TOWN.y + 1.6; G.cam.x = p.x; G.cam.y = p.y; fxRing(p.x, p.y, .3, 3, '#c8a850', .5); } } return; }
   if (G.pendingEnter) { const e = G.pendingEnter; G.pendingEnter = null; if (!W.dun) enterDungeon(e[0], e[1]); return; }
   if (!W.dun) return;
   // ловушки: решётки в полу периодически извергают пламя
@@ -1649,7 +1658,7 @@ Bus.on('respawn', (p) => { if (G.nemesis && !G.nemesis.dead && !G.J.hints.nem) s
 Bus.on('nemesisDeath', (m, p) => {
   const d = m.nd, gold = d.gold + 25 * d.lvl; p.gold += gold; gainXp(p, 60 * d.lvl); G.J.nemKills++; G.nemesis = null;
   for (const it of (d.items || [])) { giveItem(p, it); floatText(p.x, p.y, 'Возвращено: ' + it.name, RANKS[it.rank].c, 6); }
-  dropItem(m.x, m.y, makeItem(Math.min(10, d.lvl), rollRank([0, 30, 40, 20, 10 + 5 * d.tier])), p);
+  dropItem(m.x, m.y, makeItem(Math.min(10, d.lvl), rollRank([0, 50, 35, 12, 3 + d.tier])), p);
   const names = []; for (const s of d.souls) { giveSoul(p, s.id, 1, true); names.push(soulDef(s.id).abName); }
   floatText(m.x, m.y, '«' + NEM_SAY.die[0] + '»', '#ffb0b8', 7); floatNum(p.x, p.y, gold, '#ffd870');
   banner('ТЕНЬ ПОВЕРЖЕНА', '+' + gold + ' золота' + (names.length ? ', копии душ: ' + names.join(', ') : ''), '#ff5a6a'); Sfx.play('soul'); shake(8);
@@ -1658,15 +1667,15 @@ Bus.on('nemesisDeath', (m, p) => {
 
 // ===== 10_player.js =====
 // Игрок. Управляется через «намерение» (intent) — локальный ввод или, в будущем, сеть.
-const MAXLVL = 10, POTION_MAX = 6, POTION_COST = 25;
-const xpNext = l => Math.round(20 * Math.pow(l, 1.7));
+const MAXLVL = 10, POTION_MAX = 6, POTION_COST = 40, MPOT_MAX = 4, SCROLL_MAX = 3;
+const xpNext = l => Math.round(45 * Math.pow(l, 1.85));
 function mkPlayer(name) {
-  const p = mkEnt({ isPlayer: true, humanoid: true, name: name || 'Герой', team: 1, spr: 'hero', r: .3, spd: 4.3, lvl: 1, xp: 0, gold: 0, potions: 2, souls: {}, mp: 60, mpTrain: 0, mast: {}, shards: 0, equip: { weapon: null, armor: null, amulet: null, ring: null }, bag: [], slots: [null, null, null, null], sl: [0, 1, 2, 3].map(() => ({ cd: 0, ch: 1 })), combo: 0, comboT: 0, swing: null, roll: null, rollCd: 0, potCd: 0, respawn: 0, blood: '#ff5a5a', x: TOWN.x, y: TOWN.y + 1.6 });
+  const p = mkEnt({ isPlayer: true, humanoid: true, name: name || 'Герой', team: 1, spr: 'hero', r: .3, spd: 4.3, lvl: 1, xp: 0, gold: 0, potions: 2, souls: {}, ess: 0, slv: {}, mpot: 1, scrolls: 0, style: 'melee', mp: 60, mpTrain: 0, mast: {}, shards: 0, equip: { weapon: null, armor: null, amulet: null, ring: null }, bag: [], slots: [null, null, null, null], sl: [0, 1, 2, 3].map(() => ({ cd: 0, ch: 1 })), combo: 0, comboT: 0, swing: null, roll: null, rollCd: 0, potCd: 0, respawn: 0, blood: '#ff5a5a', x: TOWN.x, y: TOWN.y + 1.6 });
   recalc(p); p.hp = p.maxHp; return p;
 }
 function recalc(p) {
   const g = gearStats(ISLOTS.map(s => p.equip[s])); p.gs = g;
-  p.maxHp = Math.round((100 + 22 * (p.lvl - 1) + g.hp) * (1 - .08 * g.curse)); p.atk = 10 + 3 * (p.lvl - 1) + g.atk; p.spd = 4.3 * (1 + Math.min(30, g.spd) / 100);
+  p.maxHp = Math.round((100 + 22 * (p.lvl - 1) + g.hp) * (1 - .08 * g.curse) * (p.style === 'ranged' ? .85 : 1)); p.atk = (10 + 2.2 * (p.lvl - 1) + g.atk) * (p.buffT > G.time ? 1.2 : 1); p.spd = 4.3 * (1 + Math.min(30, g.spd) / 100);
   p.cdm = 1 - Math.min(40, g.cdr) / 100; p.crit = .1 + g.crit / 100; p.potB = 1 + g.pot / 100; p.maxMp = 60 + 6 * (p.lvl - 1) + manaBonus(p); if (p.mp > p.maxMp) p.mp = p.maxMp;
   const en = s => p.equip[s] && p.equip[s].ench ? soulDef(p.equip[s].ench).el : null; p.wEl = en('weapon'); p.resist = en('armor'); p.aEl = en('amulet'); p.rEl = en('ring');
   p.immune = {}; const im = { fire: 'burn', ash: 'burn', poison: 'poison', slime: 'slow', beast: 'bleed', nature: 'root', bone: 'brittle', storm: 'stun' }[p.resist]; if (im) p.immune[im] = 1; if (p.hp > p.maxHp) p.hp = p.maxHp;
@@ -1726,12 +1735,17 @@ function castSlot(p, s, dx, dy, ax, ay) {
   if (p.mp < cost) { Sfx.play('deny'); if (!(p.noMpT > G.time)) { p.noMpT = G.time + 1; floatText(p.x, p.y, 'Нет маны', '#6a9aff', 6); } return; }
   p.mp -= cost; const tb = manaBonus(p); p.mpTrain = (p.mpTrain || 0) + cost * (p.mp < p.maxMp * .15 ? 2 : 1); if (manaBonus(p) > tb) { recalc(p); floatText(p.x, p.y, 'Запас маны вырос: ' + p.maxMp, '#6a9aff', 6); } mastGain(p, def.el, 1);
   let tx = ax, ty = ay; const d = dist(p.x, p.y, ax, ay); if (d > mr) { tx = p.x + (ax - p.x) / d * mr; ty = p.y + (ay - p.y) / d * mr; }
-  castSoul(p, def, stars, dx, dy, tx, ty, 1 + (p.gs.soul + (p.gs.el[def.el] || 0) + (p.aEl === def.el ? 25 : 0) + mr0 * 6) / 100);
+  castSoul(p, def, stars, dx, dy, tx, ty, 1 + (p.gs.soul + (p.gs.el[def.el] || 0) + (p.aEl === def.el ? 25 : 0) + mr0 * 6 + ((p.slv && p.slv[id]) | 0) * 8) / 100);
   sl.ch--; if (sl.cd <= 0) sl.cd = ab.cd * p.cdm * (p.rEl === def.el ? .8 : 1) * (mr0 >= 3 ? .9 : 1); p.swing = null; p.usedSoul = true;
 }
 const SWING = [{ dur: .24, at: .08, r: 1.6, cos: .2, k: 1, kb: 4 }, { dur: .24, at: .08, r: 1.6, cos: .2, k: 1.1, kb: 4 }, { dur: .4, at: .15, r: 2, cos: -.15, k: 1.9, kb: 12 }];
 function swingHit(p, s) {
   const S = SWING[s.n - 1]; let any = false;
+  if (p.style === 'ranged') { // дальний бой: вместо удара — выстрел сгустком душ, третий взрывается
+    const crit = chance(p.crit), col = p.wEl ? EL[p.wEl].c : '#c9a0ff', big = s.n === 3;
+    spawnProj({ kind: big ? 'ball' : 'arrow', x: p.x + s.dx * .5, y: p.y + s.dy * .5, vx: s.dx * 13, vy: s.dy * 13, r: big ? .45 : .3, life: .6, team: p.team, src: p, dmg: p.atk * S.k * .8 * rand(.9, 1.1) * (crit ? 1.6 : 1), el: p.wEl || undefined, color: col, kb: S.kb * .6, aoe: big ? 1.2 : 0 });
+    Sfx.play('arrow'); return;
+  }
   for (const e of G.ents) {
     if (e.dead || !hostile(p, e)) continue; const d = dist(p.x, p.y, e.x, e.y); if (d > S.r + e.r) continue;
     if (d > .4 && ((e.x - p.x) * s.dx + (e.y - p.y) * s.dy) / d < S.cos) continue;
@@ -1764,7 +1778,7 @@ function updatePlayer(p, dt, I) {
       if (I.atk && !p.swing && !p.dash) {
         const n = p.comboT > 0 ? p.combo % 3 + 1 : 1; p.combo = n; p.swing = { n, t: 0, done: false, dx: a[0], dy: a[1] };
         p.kx += a[0] * (n === 3 ? 6 : 3); p.ky += a[1] * (n === 3 ? 6 : 3);
-        fxSlash(p.x, p.y, a[0], a[1], SWING[n - 1].r, n === 3 ? 2.6 : 1.7, p.wEl ? EL[p.wEl].c : n === 3 ? '#ffe9a0' : '#ffffff'); Sfx.play('swing'); p.attacked = true;
+        if (p.style === 'ranged') { p.kx -= a[0] * (n === 3 ? 9 : 4.5); p.ky -= a[1] * (n === 3 ? 9 : 4.5); } else fxSlash(p.x, p.y, a[0], a[1], SWING[n - 1].r, n === 3 ? 2.6 : 1.7, p.wEl ? EL[p.wEl].c : n === 3 ? '#ffe9a0' : '#ffffff'); Sfx.play('swing'); p.attacked = true;
       }
       const sp = p.spd * (p.st.slow ? .5 : 1) * (p.swing ? .35 : 1) * (p.st.root ? 0 : 1);
       if ((I.mx || I.my) && sp > 0) { moveEnt(p, I.mx * sp * dt, I.my * sp * dt); p.moving = true; p.moved = (p.moved || 0) + dt; }
@@ -1772,6 +1786,14 @@ function updatePlayer(p, dt, I) {
   }
   if (p.swing) { const s = p.swing, S = SWING[s.n - 1]; s.t += dt; if (!s.done && s.t >= S.at) { s.done = true; swingHit(p, s); } if (s.t >= S.dur) { p.swing = null; p.comboT = .5; } }
   if (I.potion) usePotion(p);
+  if (I.mpot && p.mpot > 0 && p.mp < p.maxMp) { p.mpot--; p.mp = Math.min(p.maxMp, p.mp + p.maxMp * .6); Sfx.play('potion'); burst(p.x, p.y, ['#6a9aff', '#ffffff'], 12, 3, { z: 10, grav: -20 }); } else if (I.mpot) Sfx.play('deny');
+  if (I.scroll) { if (p.scrolls > 0 && !p.tp && !G.prologue && !(inTown(p))) { p.scrolls--; p.tp = { t: 2.5, hp: p.hp }; floatText(p.x, p.y, 'Свиток возврата...', '#c8a850', 6); Sfx.play('fuse'); } else Sfx.play('deny'); }
+  if (p.tp) {
+    p.tp.t -= dt; if (chance(dt * 40)) { const q = rand(TAU); part(p.x + Math.cos(q) * .8, p.y + Math.sin(q) * .8, 0, 0, 0, 50, .6, pick(['#c8a850', '#ffffff']), 1, -20, 1); }
+    if (p.hp < p.tp.hp - 1) { p.tp = null; p.scrolls++; floatText(p.x, p.y, 'Возврат прерван', '#ff7a7a', 6); }
+    else if (p.tp.t <= 0) { p.tp = null; Sfx.play('soul'); if (W.dun) { G.pendingLeave = true; G.tpAfter = true; } else { p.x = TOWN.x; p.y = TOWN.y + 1.6; G.cam.x = p.x; G.cam.y = p.y; fxRing(p.x, p.y, .3, 3, '#c8a850', .5); } }
+  }
+  if (p.buffT && G.time > p.buffT) { p.buffT = 0; recalc(p); floatText(p.x, p.y, 'Заточка сошла', '#c8c8d0', 6); }
   if (I.interact) { const n = nearInteract(p); if (n) Bus.emit('interact', p, n); }
   if (p.mp < p.maxMp) p.mp = Math.min(p.maxMp, p.mp + p.maxMp * (inTown(p) ? .2 : .05) * dt);
   if (inTown(p) && p.hp < p.maxHp) p.hp = Math.min(p.maxHp, p.hp + p.maxHp * .12 * dt);
@@ -1800,7 +1822,7 @@ const Input = (() => {
   function buttons() {
     const w = V.w, h = V.h;
     return [{ id: 'atk', x: w - 32, y: h - 36, r: 19 }, { id: 'roll', x: w - 76, y: h - 24, r: 13 }, { id: 's0', x: w - 86, y: h - 54, r: 11 }, { id: 's1', x: w - 67, y: h - 78, r: 11 }, { id: 's2', x: w - 40, y: h - 89, r: 11 }, { id: 's3', x: w - 14, y: h - 80, r: 11 },
-    { id: 'pot', x: w - 16, y: h - 112, r: 10 }, { id: 'use', x: w - 44, y: h - 117, r: 10 }, { id: 'menu', x: w - 76, y: 14, r: 9 }];
+    { id: 'pot', x: w - 16, y: h - 112, r: 10 }, { id: 'mp', x: w - 16, y: h - 135, r: 9 }, { id: 'tp', x: w - 68, y: h - 104, r: 9 }, { id: 'use', x: w - 44, y: h - 117, r: 10 }, { id: 'menu', x: w - 76, y: 14, r: 9 }];
   }
   function init(c) {
     V.touch = ('ontouchstart' in window) || navigator.maxTouchPoints > 0;
@@ -1842,7 +1864,7 @@ const Input = (() => {
     return {
       mx: m[0], my: m[1], ax, ay, atk: mdown || !!held.atk, roll: !!(pr.Space || pr.Troll),
       cast: [!!(pr.Digit1 || pr.Ts0), !!(pr.Digit2 || pr.Ts1), !!(pr.Digit3 || pr.Ts2), !!(pr.Digit4 || pr.Ts3)],
-      potion: !!(pr.KeyQ || pr.Tpot), interact: !!(pr.KeyE || pr.Tuse), menu: !!(pr.Tab || pr.KeyI || pr.KeyK || pr.KeyJ || pr.KeyM || pr.Tmenu), mtab: pr.KeyI ? 'gear' : pr.KeyK ? 'souls' : pr.KeyJ ? 'journal' : pr.KeyM ? 'map' : null, esc: !!pr.Escape
+      potion: !!(pr.KeyQ || pr.Tpot), mpot: !!(pr.KeyR || pr.Tmp), scroll: !!(pr.KeyT || pr.Ttp), interact: !!(pr.KeyE || pr.Tuse), menu: !!(pr.Tab || pr.KeyI || pr.KeyK || pr.KeyJ || pr.KeyM || pr.Tmenu), mtab: pr.KeyI ? 'gear' : pr.KeyK ? 'souls' : pr.KeyJ ? 'journal' : pr.KeyM ? 'map' : null, esc: !!pr.Escape
     };
   }
   function endFrame() { for (const k in pr) delete pr[k]; }
@@ -1863,7 +1885,8 @@ function drawHud(b) {
   if (p.st.blind && !p.dead) { const g = b.createRadialGradient(V.w / 2, V.h / 2, 22, V.w / 2, V.h / 2, 90); g.addColorStop(0, 'rgba(210,210,220,0)'); g.addColorStop(1, 'rgba(210,210,220,.93)'); b.fillStyle = g; b.fillRect(0, 0, V.w, V.h); }
   if (p.hp < p.maxHp * .3 && !p.dead) { b.globalAlpha = .12 + .1 * Math.sin(G.time * 7); b.fillStyle = '#ff2020'; b.fillRect(0, 0, V.w, 5); b.fillRect(0, V.h - 5, V.w, 5); b.fillRect(0, 0, 5, V.h); b.fillRect(V.w - 5, 0, 5, V.h); b.globalAlpha = 1; }
   // левый верх
-  b.globalAlpha = .6; b.fillStyle = '#0b0810'; b.fillRect(2, 2, 96, 42); b.globalAlpha = 1;
+  b.globalAlpha = .6; b.fillStyle = '#0b0810'; b.fillRect(2, 2, 96, 51); b.globalAlpha = 1;
+  txt((V.touch ? '' : 'R ') + 'мана ×' + p.mpot, 5, 42, p.mpot ? '#a8c8ff' : '#6a6252', 4.5); txt((V.touch ? '' : 'T ') + 'свиток ×' + p.scrolls, 95, 42, p.scrolls ? '#e0c060' : '#6a6252', 4.5, 'right'); if (p.buffT > G.time) txt('заточка ' + Math.ceil(p.buffT - G.time) + 'с', 50, 42, '#ff9a6a', 4, 'center');
   txt(p.name, 5, 3, '#fff', 6); txt('Ур. ' + p.lvl, 95, 3, '#ffd870', 6, 'right');
   bar(b, 5, 13, 90, 6, p.hp / p.maxHp, p.hp < p.maxHp * .3 ? '#ff4a4a' : '#d83a4a');
   if (p.shield > 0) { b.fillStyle = '#6fe0b0'; b.fillRect(5, 13, Math.round(90 * clamp(p.shield / (p.shieldMax || 1), 0, 1)), 2); }
@@ -1926,7 +1949,7 @@ const NPCS = { elder: { name: 'Старейшина Мирра', spr: 'elder' },
 const QUESTS = {
   m1: { main: 1, giver: 'elder', title: 'Пробуждение', intro: ['Очнулся. Значит, камень ещё помнит, как возвращать мёртвых.', 'Это Последний Очаг. Всё, что осталось от людей по эту сторону леса. Дальше — только Шёпот.', 'Ты — Пожиратель. Души зверей не уходят из тебя, а остаются. Это дар. И это то, что тебя убьёт.', 'Сначала докажи, что годен. Опушка кишит тварями. Убей шестерых и возвращайся.'], obj: [{ t: 'kill', n: 6, s: 'Убей тварей' }], done: ['Шестеро. И ты всё ещё стоишь.', 'Ты слышал их, когда они умирали? Шёпот. Запомни его — он будет становиться громче.'], reward: { xp: 40, gold: 40, potions: 1 } },
   m2: { main: 1, giver: 'elder', req: 'm1', title: 'Чужие голоса', intro: ['Одной волчьей души мало. Каждая тварь в лесу носит свою — огонь, воду, яд, грозу.', 'Собери две разные души. Не бойся, если начнёшь слышать их по ночам. Бойся, если перестанешь.'], obj: [{ t: 'souls', n: 2, s: 'Собери разные души' }], done: ['Две. Они уже спорят внутри тебя, верно?', 'Стихии не терпят друг друга. Огонь жжёт траву, молния ищет воду. Заставь их драться за тебя.'], reward: { xp: 60, gold: 50 } },
-  m3: { main: 1, giver: 'elder', req: 'm2', title: 'Химера', intro: ['Видишь алтарь? Его сложили те, кто был до тебя. Пожиратели.', 'На нём две души можно сплавить в одну — в химеру. Никто не знает заранее, что выйдет. Рецепты умерли вместе с ними.', 'Создай химеру. Любую.'], obj: [{ t: 'chim', n: 1, s: 'Слей души на Алтаре' }], done: ['Она кричала, когда рождалась? Они всегда кричат.', 'Возьми. Это носил тот, кто пришёл до тебя. Ему уже не нужно.'], reward: { xp: 80, item: 1 } },
+  m3: { main: 1, giver: 'elder', req: 'm2', title: 'Химера', intro: ['Видишь алтарь? Его сложили те, кто был до тебя. Пожиратели.', 'На нём две души можно сплавить в одну — в химеру. Никто не знает заранее, что выйдет. Рецепты умерли вместе с ними.', 'Создай химеру. Любую. Понадобится по две копии каждой души — алтарь берёт плату.'], obj: [{ t: 'chim', n: 1, s: 'Слей души на Алтаре' }], done: ['Она кричала, когда рождалась? Они всегда кричат.', 'Возьми. Это носил тот, кто пришёл до тебя. Ему уже не нужно.'], reward: { xp: 80, item: 1 } },
   m4: { main: 1, giver: 'elder', req: 'm3', title: 'Красные тотемы', intro: ['Твари в лесу больше не бродят поодиночке. Они ставят частоколы. Тотемы. У них появились вожаки.', 'Звери так не делают. Кто-то их учит.', 'Найди лагерь с красным тотемом и вырежи его весь. Принеси мне душу вожака — хочу знать, чей голос в ней звучит.'], obj: [{ t: 'camp', n: 1, s: 'Зачисти лагерь врагов' }], done: ['Дай взглянуть... Так я и думала. В ней пепел.', 'Весь лес дышит пеплом. Он идёт с востока, из-за Выжженной поляны. Но сперва — три гнезда, что питают его.'], reward: { xp: 120, gold: 80, shards: 5 } },
   m5: { main: 1, giver: 'elder', req: 'm4', title: 'Гнездо Грозы', intro: ['В Чаще, под корнями, есть провал. Оттуда по ночам бьют молнии — снизу вверх.', 'Там сидит Грозовая Матка. Её выводок ослепил троих наших охотников.', 'Спустись и убей её. И запомни: умрёшь внизу — твоя Тень встанет у входа и будет ждать.'], obj: [{ t: 'boss', id: 'stormmother', n: 1, s: 'Убей Грозовую Матку' }], done: ['Гром стих. Впервые за год.', 'Её душа теперь в тебе. Чувствуешь, как она бьётся? Это ещё не самое страшное, что ты проглотишь.'], reward: { xp: 200, gold: 120, item: 2 } },
   m6: { main: 1, giver: 'elder', req: 'm5', title: 'Гниль и кость', intro: ['Осталось два гнезда. На юге, в топях, — Матерь Слизи. Она растворяет всё, к чему прикасается.', 'На севере, на погосте, — Костяной Король. Он был человеком. Пожирателем, как ты.', 'Да. Вот что бывает с теми, кто слушает шёпот слишком долго. Убей обоих.'], obj: [{ t: 'boss', id: 'slimequeen', n: 1, s: 'Убей Матерь Слизи' }, { t: 'boss', id: 'boneking', n: 1, s: 'Убей Костяного Короля' }], done: ['Король узнал тебя перед смертью? Они всегда узнают своих.', 'Теперь лес открыт до самого востока. Остался тот, кто начал всё это.'], reward: { xp: 350, gold: 200, shards: 12 } },
@@ -1996,7 +2019,7 @@ const Menus = (() => {
   const stars = n => '★'.repeat(starsOf(n)) + '<span class="q">' + '★'.repeat(3 - starsOf(n)) + '</span>';
   const elChip = el => '<span class="el" style="background:' + EL[el].c + '">' + EL[el].n + '</span>';
   let lastKey = '', lastTab = 'gear';
-  const res = p => '<span class="res"><span data-a="mus" style="cursor:pointer" title="Музыка">' + (Sfx.isMusic() ? '♪ вкл' : '♪ выкл') + '</span><span>Ур. ' + p.lvl + '</span><span class="gd">● ' + p.gold + '</span><span class="sh">◆ ' + (p.shards | 0) + '</span><span class="bad">✚ ' + p.potions + '</span></span>';
+  const res = p => '<span class="res"><span style="color:#c9a0ff">✧ ' + (p.ess | 0) + '</span><span data-a="mus" style="cursor:pointer" title="Музыка">' + (Sfx.isMusic() ? '♪ вкл' : '♪ выкл') + '</span><span>Ур. ' + p.lvl + '</span><span class="gd">● ' + p.gold + '</span><span class="sh">◆ ' + (p.shards | 0) + '</span><span class="bad">✚ ' + p.potions + '</span></span>';
   // Окно: шапка сверху, слева список, справа детали выбранного. Прокрутка не сбрасывается при клике.
   function show(html) {
     const key = st ? st.kind + ':' + (st.tab || '') : '', sc = {}; if (key === lastKey) for (const c of ['panel', 'cl', 'cr']) { const e = ui.querySelector('.' + c); if (e) sc[c] = e.scrollTop; }
@@ -2007,16 +2030,17 @@ const Menus = (() => {
   }
   function close() { if (!st || st.kind === 'title') return; ui.classList.remove('on'); ui.innerHTML = ''; st = null; G.paused = false; Input.clear(); G.noKeyUntil = performance.now() + 250; Bus.emit('menuClosed'); }
   const isOpen = () => !!st;
-  function card(id, n, cls, act) { const d = soulDef(id); return '<div class="soul ' + (cls || '') + '" data-a="' + act + '" data-v="' + id + '"><img src="' + iconUrl(d.icon) + '"><div><b>' + esc(d.abName) + '</b><small>' + stars(n) + ' ×' + n + '</small></div></div>'; }
+  function card(id, n, cls, act) { const d = soulDef(id); return '<div class="soul ' + (cls || '') + '" data-a="' + act + '" data-v="' + id + '"><img src="' + iconUrl(d.icon) + '" style="border-color:' + (cls === 'sel' ? '' : shadeHex(SRAR[d.rar].c, .45)) + '"><div><b style="color:' + SRAR[d.rar].c + '">' + esc(d.abName) + '</b><small>' + stars(n) + ' ×' + n + ((G.me.slv[id] | 0) ? ' · ур.' + G.me.slv[id] : '') + '</small></div></div>'; }
 
   // ---------- Старт ----------
   function title() {
-    st = { kind: 'title', confirm: false, look: (st && st.look) || { cloak: 0, skin: 0, eyes: 0, scarf: 0 } }; const s = loadSave(); applyLook(st.look);
+    st = { kind: 'title', confirm: false, look: (st && st.look) || { cloak: 0, skin: 0, eyes: 0, scarf: 0, style: 'melee' } }; const s = loadSave(); applyLook(st.look);
     const pv = scaled(SPR.hero_i.c, 6), sw = (k, nm) => '<div class="row" style="margin:5px 0"><span style="width:64px;font-size:13px;color:#7d7462">' + nm + '</span>' + LOOKS[k].map((o, i) => '<button class="btn" title="' + o[0] + '" data-a="look" data-v="' + k + ':' + i + '" style="width:30px;height:30px;padding:0;background:' + o[1] + ';border-color:' + (st.look[k] === i ? '#ffd870' : '#3a3024') + '"></button>').join('') + '</div>';
     const keepName = document.getElementById('nm') ? document.getElementById('nm').value : null;
     show('<h1>ПОЖИРАТЕЛЬ ДУШ</h1><div class="sub">изометрическая экшн-RPG · души вместо классов</div>' +
       (s ? '<button class="btn gold" style="width:100%;margin-bottom:10px" data-a="cont">Продолжить: ' + esc(s.name) + ', ур. ' + (s.lvl | 0) + '</button>' : '') +
       '<h3>Создание героя</h3><div class="row" style="align-items:flex-start;flex-wrap:nowrap"><img src="' + pv.toDataURL() + '" style="image-rendering:pixelated;width:84px;flex:none;background:#07060a;border:2px solid #3a3024;padding:6px"><div style="flex:1">' + sw('cloak', 'Плащ') + sw('skin', 'Кожа') + sw('eyes', 'Глаза') + sw('scarf', 'Шарф') + '</div></div>' +
+      '<div class="tabs" style="margin:10px 0 0"><button class="btn ' + (st.look.style !== 'ranged' ? 'act' : '') + '" data-a="look" data-v="style:melee">Ближний бой<small>меч · больше здоровья</small></button><button class="btn ' + (st.look.style === 'ranged' ? 'act' : '') + '" data-a="look" data-v="style:ranged">Дальний бой<small>посох · выстрелы · −15% здоровья</small></button></div>' +
       '<input class="name" id="nm" maxlength="12" placeholder="Имя героя" value="' + esc(keepName !== null ? keepName : (s ? '' : 'Герой')) + '" style="margin-top:8px">' +
       '<button class="btn" style="width:100%;margin-top:8px" data-a="new" id="newb">' + (s ? 'Новая игра (сотрёт сохранение)' : 'Начать игру') + '</button>' +
       '<button class="btn" style="width:100%;margin-top:6px;font-size:12px;opacity:.75" data-a="newskip">' + (s ? 'Новая игра без вступления' : 'Начать без вступления') + '</button>' +
@@ -2034,10 +2058,10 @@ const Menus = (() => {
   function openAltar(atAltar, tab) { if (!G.started || G.me.dead) return; st = { kind: 'altar', tab: tab || (atAltar ? 'souls' : lastTab), sel: null, fa: null, fb: null, atAltar, res: null }; drawAltar(); }
   function drawAltar() {
     const p = G.me, t = st.tab; let h = '<button class="btn x" data-a="close">✕</button><h2>' + (st.atAltar ? 'Алтарь душ' : 'Герой: ' + esc(p.name)) + res(p) + '</h2>'; if (!st.atAltar) lastTab = t;
-    h += '<div class="tabs">' + [['souls', 'Души', 'K'], ['gear', 'Снаряжение', 'I'], ['fuse', 'Слияние', ''], ['journal', 'Журнал', 'J'], ['map', 'Карта', 'M']].map(x => '<button class="btn ' + (t === x[0] ? 'act' : '') + '" data-a="tab" data-v="' + x[0] + '">' + x[1] + (x[2] && !V.touch ? '<small>[' + x[2] + ']</small>' : '') + '</button>').join('') + '</div>';
-    if (t === 'souls') h += tabSouls(p); else if (t === 'gear') h += tabGear(p, false); else if (t === 'fuse') h += tabFuse(p); else if (t === 'map') h += '<canvas id="bigmap" width="570" height="285" style="width:100%;image-rendering:pixelated;background:#07060a;border:2px solid #3a3024"></canvas><div class="det"><span style="color:#fff">■</span> ты · <span style="color:#c9a0ff">■</span> город · <span style="color:#c82a3a">■</span> лагерь врагов · <span style="color:#ff7a1a">■</span> логово · <span style="color:#ff2a4a">■</span> Тень. Разведано: ' + Math.round(W.seen.reduce((a, c) => a + c, 0) / W.seen.length * 100) + '%. Лагерей зачищено: ' + (G.J.camps || 0) + '</div>'; else h += tabJournal(p);
+    h += '<div class="tabs">' + [['souls', 'Души', 'K'], ['gear', 'Снаряжение', 'I'], ['fuse', 'Слияние', ''], ['journal', 'Журнал', 'J'], ['map', 'Карта', 'M']].concat(st.atAltar ? [['ess', 'Жертва', '']] : []).map(x => '<button class="btn ' + (t === x[0] ? 'act' : '') + '" data-a="tab" data-v="' + x[0] + '">' + x[1] + (x[2] && !V.touch ? '<small>[' + x[2] + ']</small>' : '') + '</button>').join('') + '</div>';
+    if (t === 'souls') h += tabSouls(p); else if (t === 'gear') h += tabGear(p, false); else if (t === 'ess') h += tabEss(p); else if (t === 'fuse') h += tabFuse(p); else if (t === 'map') h += '<canvas id="bigmap" width="570" height="285" style="width:100%;image-rendering:pixelated;background:#07060a;border:2px solid #3a3024"></canvas><div class="det"><span style="color:#fff">■</span> ты · <span style="color:#c9a0ff">■</span> город · <span style="color:#c82a3a">■</span> лагерь врагов · <span style="color:#ff7a1a">■</span> логово · <span style="color:#ff2a4a">■</span> Тень. Разведано: ' + Math.round(W.seen.reduce((a, c) => a + c, 0) / W.seen.length * 100) + '%. Лагерей зачищено: ' + (G.J.camps || 0) + '</div>'; else h += tabJournal(p);
     show(h);
-    if (t === 'map') { if (W.mapDirty) renderMap(); const c = document.getElementById('bigmap'), x = c.getContext('2d'); x.imageSmoothingEnabled = false; x.setTransform(1.5, .75, -1.5, .75, MH * 1.5, 2); x.drawImage(W.map, 0, 0); const mk = (wx, wy, col, s) => { x.fillStyle = '#07060a'; x.fillRect(wx - s - 1, wy - s - 1, s * 2 + 2, s * 2 + 2); x.fillStyle = col; x.fillRect(wx - s, wy - s, s * 2, s * 2); }; if (!W.dun) { mk(TOWN.x, TOWN.y, '#c9a0ff', 2); if (W.seen[tIdx(LAIR.x, LAIR.y)]) mk(LAIR.x, LAIR.y, '#ff7a1a', 2); } for (const k of W.crypts) if (W.seen[tIdx(k.x, k.y)]) mk(k.x, k.y, '#b04ad8', 2); for (const k of W.camps) if (W.seen[tIdx(k.x, k.y)] && !k.cleared) mk(k.x, k.y, '#c82a3a', 1.5); if (G.nemesis && !G.nemesis.dead && !W.dun) mk(G.nemesis.x, G.nemesis.y, '#ff2a4a', 2); mk(p.x, p.y, '#ffffff', 1.5); }
+    if (t === 'map') { if (W.mapDirty) renderMap(); const c = document.getElementById('bigmap'), x = c.getContext('2d'); x.imageSmoothingEnabled = false; const mk0 = 570 / (MW + MH); x.setTransform(mk0, mk0 / 2, -mk0, mk0 / 2, MH * mk0, 2); x.drawImage(W.map, 0, 0); const mk = (wx, wy, col, s) => { x.fillStyle = '#07060a'; x.fillRect(wx - s - 1, wy - s - 1, s * 2 + 2, s * 2 + 2); x.fillStyle = col; x.fillRect(wx - s, wy - s, s * 2, s * 2); }; if (!W.dun) { mk(TOWN.x, TOWN.y, '#c9a0ff', 2); if (W.seen[tIdx(LAIR.x, LAIR.y)]) mk(LAIR.x, LAIR.y, '#ff7a1a', 2); } for (const k of W.crypts) if (W.seen[tIdx(k.x, k.y)]) mk(k.x, k.y, '#b04ad8', 2); for (const k of W.camps) if (W.seen[tIdx(k.x, k.y)] && !k.cleared) mk(k.x, k.y, '#c82a3a', 1.5); if (G.nemesis && !G.nemesis.dead && !W.dun) mk(G.nemesis.x, G.nemesis.y, '#ff2a4a', 2); mk(p.x, p.y, '#ffffff', 1.5); }
   }
   function tabSouls(p) {
     let h = '<div class="slots">' + p.slots.map((id, i) => '<div class="slot" data-a="slot" data-v="' + i + '"><i>' + (i + 1) + '</i>' + (id ? '<img src="' + iconUrl(soulDef(id).icon) + '"><br>' + esc(soulDef(id).abName) : '<br><span class="q">пусто</span>') + '</div>').join('') + '</div>';
@@ -2087,11 +2111,11 @@ const Menus = (() => {
     h += '<!--R-->';
     const it = st.isel && findItem(p, st.isel);
     if (st.msg) h += '<div class="det" style="font-size:16px">' + st.msg + '</div>';
-    if (!it) h += '<div class="det q">' + (st.tab === 'forge' ? 'Ковка усиливает основное свойство вещи: +10% за уровень, до +10. Нужны золото и осколки (◆) — их дают проклятые, вожаки, боссы и разбор вещей. С +4 ковка может провалиться, а с +7 провал ещё и ослабляет вещь.' : 'Зачарование вплавляет душу в вещь и даёт ей стихию. Тратит одну копию души и ' + ENCH_COST + ' золота. Новое зачарование заменяет старое.') + '</div>';
+    if (!it) h += '<div class="det q">' + (st.tab === 'forge' ? 'Ковка усиливает основное свойство вещи: +6% за уровень, до +10. Нужны золото и осколки (◆) — их дают проклятые, вожаки, боссы и разбор вещей. С +4 ковка может провалиться, а с +7 провал ещё и ослабляет вещь.' : 'Зачарование вплавляет душу в вещь и даёт ей стихию. Тратит одну копию души и ' + ENCH_COST + ' золота. Новое зачарование заменяет старое.') + '</div>';
     else if (st.tab === 'forge') {
       const pl = it.plus | 0;
       if (pl >= 10) h += idet(it, 'Выбрано') + '<div class="det ok">Предел ковки достигнут.</div>';
-      else { const c = forgeCost(it), ch = FORGE_CH[pl], nx = Math.round(it.base[1] * (1 + .1 * (pl + 1))), can = p.gold >= c.gold && (p.shards | 0) >= c.sh;
+      else { const c = forgeCost(it), ch = FORGE_CH[pl], nx = Math.round(it.base[1] * (1 + .06 * (pl + 1))), can = p.gold >= c.gold && (p.shards | 0) >= c.sh;
         h += idet(it, 'Выбрано') + '<div class="det">' + AFF[it.base[0]].n + ': <b>' + baseVal(it) + '</b> → <b class="ok">' + nx + '</b>' + AFF[it.base[0]].u + '<br>Цена: <span class="gd">' + c.gold + ' золота</span> и <span style="color:#8ad0ff">' + c.sh + ' ◆</span> · Шанс: <b class="' + (ch >= 80 ? 'ok' : ch >= 40 ? 'gd' : 'bad') + '">' + ch + '%</b>' + (pl >= 6 ? '<br><span class="bad">При провале вещь упадёт до +' + (pl - 1) + '.</span>' : pl >= 3 ? '<br><span class="q">При провале материалы сгорят.</span>' : '') + '</div><button class="btn gold" style="width:100%;margin-top:8px" data-a="forge"' + (can ? '' : ' disabled') + '>Ковать до +' + (pl + 1) + (can ? '' : ' (не хватает)') + '</button>'; }
     } else {
       const base = Object.keys(p.souls).filter(id => SOULS[id]); if (st.esel && !p.souls[st.esel]) st.esel = null;
@@ -2101,16 +2125,36 @@ const Menus = (() => {
     }
     show(h);
   }
+  // ---------- Жертва: лишние души -> эссенция -> усиление душ ----------
+  function tabEss(p) {
+    const ids = Object.keys(p.souls); if (st.xsel && !p.souls[st.xsel]) st.xsel = null;
+    let h = '<div class="det" style="margin:0 0 8px">Эссенция: <b style="color:#c9a0ff">✧ ' + (p.ess | 0) + '</b>. Сожги лишнюю копию души — получишь эссенцию. За эссенцию любая душа усиливается: +8% урона за уровень, до ' + SLV_MAX + '.</div><div class="grid">' + ids.map(id => card(id, p.souls[id], st.xsel === id ? 'sel' : '', 'xsel')).join('') + '</div><!--R-->';
+    if (!st.xsel) return h + '<div class="det q">Выбери душу. Редкость решает, сколько эссенции она даст и сколько стоит её усиление: обычная — 1, редкая — 3, эпическая — 8, легендарная — 20.</div>';
+    const d = soulDef(st.xsel), lv = p.slv[st.xsel] | 0, c = slvCost(d, lv), n = p.souls[st.xsel];
+    h += '<div class="det"><b style="font-size:16px;color:' + SRAR[d.rar].c + '">' + esc(d.name) + '</b><br>' + SRAR[d.rar].n + ' · ' + d.els.map(elChip).join(' ') + '<br>' + stars(n) + ' копий: ' + n + ' · уровень <b>' + lv + '</b> / ' + SLV_MAX + ' (урон +' + lv * 8 + '%)<br>' + esc(d.desc) + '</div>';
+    h += '<button class="btn gold" style="width:100%;margin-top:8px" data-a="xup"' + (lv < SLV_MAX && (p.ess | 0) >= c ? '' : ' disabled') + '>' + (lv >= SLV_MAX ? 'Предел достигнут' : 'Усилить до ур. ' + (lv + 1) + ' за ✧ ' + c) + '</button>';
+    h += '<button class="btn red" style="width:100%;margin-top:6px" data-a="xsac">Сжечь одну копию (+✧ ' + SRAR[d.rar].e + ')' + (n === 1 ? ' — последняя!' : '') + '</button>';
+    if (n === 1) h += '<div class="det bad">Это последняя копия: душа исчезнет вместе со своим уровнем.</div>';
+    return h;
+  }
+  const SHOP = [
+    { id: 'pot', n: 'Зелье лечения', d: 'Восстанавливает 35% здоровья. Клавиша Q', c: POTION_COST, has: p => p.potions + '/' + POTION_MAX, ok: p => p.potions < POTION_MAX, buy: p => p.potions++ },
+    { id: 'mpot', n: 'Эликсир маны', d: 'Восстанавливает 60% маны. Клавиша R', c: 35, has: p => p.mpot + '/' + MPOT_MAX, ok: p => p.mpot < MPOT_MAX, buy: p => p.mpot++ },
+    { id: 'scroll', n: 'Свиток возврата', d: 'Переносит в город откуда угодно, даже из подземелья. Читается 2,5 сек, урон прерывает. Клавиша T', c: 80, has: p => p.scrolls + '/' + SCROLL_MAX, ok: p => p.scrolls < SCROLL_MAX, buy: p => p.scrolls++ },
+    { id: 'whet', n: 'Точильный камень', d: '+20% урона на 3 минуты. Действует сразу', c: 90, has: p => p.buffT > G.time ? Math.ceil(p.buffT - G.time) + ' с' : '—', ok: p => !(p.buffT > G.time), buy: p => { p.buffT = G.time + 180; recalc(p); } },
+    { id: 'shard', n: 'Осколки ×3', d: 'Материал для ковки', c: 160, has: p => '◆ ' + (p.shards | 0), ok: () => true, buy: p => { p.shards = (p.shards | 0) + 3; } },
+    { id: 'box', n: 'Таинственный свёрток', d: 'Случайная вещь твоего уровня. Чаще редкая, иногда лучше', c: 450, has: p => p.bag.length + '/' + BAG_MAX, ok: p => p.bag.length < BAG_MAX, buy: p => { const it = makeItem(p.lvl, rollRank([0, 64, 28, 7, 1])); p.bag.push(it); st.isel = it.uid; } }
+  ];
   function tabFuse(p) {
     if (!st.atAltar) return '<div class="det">Сливать души можно только у <b>Алтаря душ</b> в городе.</div>';
     if (st.res) { const d = soulDef(st.res.id), uq = Object.keys(G.J.recipes).filter(k => CHIMERAS[G.J.recipes[k]]).length; return '<div class="big"><img src="' + iconUrl(d.icon) + '"><div><b>' + esc(d.name) + '</b><br><small class="gd">' + (st.res.isNew ? (d.unique ? '✦ НОВАЯ УНИКАЛЬНАЯ ХИМЕРА (' + uq + '/10)' : 'Новая химера') : 'Ещё одна копия') + '</small></div></div><div class="det">' + d.els.map(elChip).join(' ') + '<br>' + esc(d.desc) + '</div><button class="btn" style="width:100%;margin-top:8px" data-a="again">Сливать ещё</button>'; }
     const base = Object.keys(p.souls).filter(id => SOULS[id]);
     const box = (id, k) => '<div class="slot" data-a="unf" data-v="' + k + '" style="min-height:66px">' + (id ? '<img src="' + iconUrl(soulDef(id).icon) + '"><br>' + esc(SOULS[id].mob) : '<br><span class="q">душа ' + (k === 'a' ? '1' : '2') + '</span>') + '</div>';
     let res = '<span class="q">???</span>', warn = '';
-    if (st.fa && st.fb) { const known = G.J.recipes[recipeKey(st.fa, st.fb)] && CHIMERAS[G.J.recipes[recipeKey(st.fa, st.fb)]] ? G.J.recipes[recipeKey(st.fa, st.fb)] : G.J.recipes[st.fa + '>' + st.fb]; if (known) { const d = soulDef(known); res = '<img src="' + iconUrl(d.icon) + '"><br>' + esc(d.name); } for (const id of [st.fa, st.fb]) if (p.souls[id] === 1) warn += '<div class="bad">Последняя копия: «' + esc(SOULS[id].name) + '» исчезнет.</div>'; }
+    if (st.fa && st.fb) { const known = G.J.recipes[recipeKey(st.fa, st.fb)] && CHIMERAS[G.J.recipes[recipeKey(st.fa, st.fb)]] ? G.J.recipes[recipeKey(st.fa, st.fb)] : G.J.recipes[st.fa + '>' + st.fb]; if (known) { const d = soulDef(known); res = '<img src="' + iconUrl(d.icon) + '"><br>' + esc(d.name); } for (const id of [st.fa, st.fb]) if (p.souls[id] <= 2) warn += '<div class="bad">Копий всего ' + p.souls[id] + ': «' + esc(SOULS[id].name) + '» ' + (p.souls[id] < 2 ? 'не хватает' : 'исчезнет') + '.</div>'; }
     let h = '<div class="slots" style="align-items:center">' + box(st.fa, 'a') + '<b style="font-size:22px">+</b>' + box(st.fb, 'b') + '<b style="font-size:22px">=</b><div class="slot" style="min-height:66px;border-color:#ffd870">' + res + '</div></div>';
     h += '<div class="grid">' + (base.length ? base.map(id => card(id, p.souls[id], (st.fa === id || st.fb === id ? 'sel' : ''), 'pick')).join('') : '<span class="q">Нет базовых душ</span>') + '</div>';
-    h += '<!--R--><div class="det">Слияние тратит по одной копии каждой души и <span class="gd">' + FUSE_COST + ' золота</span>. Рецепты скрыты — открытые попадают в Журнал. Порядок душ бывает важен.' + warn + '</div>';
+    h += '<!--R--><div class="det">Слияние тратит по две копии каждой души и <span class="gd">' + FUSE_COST + ' золота</span>. Рецепты скрыты — открытые попадают в Журнал. Порядок душ бывает важен.' + warn + '</div>';
     h += '<button class="btn gold" style="width:100%;margin-top:8px" data-a="fuse"' + (canFuse(p, st.fa, st.fb) ? '' : ' disabled') + '>Слить души' + (p.gold < FUSE_COST ? ' (не хватает золота)' : '') + '</button>';
     return h;
   }
@@ -2133,8 +2177,8 @@ const Menus = (() => {
   function openShop() { if (!G.started || G.me.dead) return; st = { kind: 'shop' }; drawShop(); }
   function drawShop() {
     const p = G.me, mx = Math.min(POTION_MAX - p.potions, Math.floor(p.gold / POTION_COST));
-    show('<button class="btn x" data-a="close">✕</button><h2>Торговец' + res(p) + '</h2><div class="det">«Свежие зелья! Тени в лесу сами себя не убьют.»<br><br>Зелье лечения: восстанавливает 35% здоровья.<br>Цена: <span class="gd">' + POTION_COST + ' золота</span>. В сумке: <b>' + p.potions + ' / ' + POTION_MAX + '</b>. Золото: <span class="gd">● ' + p.gold + '</span></div>' +
-      '<div class="row" style="margin-top:8px"><button class="btn gold" data-a="buy" data-v="1"' + (mx >= 1 ? '' : ' disabled') + '>Купить 1</button><button class="btn gold" data-a="buy" data-v="' + mx + '"' + (mx >= 2 ? '' : ' disabled') + '>Купить ' + (mx >= 2 ? mx : 'все') + ' (' + Math.max(0, mx) * POTION_COST + ')</button><button class="btn" data-a="close">Уйти</button></div><h3>Твои вещи</h3>' + tabGear(p, true));
+    show('<button class="btn x" data-a="close">✕</button><h2>Торговец' + res(p) + '</h2><div class="det" style="margin:0 0 8px">«Всё, что нужно, чтобы прожить ещё одну ночь. Недёшево — так и ночь нынче дорогая.»</div>' +
+      SHOP.map(o => '<div class="soul" style="cursor:default;margin-bottom:4px"><div style="flex:1"><b>' + o.n + ' <span class="q">(' + o.has(p) + ')</span></b><small style="color:#8a7f68">' + o.d + '</small></div><button class="btn gold" data-a="sbuy" data-v="' + o.id + '"' + (o.ok(p) && p.gold >= o.c ? '' : ' disabled') + '>' + o.c + ' ●</button></div>').join('') + '<h3>Твои вещи</h3>' + tabGear(p, true));
   }
 
   function act(a, v) {
@@ -2144,7 +2188,7 @@ const Menus = (() => {
     if (a === 'mus') { Sfx.toggleMusic(); return st.kind === 'shop' ? drawShop() : st.kind === 'smith' ? drawSmith() : drawAltar(); }
     if (a === 'cont') return begin(loadSave());
     if (a === 'newskip') { if (loadSave() && !st.confirm2) { st.confirm2 = true; return; } return begin(null, true); }
-    if (a === 'look') { const q = v.split(':'); st.look[q[0]] = +q[1]; return title(); }
+    if (a === 'look') { const q = v.split(':'); st.look[q[0]] = q[0] === 'style' ? q[1] : +q[1]; return title(); }
     if (a === 'new') { if (loadSave() && !st.confirm) { st.confirm = true; const b = document.getElementById('newb'); b.textContent = 'Точно? Нажми ещё раз — сохранение сотрётся'; b.classList.add('red'); return; } return begin(null); }
     if (a === 'tab') { st.tab = v; st.res = null; return drawAltar(); }
     if (a === 'sel') { st.sel = st.sel === v ? null : v; return drawAltar(); }
@@ -2170,6 +2214,10 @@ const Menus = (() => {
     if (a === 'iun') { unequipItem(p, v); return redraw(); }
     if (a === 'isell') { const it = findItem(p, st.isel), i = p.bag.indexOf(it); if (i >= 0) { p.bag.splice(i, 1); p.gold += itemPrice(it); st.isel = null; Sfx.play('coin'); } return redraw(); }
     if (a === 'ijunk') { for (let i = p.bag.length - 1; i >= 0; i--) if (p.bag[i].rank === 0) { p.gold += itemPrice(p.bag[i]); p.bag.splice(i, 1); } Sfx.play('coin'); return redraw(); }
+    if (a === 'sbuy') { const o = SHOP.find(q => q.id === v); if (o && o.ok(p) && p.gold >= o.c) { p.gold -= o.c; o.buy(p); Sfx.play('coin'); } return drawShop(); }
+    if (a === 'xsel') { st.xsel = st.xsel === v ? null : v; return drawAltar(); }
+    if (a === 'xsac') { const id = st.xsel; if (id && p.souls[id]) { p.ess = (p.ess | 0) + SRAR[soulDef(id).rar].e; takeSoul(p, id); if (!p.souls[id]) { delete p.slv[id]; st.xsel = null; } Sfx.play('fire'); saveGame(); } return drawAltar(); }
+    if (a === 'xup') { const id = st.xsel, d = id && soulDef(id), lv = id ? p.slv[id] | 0 : 0; if (d && lv < SLV_MAX && (p.ess | 0) >= slvCost(d, lv)) { p.ess -= slvCost(d, lv); p.slv[id] = lv + 1; Sfx.play('levelup'); saveGame(); } return drawAltar(); }
     if (a === 'buy') { const n = Math.min(+v, POTION_MAX - p.potions, Math.floor(p.gold / POTION_COST)); if (n > 0) { p.gold -= n * POTION_COST; p.potions += n; Sfx.play('coin'); } return drawShop(); }
   }
   ui.addEventListener('click', e => { const t = e.target.closest('[data-a]'); if (!t || t.disabled) return; Sfx.init(); Sfx.play('ui'); act(t.dataset.a, t.dataset.v); });
@@ -2217,7 +2265,7 @@ function startPrologue() {
 }
 function resetHero(p) {
   const h = G.J.hints || {}; G.J = newJournal(); G.J.hints = h; G.J.prologue = 1; delete G.J.hints.soul; delete G.J.hints.drop;
-  p.lvl = 1; p.xp = 0; p.gold = 0; p.potions = 2; p.souls = {}; p.slots = [null, null, null, null]; p.bag = []; p.shards = 0; p.mpTrain = 0; p.mast = {};
+  p.lvl = 1; p.xp = 0; p.gold = 0; p.potions = 2; p.ess = 0; p.slv = {}; p.mpot = 1; p.scrolls = 0; p.souls = {}; p.slots = [null, null, null, null]; p.bag = []; p.shards = 0; p.mpTrain = 0; p.mast = {};
   for (const s of ISLOTS) p.equip[s] = null; recalc(p); giveSoul(p, 'wolf', 1, true); p.hp = p.maxHp; p.mp = p.maxMp; for (let i = 0; i < 4; i++) resetSlot(p, i);
 }
 const GUARD_SAY = [[2, 'Ты пришёл за последней душой.'], [11, 'Сотни голосов кричат в тебе. Ты их ещё слышишь?'], [21, 'Этот лес старше твоего голода.'], [32, 'Бей. Жги. Это ничего не изменит.']];
@@ -2314,6 +2362,7 @@ function drawEnt(b, e) {
     let sc = null; if (e.wu) { const s = Math.sin(G.time * 34) * .07; sc = [1 + s, 1 - s]; } else if (e.swing) sc = [1.06, .96];
     if (e.elite) { sc = sc || [1, 1]; sc = [sc[0] * 1.3, sc[1] * 1.3]; }
     drawSpr(b, name, sx, sy - z - bob, e.face < 0, e.flash > 0, sc);
+    if ((e.isPlayer || e.isNemesis) && !(e.flash > 0)) drawGear(b, e, sx, sy - z - bob);
     if (e.enraged && !(e.flash > 0)) { b.globalAlpha = .28 + .12 * Math.sin(G.time * 10); b.globalCompositeOperation = 'lighter'; drawSpr(b, name, sx, sy - z - bob, e.face < 0, true); b.globalCompositeOperation = 'source-over'; }
   }
   b.globalAlpha = 1;
@@ -2327,6 +2376,18 @@ function drawEnt(b, e) {
   if (e.isNemesis) txt(e.name, sx, top - 14, '#ff5a6a', 6, 'center');
   else if (e.ai && !e.boss && !e.ghost && e.lvl && G.me && dist(e.x, e.y, G.me.x, G.me.y) < 7) txt(e.name + ' ' + e.lvl, sx, top - (e.hp < e.maxHp ? 13 : 9), e.chief ? '#ff5a6a' : e.elite ? '#c88aff' : e.lvl > G.me.lvl + 1 ? '#ff8a6a' : '#d8d0e0', 4.5, 'center', .85);
   if (e.sayT > 0 && e.sayS) txt('«' + e.sayS + '»', sx, top - 23, '#ffb0b8', 6.5, 'center', clamp(e.sayT, 0, 1));
+}
+// Надетое видно на персонаже: клинок или посох в руке, наплечники, амулет — цвет по рангу вещи
+function drawGear(b, e, sx, sy) {
+  const eq = e.isPlayer ? e.equip : null, items = eq ? ISLOTS.map(s => eq[s]) : (e.nd && e.nd.items) || [], f = e.face, get = s => items.find(i => i && i.slot === s);
+  const ar = get('armor'), am = get('amulet'), w = get('weapon');
+  if (ar) { const t = itemTier(ar), c = RANKS[ar.rank].c; b.fillStyle = c; b.fillRect(sx - 6, sy - 12, 2 + (t > 1 ? 1 : 0), 2); b.fillRect(sx + 4 - (t > 1 ? 1 : 0), sy - 12, 2 + (t > 1 ? 1 : 0), 2); if (t >= 2) { b.fillRect(sx - 2, sy - 9, 4, 1); } if (t >= 3) { b.fillRect(sx - 6, sy - 13, 1, 1); b.fillRect(sx + 5, sy - 13, 1, 1); } }
+  if (am) { b.fillStyle = RANKS[am.rank].c; b.fillRect(sx - 1, sy - 11, 2, 1); }
+  if (w) {
+    const t = itemTier(w), c = RANKS[w.rank].c, hx = sx + f * 7, tip = w.ench ? EL[soulDef(w.ench).el].c : '#ffffff', len = 6 + t * 2, up = e.swing ? 3 : 0;
+    if (e.isPlayer && e.style === 'ranged') { b.fillStyle = '#4a3626'; b.fillRect(hx, sy - 15, 1, 13); b.fillStyle = c; b.fillRect(hx - 1, sy - 18, 3, 3); b.fillStyle = tip; b.fillRect(hx, sy - 17, 1, 1); }
+    else { b.fillStyle = '#100a14'; b.fillRect(hx - 1, sy - 7 - len - up, 3, len + 2); b.fillStyle = c; b.fillRect(hx, sy - 6 - len - up, 1, len); b.fillStyle = '#4a3626'; b.fillRect(hx - 1, sy - 6 - up, 3, 1); b.fillRect(hx, sy - 5 - up, 1, 2); b.fillStyle = tip; b.fillRect(hx, sy - 6 - len - up, 1, 2); if (t >= 3) { b.fillStyle = c; b.fillRect(hx + f, sy - 6 - len - up, 1, 3); b.fillRect(hx + f * 2, sy - 5 - len - up, 1, 2); } }
+  }
 }
 function drawProj(b, p) {
   const s = w2s(p.x, p.y), sx = s[0], sy = s[1];
@@ -2378,6 +2439,8 @@ function drawTouch(b) {
     else if (bt.id === 'roll') { drawGlyph(b, 'rollg', bt.x, bt.y, p.rollCd > 0 ? '#6a5a80' : '#ffffff'); }
     else if (bt.id === 'pot') { drawGlyph(b, 'potion', bt.x, bt.y - 1, p.potions > 0 ? '#ff6a7a' : '#6a5a80'); txt(String(p.potions), bt.x + 5, bt.y + 2, '#fff', 5.5); }
     else if (bt.id === 'use') drawGlyph(b, 'hand', bt.x, bt.y, '#ffd870');
+    else if (bt.id === 'mp') { drawGlyph(b, 'potion', bt.x, bt.y - 1, p.mpot > 0 ? '#6a9aff' : '#6a5a80'); txt(String(p.mpot), bt.x + 5, bt.y + 2, '#fff', 5); }
+    else if (bt.id === 'tp') { drawGlyph(b, 'rollg', bt.x, bt.y, p.scrolls > 0 ? '#e0c060' : '#6a5a80'); txt(String(p.scrolls), bt.x + 5, bt.y + 2, '#fff', 5); }
     else if (bt.id === 'menu') drawGlyph(b, 'menu', bt.x, bt.y, '#c9a0ff');
     else drawSlotIcon(b, p, +bt.id[1], bt.x - 8, bt.y - 8);
   }
@@ -2469,14 +2532,14 @@ function render() {
 
 // ===== 14_save.js =====
 // Сохранение в localStorage (всё в try/catch — в приватном режиме может быть недоступно)
-const SAVE_KEY = 'soul_eater_save_v1';
+const SAVE_KEY = 'soul_eater_save_v2';
 function saveGame() {
   if (!G.started || !G.me || G.prologue) return; const p = G.me, n = G.nemesis && !G.nemesis.dead ? Object.assign({}, G.nemesis.nd, { x: G.nemesis.x, y: G.nemesis.y }) : null;
-  try { localStorage.setItem(SAVE_KEY, JSON.stringify({ v: 1, name: p.name, lvl: p.lvl, xp: p.xp, gold: p.gold, potions: p.potions, souls: p.souls, slots: p.slots, J: G.J, equip: p.equip, bag: p.bag, shards: p.shards | 0, mpTrain: p.mpTrain | 0, mast: p.mast || {}, nem: n, look: p.look || {}, seen: packSeen() })); } catch (e) { }
+  try { localStorage.setItem(SAVE_KEY, JSON.stringify({ v: 2, name: p.name, lvl: p.lvl, xp: p.xp, gold: p.gold, potions: p.potions, souls: p.souls, slots: p.slots, J: G.J, equip: p.equip, bag: p.bag, shards: p.shards | 0, ess: p.ess | 0, slv: p.slv || {}, mpot: p.mpot | 0, scrolls: p.scrolls | 0, mpTrain: p.mpTrain | 0, mast: p.mast || {}, nem: n, look: p.look || {}, seen: packSeen() })); } catch (e) { }
 }
 function packSeen() { let s = ''; const a = (G.over ? G.over.W : W).seen; for (let i = 0; i < a.length; i += 6) { let v = 0; for (let k = 0; k < 6; k++) if (a[i + k]) v |= 1 << k; s += String.fromCharCode(48 + v); } return s; }
 function unpackSeen(s) { if (typeof s !== 'string') return; const a = W.seen; for (let i = 0, j = 0; i < a.length && j < s.length; i += 6, j++) { const v = s.charCodeAt(j) - 48; for (let k = 0; k < 6 && i + k < a.length; k++) a[i + k] = (v >> k) & 1; } W.mapDirty = true; }
-function loadSave() { try { const s = JSON.parse(localStorage.getItem(SAVE_KEY)); return s && s.v === 1 && s.name ? s : null; } catch (e) { return null; } }
+function loadSave() { try { const s = JSON.parse(localStorage.getItem(SAVE_KEY)); return s && s.v === 2 && s.name ? s : null; } catch (e) { return null; } }
 function wipeSave() { try { localStorage.removeItem(SAVE_KEY); } catch (e) { } }
 const validSoul = id => typeof id === 'string' && (!!SOULS[id] || !!CHIMERAS[id] || (id.slice(0, 2) === 'p_' && !!SOULS[id.split('_')[1]] && !!SOULS[id.split('_')[2]]));
 function applySave(p, s) {
@@ -2485,7 +2548,7 @@ function applySave(p, s) {
   if (!Object.keys(p.souls).length) p.souls.wolf = 1;
   p.slots = [0, 1, 2, 3].map(i => { const id = s.slots && s.slots[i]; return id && p.souls[id] ? id : null; });
   G.J = Object.assign(newJournal(), s.J || {}); for (const k of ['reactions', 'recipes', 'obtained', 'hints']) if (!G.J[k] || typeof G.J[k] !== 'object') G.J[k] = {};
-  p.shards = Math.max(0, s.shards | 0); p.mpTrain = Math.max(0, s.mpTrain | 0); p.mast = {}; for (const k in (s.mast || {})) if (EL[k]) p.mast[k] = +s.mast[k] || 0;
+  p.shards = Math.max(0, s.shards | 0); p.ess = Math.max(0, s.ess | 0); p.slv = {}; for (const k in (s.slv || {})) if (validSoul(k)) p.slv[k] = clamp(s.slv[k] | 0, 0, SLV_MAX); p.mpot = clamp(s.mpot | 0, 0, MPOT_MAX); p.scrolls = clamp(s.scrolls | 0, 0, SCROLL_MAX); p.style = s.look && s.look.style === 'ranged' ? 'ranged' : 'melee'; p.mpTrain = Math.max(0, s.mpTrain | 0); p.mast = {}; for (const k in (s.mast || {})) if (EL[k]) p.mast[k] = +s.mast[k] || 0;
   const okIt0 = it => { if (it && it.ench && !SOULS[it.ench]) delete it.ench; if (it) it.plus = clamp(it.plus | 0, 0, 10); return true; };
   const okIt = it => okIt0(it) && it && ISLOTS.indexOf(it.slot) >= 0 && RANKS[it.rank] && AFF[it.base && it.base[0]] && Array.isArray(it.aff) && it.aff.every(a => AFF[a[0]]);
   if (s.equip) for (const k of ISLOTS) p.equip[k] = okIt(s.equip[k]) && s.equip[k].slot === k ? s.equip[k] : null; if (Array.isArray(s.bag)) p.bag = s.bag.filter(okIt).slice(0, BAG_MAX + 8);
@@ -2541,7 +2604,7 @@ function startGame(o) {
   G.ents = []; G.projs = []; G.zones = []; G.parts = []; G.texts = []; G.fx = []; G.pickups = []; G.players = []; G.nemesis = null; G.time = 0; G.over = null; G.pendingLeave = false;
   genWorld(); G.J = newJournal();
   const look = (o && o.save && o.save.look) || (o && o.look) || {}; applyLook(look);
-  const p = mkPlayer(o && o.name); p.look = look; G.me = p; G.dark = undefined; G.players.push(p); G.ents.push(p);
+  const p = mkPlayer(o && o.name); p.look = look; p.style = look.style === 'ranged' ? 'ranged' : 'melee'; recalc(p); p.hp = p.maxHp; G.me = p; G.dark = undefined; G.players.push(p); G.ents.push(p);
   if (o && o.save && typeof applySave === 'function') applySave(p, o.save);
   else if (typeof giveSoul === 'function' && typeof soulDef === 'function') giveSoul(p, 'wolf', 1, true);
   G.cam.x = p.x; G.cam.y = p.y; G.started = true; G.paused = false; Input.clear();

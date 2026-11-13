@@ -46,7 +46,7 @@ Bus.on('respawn', (p) => { if (G.nemesis && !G.nemesis.dead && !G.J.hints.nem) s
 Bus.on('nemesisDeath', (m, p) => {
   const d = m.nd, gold = d.gold + 25 * d.lvl; p.gold += gold; gainXp(p, 60 * d.lvl); G.J.nemKills++; G.nemesis = null;
   for (const it of (d.items || [])) { giveItem(p, it); floatText(p.x, p.y, 'Возвращено: ' + it.name, RANKS[it.rank].c, 6); }
-  dropItem(m.x, m.y, makeItem(Math.min(10, d.lvl), rollRank([0, 30, 40, 20, 10 + 5 * d.tier])), p);
+  dropItem(m.x, m.y, makeItem(Math.min(10, d.lvl), rollRank([0, 50, 35, 12, 3 + d.tier])), p);
   const names = []; for (const s of d.souls) { giveSoul(p, s.id, 1, true); names.push(soulDef(s.id).abName); }
   floatText(m.x, m.y, '«' + NEM_SAY.die[0] + '»', '#ffb0b8', 7); floatNum(p.x, p.y, gold, '#ffd870');
   banner('ТЕНЬ ПОВЕРЖЕНА', '+' + gold + ' золота' + (names.length ? ', копии душ: ' + names.join(', ') : ''), '#ff5a6a'); Sfx.play('soul'); shake(8);

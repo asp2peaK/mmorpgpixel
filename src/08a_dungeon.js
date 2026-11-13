@@ -64,8 +64,8 @@ function leaveDungeon() {
 }
 function openChest(p, n, boss) {
   W.o[tIdx(n.x, n.y)] = 0; const lvl = W.dun.lvl; Sfx.play('soul'); burst(n.x, n.y, ['#ffd870', '#ffffff'], 24, 5, { glow: 1 }); fxRing(n.x, n.y, .3, 2.5, '#ffd870', .5);
-  for (let i = 0; i < (boss ? 3 : 2); i++) dropItem(n.x, n.y + .6, makeItem(lvl + (boss ? 2 : 0), rollRank(boss ? [0, 20, 45, 25, 10] : [25, 45, 22, 7, 1])), p);
-  for (let i = 0; i < 5; i++) dropPickup('gold', n.x, n.y + .6, Math.ceil((boss ? 40 : 12) * lvl / 5)); const sh = boss ? 8 : randi(2, 3); p.shards = (p.shards || 0) + sh; floatText(n.x, n.y, '+' + sh + ' ◆', '#8ad0ff', 7);
+  for (let i = 0; i < (boss ? 3 : 2); i++) dropItem(n.x, n.y + .6, makeItem(lvl + (boss ? 2 : 0), rollRank(boss ? [0, 40, 40, 17, 3] : [50, 38, 10, 2, 0])), p);
+  for (let i = 0; i < 5; i++) dropPickup('gold', n.x, n.y + .6, Math.ceil((boss ? 18 : 5) * lvl / 5)); const sh = boss ? 8 : randi(2, 3); p.shards = (p.shards || 0) + sh; floatText(n.x, n.y, '+' + sh + ' ◆', '#8ad0ff', 7);
 }
 Bus.on('interact', (p, n) => {
   if (n.o === O.CRYPT) { const c = W.crypts.find(q => dist(q.x, q.y, n.x, n.y) < 1), d = c && DUNGEONS.find(q => q.id === c.id); if (d) G.pendingEnter = [d, c]; }
@@ -75,11 +75,11 @@ Bus.on('interact', (p, n) => {
 // Смерть в подземелье: героя выбрасывает наружу, Тень встаёт у входа
 Bus.on('playerDeath', (p) => { if (W.dun && G.over) { p.x = G.over.px; p.y = G.over.py; G.pendingLeave = true; } });
 Bus.on('mobDeath', (m) => {
-  if (!m.dunBoss || !W.dun) return; const B = W.bossRoom, k = (B.y + (B.h >> 1)) * MW + B.x + (B.w >> 1); W.o[k] = O.CHEST; W.bossChest = k;
+  if (!m.dunBoss || !W.dun) return; const B = W.bossRoom, k = (B.y + (B.h >> 1)) * MW + B.x + (B.w >> 1); W.o[k] = O.CHEST; W.bossChest = k; W.o[k + 3] = O.EXIT; W.g[k + 3] = T.DFLOOR; // портал наружу прямо в зале босса
   G.J.dungeons = G.J.dungeons || {}; G.J.dungeons[W.dun.id] = (G.J.dungeons[W.dun.id] || 0) + 1;
 });
 G.systems.push(dt => {
-  if (G.pendingLeave) { G.pendingLeave = false; leaveDungeon(); return; }
+  if (G.pendingLeave) { G.pendingLeave = false; leaveDungeon(); if (G.tpAfter) { G.tpAfter = false; const p = G.me; if (!p.dead) { p.x = TOWN.x; p.y = TOWN.y + 1.6; G.cam.x = p.x; G.cam.y = p.y; fxRing(p.x, p.y, .3, 3, '#c8a850', .5); } } return; }
   if (G.pendingEnter) { const e = G.pendingEnter; G.pendingEnter = null; if (!W.dun) enterDungeon(e[0], e[1]); return; }
   if (!W.dun) return;
   // ловушки: решётки в полу периодически извергают пламя

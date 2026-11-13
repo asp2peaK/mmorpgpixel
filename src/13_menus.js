@@ -5,7 +5,7 @@ const Menus = (() => {
   const stars = n => '★'.repeat(starsOf(n)) + '<span class="q">' + '★'.repeat(3 - starsOf(n)) + '</span>';
   const elChip = el => '<span class="el" style="background:' + EL[el].c + '">' + EL[el].n + '</span>';
   let lastKey = '', lastTab = 'gear';
-  const res = p => '<span class="res"><span data-a="mus" style="cursor:pointer" title="Музыка">' + (Sfx.isMusic() ? '♪ вкл' : '♪ выкл') + '</span><span>Ур. ' + p.lvl + '</span><span class="gd">● ' + p.gold + '</span><span class="sh">◆ ' + (p.shards | 0) + '</span><span class="bad">✚ ' + p.potions + '</span></span>';
+  const res = p => '<span class="res"><span style="color:#c9a0ff">✧ ' + (p.ess | 0) + '</span><span data-a="mus" style="cursor:pointer" title="Музыка">' + (Sfx.isMusic() ? '♪ вкл' : '♪ выкл') + '</span><span>Ур. ' + p.lvl + '</span><span class="gd">● ' + p.gold + '</span><span class="sh">◆ ' + (p.shards | 0) + '</span><span class="bad">✚ ' + p.potions + '</span></span>';
   // Окно: шапка сверху, слева список, справа детали выбранного. Прокрутка не сбрасывается при клике.
   function show(html) {
     const key = st ? st.kind + ':' + (st.tab || '') : '', sc = {}; if (key === lastKey) for (const c of ['panel', 'cl', 'cr']) { const e = ui.querySelector('.' + c); if (e) sc[c] = e.scrollTop; }
@@ -16,16 +16,17 @@ const Menus = (() => {
   }
   function close() { if (!st || st.kind === 'title') return; ui.classList.remove('on'); ui.innerHTML = ''; st = null; G.paused = false; Input.clear(); G.noKeyUntil = performance.now() + 250; Bus.emit('menuClosed'); }
   const isOpen = () => !!st;
-  function card(id, n, cls, act) { const d = soulDef(id); return '<div class="soul ' + (cls || '') + '" data-a="' + act + '" data-v="' + id + '"><img src="' + iconUrl(d.icon) + '"><div><b>' + esc(d.abName) + '</b><small>' + stars(n) + ' ×' + n + '</small></div></div>'; }
+  function card(id, n, cls, act) { const d = soulDef(id); return '<div class="soul ' + (cls || '') + '" data-a="' + act + '" data-v="' + id + '"><img src="' + iconUrl(d.icon) + '" style="border-color:' + (cls === 'sel' ? '' : shadeHex(SRAR[d.rar].c, .45)) + '"><div><b style="color:' + SRAR[d.rar].c + '">' + esc(d.abName) + '</b><small>' + stars(n) + ' ×' + n + ((G.me.slv[id] | 0) ? ' · ур.' + G.me.slv[id] : '') + '</small></div></div>'; }
 
   // ---------- Старт ----------
   function title() {
-    st = { kind: 'title', confirm: false, look: (st && st.look) || { cloak: 0, skin: 0, eyes: 0, scarf: 0 } }; const s = loadSave(); applyLook(st.look);
+    st = { kind: 'title', confirm: false, look: (st && st.look) || { cloak: 0, skin: 0, eyes: 0, scarf: 0, style: 'melee' } }; const s = loadSave(); applyLook(st.look);
     const pv = scaled(SPR.hero_i.c, 6), sw = (k, nm) => '<div class="row" style="margin:5px 0"><span style="width:64px;font-size:13px;color:#7d7462">' + nm + '</span>' + LOOKS[k].map((o, i) => '<button class="btn" title="' + o[0] + '" data-a="look" data-v="' + k + ':' + i + '" style="width:30px;height:30px;padding:0;background:' + o[1] + ';border-color:' + (st.look[k] === i ? '#ffd870' : '#3a3024') + '"></button>').join('') + '</div>';
     const keepName = document.getElementById('nm') ? document.getElementById('nm').value : null;
     show('<h1>ПОЖИРАТЕЛЬ ДУШ</h1><div class="sub">изометрическая экшн-RPG · души вместо классов</div>' +
       (s ? '<button class="btn gold" style="width:100%;margin-bottom:10px" data-a="cont">Продолжить: ' + esc(s.name) + ', ур. ' + (s.lvl | 0) + '</button>' : '') +
       '<h3>Создание героя</h3><div class="row" style="align-items:flex-start;flex-wrap:nowrap"><img src="' + pv.toDataURL() + '" style="image-rendering:pixelated;width:84px;flex:none;background:#07060a;border:2px solid #3a3024;padding:6px"><div style="flex:1">' + sw('cloak', 'Плащ') + sw('skin', 'Кожа') + sw('eyes', 'Глаза') + sw('scarf', 'Шарф') + '</div></div>' +
+      '<div class="tabs" style="margin:10px 0 0"><button class="btn ' + (st.look.style !== 'ranged' ? 'act' : '') + '" data-a="look" data-v="style:melee">Ближний бой<small>меч · больше здоровья</small></button><button class="btn ' + (st.look.style === 'ranged' ? 'act' : '') + '" data-a="look" data-v="style:ranged">Дальний бой<small>посох · выстрелы · −15% здоровья</small></button></div>' +
       '<input class="name" id="nm" maxlength="12" placeholder="Имя героя" value="' + esc(keepName !== null ? keepName : (s ? '' : 'Герой')) + '" style="margin-top:8px">' +
       '<button class="btn" style="width:100%;margin-top:8px" data-a="new" id="newb">' + (s ? 'Новая игра (сотрёт сохранение)' : 'Начать игру') + '</button>' +
       '<button class="btn" style="width:100%;margin-top:6px;font-size:12px;opacity:.75" data-a="newskip">' + (s ? 'Новая игра без вступления' : 'Начать без вступления') + '</button>' +
@@ -43,10 +44,10 @@ const Menus = (() => {
   function openAltar(atAltar, tab) { if (!G.started || G.me.dead) return; st = { kind: 'altar', tab: tab || (atAltar ? 'souls' : lastTab), sel: null, fa: null, fb: null, atAltar, res: null }; drawAltar(); }
   function drawAltar() {
     const p = G.me, t = st.tab; let h = '<button class="btn x" data-a="close">✕</button><h2>' + (st.atAltar ? 'Алтарь душ' : 'Герой: ' + esc(p.name)) + res(p) + '</h2>'; if (!st.atAltar) lastTab = t;
-    h += '<div class="tabs">' + [['souls', 'Души', 'K'], ['gear', 'Снаряжение', 'I'], ['fuse', 'Слияние', ''], ['journal', 'Журнал', 'J'], ['map', 'Карта', 'M']].map(x => '<button class="btn ' + (t === x[0] ? 'act' : '') + '" data-a="tab" data-v="' + x[0] + '">' + x[1] + (x[2] && !V.touch ? '<small>[' + x[2] + ']</small>' : '') + '</button>').join('') + '</div>';
-    if (t === 'souls') h += tabSouls(p); else if (t === 'gear') h += tabGear(p, false); else if (t === 'fuse') h += tabFuse(p); else if (t === 'map') h += '<canvas id="bigmap" width="570" height="285" style="width:100%;image-rendering:pixelated;background:#07060a;border:2px solid #3a3024"></canvas><div class="det"><span style="color:#fff">■</span> ты · <span style="color:#c9a0ff">■</span> город · <span style="color:#c82a3a">■</span> лагерь врагов · <span style="color:#ff7a1a">■</span> логово · <span style="color:#ff2a4a">■</span> Тень. Разведано: ' + Math.round(W.seen.reduce((a, c) => a + c, 0) / W.seen.length * 100) + '%. Лагерей зачищено: ' + (G.J.camps || 0) + '</div>'; else h += tabJournal(p);
+    h += '<div class="tabs">' + [['souls', 'Души', 'K'], ['gear', 'Снаряжение', 'I'], ['fuse', 'Слияние', ''], ['journal', 'Журнал', 'J'], ['map', 'Карта', 'M']].concat(st.atAltar ? [['ess', 'Жертва', '']] : []).map(x => '<button class="btn ' + (t === x[0] ? 'act' : '') + '" data-a="tab" data-v="' + x[0] + '">' + x[1] + (x[2] && !V.touch ? '<small>[' + x[2] + ']</small>' : '') + '</button>').join('') + '</div>';
+    if (t === 'souls') h += tabSouls(p); else if (t === 'gear') h += tabGear(p, false); else if (t === 'ess') h += tabEss(p); else if (t === 'fuse') h += tabFuse(p); else if (t === 'map') h += '<canvas id="bigmap" width="570" height="285" style="width:100%;image-rendering:pixelated;background:#07060a;border:2px solid #3a3024"></canvas><div class="det"><span style="color:#fff">■</span> ты · <span style="color:#c9a0ff">■</span> город · <span style="color:#c82a3a">■</span> лагерь врагов · <span style="color:#ff7a1a">■</span> логово · <span style="color:#ff2a4a">■</span> Тень. Разведано: ' + Math.round(W.seen.reduce((a, c) => a + c, 0) / W.seen.length * 100) + '%. Лагерей зачищено: ' + (G.J.camps || 0) + '</div>'; else h += tabJournal(p);
     show(h);
-    if (t === 'map') { if (W.mapDirty) renderMap(); const c = document.getElementById('bigmap'), x = c.getContext('2d'); x.imageSmoothingEnabled = false; x.setTransform(1.5, .75, -1.5, .75, MH * 1.5, 2); x.drawImage(W.map, 0, 0); const mk = (wx, wy, col, s) => { x.fillStyle = '#07060a'; x.fillRect(wx - s - 1, wy - s - 1, s * 2 + 2, s * 2 + 2); x.fillStyle = col; x.fillRect(wx - s, wy - s, s * 2, s * 2); }; if (!W.dun) { mk(TOWN.x, TOWN.y, '#c9a0ff', 2); if (W.seen[tIdx(LAIR.x, LAIR.y)]) mk(LAIR.x, LAIR.y, '#ff7a1a', 2); } for (const k of W.crypts) if (W.seen[tIdx(k.x, k.y)]) mk(k.x, k.y, '#b04ad8', 2); for (const k of W.camps) if (W.seen[tIdx(k.x, k.y)] && !k.cleared) mk(k.x, k.y, '#c82a3a', 1.5); if (G.nemesis && !G.nemesis.dead && !W.dun) mk(G.nemesis.x, G.nemesis.y, '#ff2a4a', 2); mk(p.x, p.y, '#ffffff', 1.5); }
+    if (t === 'map') { if (W.mapDirty) renderMap(); const c = document.getElementById('bigmap'), x = c.getContext('2d'); x.imageSmoothingEnabled = false; const mk0 = 570 / (MW + MH); x.setTransform(mk0, mk0 / 2, -mk0, mk0 / 2, MH * mk0, 2); x.drawImage(W.map, 0, 0); const mk = (wx, wy, col, s) => { x.fillStyle = '#07060a'; x.fillRect(wx - s - 1, wy - s - 1, s * 2 + 2, s * 2 + 2); x.fillStyle = col; x.fillRect(wx - s, wy - s, s * 2, s * 2); }; if (!W.dun) { mk(TOWN.x, TOWN.y, '#c9a0ff', 2); if (W.seen[tIdx(LAIR.x, LAIR.y)]) mk(LAIR.x, LAIR.y, '#ff7a1a', 2); } for (const k of W.crypts) if (W.seen[tIdx(k.x, k.y)]) mk(k.x, k.y, '#b04ad8', 2); for (const k of W.camps) if (W.seen[tIdx(k.x, k.y)] && !k.cleared) mk(k.x, k.y, '#c82a3a', 1.5); if (G.nemesis && !G.nemesis.dead && !W.dun) mk(G.nemesis.x, G.nemesis.y, '#ff2a4a', 2); mk(p.x, p.y, '#ffffff', 1.5); }
   }
   function tabSouls(p) {
     let h = '<div class="slots">' + p.slots.map((id, i) => '<div class="slot" data-a="slot" data-v="' + i + '"><i>' + (i + 1) + '</i>' + (id ? '<img src="' + iconUrl(soulDef(id).icon) + '"><br>' + esc(soulDef(id).abName) : '<br><span class="q">пусто</span>') + '</div>').join('') + '</div>';
@@ -96,11 +97,11 @@ const Menus = (() => {
     h += '<!--R-->';
     const it = st.isel && findItem(p, st.isel);
     if (st.msg) h += '<div class="det" style="font-size:16px">' + st.msg + '</div>';
-    if (!it) h += '<div class="det q">' + (st.tab === 'forge' ? 'Ковка усиливает основное свойство вещи: +10% за уровень, до +10. Нужны золото и осколки (◆) — их дают проклятые, вожаки, боссы и разбор вещей. С +4 ковка может провалиться, а с +7 провал ещё и ослабляет вещь.' : 'Зачарование вплавляет душу в вещь и даёт ей стихию. Тратит одну копию души и ' + ENCH_COST + ' золота. Новое зачарование заменяет старое.') + '</div>';
+    if (!it) h += '<div class="det q">' + (st.tab === 'forge' ? 'Ковка усиливает основное свойство вещи: +6% за уровень, до +10. Нужны золото и осколки (◆) — их дают проклятые, вожаки, боссы и разбор вещей. С +4 ковка может провалиться, а с +7 провал ещё и ослабляет вещь.' : 'Зачарование вплавляет душу в вещь и даёт ей стихию. Тратит одну копию души и ' + ENCH_COST + ' золота. Новое зачарование заменяет старое.') + '</div>';
     else if (st.tab === 'forge') {
       const pl = it.plus | 0;
       if (pl >= 10) h += idet(it, 'Выбрано') + '<div class="det ok">Предел ковки достигнут.</div>';
-      else { const c = forgeCost(it), ch = FORGE_CH[pl], nx = Math.round(it.base[1] * (1 + .1 * (pl + 1))), can = p.gold >= c.gold && (p.shards | 0) >= c.sh;
+      else { const c = forgeCost(it), ch = FORGE_CH[pl], nx = Math.round(it.base[1] * (1 + .06 * (pl + 1))), can = p.gold >= c.gold && (p.shards | 0) >= c.sh;
         h += idet(it, 'Выбрано') + '<div class="det">' + AFF[it.base[0]].n + ': <b>' + baseVal(it) + '</b> → <b class="ok">' + nx + '</b>' + AFF[it.base[0]].u + '<br>Цена: <span class="gd">' + c.gold + ' золота</span> и <span style="color:#8ad0ff">' + c.sh + ' ◆</span> · Шанс: <b class="' + (ch >= 80 ? 'ok' : ch >= 40 ? 'gd' : 'bad') + '">' + ch + '%</b>' + (pl >= 6 ? '<br><span class="bad">При провале вещь упадёт до +' + (pl - 1) + '.</span>' : pl >= 3 ? '<br><span class="q">При провале материалы сгорят.</span>' : '') + '</div><button class="btn gold" style="width:100%;margin-top:8px" data-a="forge"' + (can ? '' : ' disabled') + '>Ковать до +' + (pl + 1) + (can ? '' : ' (не хватает)') + '</button>'; }
     } else {
       const base = Object.keys(p.souls).filter(id => SOULS[id]); if (st.esel && !p.souls[st.esel]) st.esel = null;
@@ -110,16 +111,36 @@ const Menus = (() => {
     }
     show(h);
   }
+  // ---------- Жертва: лишние души -> эссенция -> усиление душ ----------
+  function tabEss(p) {
+    const ids = Object.keys(p.souls); if (st.xsel && !p.souls[st.xsel]) st.xsel = null;
+    let h = '<div class="det" style="margin:0 0 8px">Эссенция: <b style="color:#c9a0ff">✧ ' + (p.ess | 0) + '</b>. Сожги лишнюю копию души — получишь эссенцию. За эссенцию любая душа усиливается: +8% урона за уровень, до ' + SLV_MAX + '.</div><div class="grid">' + ids.map(id => card(id, p.souls[id], st.xsel === id ? 'sel' : '', 'xsel')).join('') + '</div><!--R-->';
+    if (!st.xsel) return h + '<div class="det q">Выбери душу. Редкость решает, сколько эссенции она даст и сколько стоит её усиление: обычная — 1, редкая — 3, эпическая — 8, легендарная — 20.</div>';
+    const d = soulDef(st.xsel), lv = p.slv[st.xsel] | 0, c = slvCost(d, lv), n = p.souls[st.xsel];
+    h += '<div class="det"><b style="font-size:16px;color:' + SRAR[d.rar].c + '">' + esc(d.name) + '</b><br>' + SRAR[d.rar].n + ' · ' + d.els.map(elChip).join(' ') + '<br>' + stars(n) + ' копий: ' + n + ' · уровень <b>' + lv + '</b> / ' + SLV_MAX + ' (урон +' + lv * 8 + '%)<br>' + esc(d.desc) + '</div>';
+    h += '<button class="btn gold" style="width:100%;margin-top:8px" data-a="xup"' + (lv < SLV_MAX && (p.ess | 0) >= c ? '' : ' disabled') + '>' + (lv >= SLV_MAX ? 'Предел достигнут' : 'Усилить до ур. ' + (lv + 1) + ' за ✧ ' + c) + '</button>';
+    h += '<button class="btn red" style="width:100%;margin-top:6px" data-a="xsac">Сжечь одну копию (+✧ ' + SRAR[d.rar].e + ')' + (n === 1 ? ' — последняя!' : '') + '</button>';
+    if (n === 1) h += '<div class="det bad">Это последняя копия: душа исчезнет вместе со своим уровнем.</div>';
+    return h;
+  }
+  const SHOP = [
+    { id: 'pot', n: 'Зелье лечения', d: 'Восстанавливает 35% здоровья. Клавиша Q', c: POTION_COST, has: p => p.potions + '/' + POTION_MAX, ok: p => p.potions < POTION_MAX, buy: p => p.potions++ },
+    { id: 'mpot', n: 'Эликсир маны', d: 'Восстанавливает 60% маны. Клавиша R', c: 35, has: p => p.mpot + '/' + MPOT_MAX, ok: p => p.mpot < MPOT_MAX, buy: p => p.mpot++ },
+    { id: 'scroll', n: 'Свиток возврата', d: 'Переносит в город откуда угодно, даже из подземелья. Читается 2,5 сек, урон прерывает. Клавиша T', c: 80, has: p => p.scrolls + '/' + SCROLL_MAX, ok: p => p.scrolls < SCROLL_MAX, buy: p => p.scrolls++ },
+    { id: 'whet', n: 'Точильный камень', d: '+20% урона на 3 минуты. Действует сразу', c: 90, has: p => p.buffT > G.time ? Math.ceil(p.buffT - G.time) + ' с' : '—', ok: p => !(p.buffT > G.time), buy: p => { p.buffT = G.time + 180; recalc(p); } },
+    { id: 'shard', n: 'Осколки ×3', d: 'Материал для ковки', c: 160, has: p => '◆ ' + (p.shards | 0), ok: () => true, buy: p => { p.shards = (p.shards | 0) + 3; } },
+    { id: 'box', n: 'Таинственный свёрток', d: 'Случайная вещь твоего уровня. Чаще редкая, иногда лучше', c: 450, has: p => p.bag.length + '/' + BAG_MAX, ok: p => p.bag.length < BAG_MAX, buy: p => { const it = makeItem(p.lvl, rollRank([0, 64, 28, 7, 1])); p.bag.push(it); st.isel = it.uid; } }
+  ];
   function tabFuse(p) {
     if (!st.atAltar) return '<div class="det">Сливать души можно только у <b>Алтаря душ</b> в городе.</div>';
     if (st.res) { const d = soulDef(st.res.id), uq = Object.keys(G.J.recipes).filter(k => CHIMERAS[G.J.recipes[k]]).length; return '<div class="big"><img src="' + iconUrl(d.icon) + '"><div><b>' + esc(d.name) + '</b><br><small class="gd">' + (st.res.isNew ? (d.unique ? '✦ НОВАЯ УНИКАЛЬНАЯ ХИМЕРА (' + uq + '/10)' : 'Новая химера') : 'Ещё одна копия') + '</small></div></div><div class="det">' + d.els.map(elChip).join(' ') + '<br>' + esc(d.desc) + '</div><button class="btn" style="width:100%;margin-top:8px" data-a="again">Сливать ещё</button>'; }
     const base = Object.keys(p.souls).filter(id => SOULS[id]);
     const box = (id, k) => '<div class="slot" data-a="unf" data-v="' + k + '" style="min-height:66px">' + (id ? '<img src="' + iconUrl(soulDef(id).icon) + '"><br>' + esc(SOULS[id].mob) : '<br><span class="q">душа ' + (k === 'a' ? '1' : '2') + '</span>') + '</div>';
     let res = '<span class="q">???</span>', warn = '';
-    if (st.fa && st.fb) { const known = G.J.recipes[recipeKey(st.fa, st.fb)] && CHIMERAS[G.J.recipes[recipeKey(st.fa, st.fb)]] ? G.J.recipes[recipeKey(st.fa, st.fb)] : G.J.recipes[st.fa + '>' + st.fb]; if (known) { const d = soulDef(known); res = '<img src="' + iconUrl(d.icon) + '"><br>' + esc(d.name); } for (const id of [st.fa, st.fb]) if (p.souls[id] === 1) warn += '<div class="bad">Последняя копия: «' + esc(SOULS[id].name) + '» исчезнет.</div>'; }
+    if (st.fa && st.fb) { const known = G.J.recipes[recipeKey(st.fa, st.fb)] && CHIMERAS[G.J.recipes[recipeKey(st.fa, st.fb)]] ? G.J.recipes[recipeKey(st.fa, st.fb)] : G.J.recipes[st.fa + '>' + st.fb]; if (known) { const d = soulDef(known); res = '<img src="' + iconUrl(d.icon) + '"><br>' + esc(d.name); } for (const id of [st.fa, st.fb]) if (p.souls[id] <= 2) warn += '<div class="bad">Копий всего ' + p.souls[id] + ': «' + esc(SOULS[id].name) + '» ' + (p.souls[id] < 2 ? 'не хватает' : 'исчезнет') + '.</div>'; }
     let h = '<div class="slots" style="align-items:center">' + box(st.fa, 'a') + '<b style="font-size:22px">+</b>' + box(st.fb, 'b') + '<b style="font-size:22px">=</b><div class="slot" style="min-height:66px;border-color:#ffd870">' + res + '</div></div>';
     h += '<div class="grid">' + (base.length ? base.map(id => card(id, p.souls[id], (st.fa === id || st.fb === id ? 'sel' : ''), 'pick')).join('') : '<span class="q">Нет базовых душ</span>') + '</div>';
-    h += '<!--R--><div class="det">Слияние тратит по одной копии каждой души и <span class="gd">' + FUSE_COST + ' золота</span>. Рецепты скрыты — открытые попадают в Журнал. Порядок душ бывает важен.' + warn + '</div>';
+    h += '<!--R--><div class="det">Слияние тратит по две копии каждой души и <span class="gd">' + FUSE_COST + ' золота</span>. Рецепты скрыты — открытые попадают в Журнал. Порядок душ бывает важен.' + warn + '</div>';
     h += '<button class="btn gold" style="width:100%;margin-top:8px" data-a="fuse"' + (canFuse(p, st.fa, st.fb) ? '' : ' disabled') + '>Слить души' + (p.gold < FUSE_COST ? ' (не хватает золота)' : '') + '</button>';
     return h;
   }
@@ -142,8 +163,8 @@ const Menus = (() => {
   function openShop() { if (!G.started || G.me.dead) return; st = { kind: 'shop' }; drawShop(); }
   function drawShop() {
     const p = G.me, mx = Math.min(POTION_MAX - p.potions, Math.floor(p.gold / POTION_COST));
-    show('<button class="btn x" data-a="close">✕</button><h2>Торговец' + res(p) + '</h2><div class="det">«Свежие зелья! Тени в лесу сами себя не убьют.»<br><br>Зелье лечения: восстанавливает 35% здоровья.<br>Цена: <span class="gd">' + POTION_COST + ' золота</span>. В сумке: <b>' + p.potions + ' / ' + POTION_MAX + '</b>. Золото: <span class="gd">● ' + p.gold + '</span></div>' +
-      '<div class="row" style="margin-top:8px"><button class="btn gold" data-a="buy" data-v="1"' + (mx >= 1 ? '' : ' disabled') + '>Купить 1</button><button class="btn gold" data-a="buy" data-v="' + mx + '"' + (mx >= 2 ? '' : ' disabled') + '>Купить ' + (mx >= 2 ? mx : 'все') + ' (' + Math.max(0, mx) * POTION_COST + ')</button><button class="btn" data-a="close">Уйти</button></div><h3>Твои вещи</h3>' + tabGear(p, true));
+    show('<button class="btn x" data-a="close">✕</button><h2>Торговец' + res(p) + '</h2><div class="det" style="margin:0 0 8px">«Всё, что нужно, чтобы прожить ещё одну ночь. Недёшево — так и ночь нынче дорогая.»</div>' +
+      SHOP.map(o => '<div class="soul" style="cursor:default;margin-bottom:4px"><div style="flex:1"><b>' + o.n + ' <span class="q">(' + o.has(p) + ')</span></b><small style="color:#8a7f68">' + o.d + '</small></div><button class="btn gold" data-a="sbuy" data-v="' + o.id + '"' + (o.ok(p) && p.gold >= o.c ? '' : ' disabled') + '>' + o.c + ' ●</button></div>').join('') + '<h3>Твои вещи</h3>' + tabGear(p, true));
   }
 
   function act(a, v) {
@@ -153,7 +174,7 @@ const Menus = (() => {
     if (a === 'mus') { Sfx.toggleMusic(); return st.kind === 'shop' ? drawShop() : st.kind === 'smith' ? drawSmith() : drawAltar(); }
     if (a === 'cont') return begin(loadSave());
     if (a === 'newskip') { if (loadSave() && !st.confirm2) { st.confirm2 = true; return; } return begin(null, true); }
-    if (a === 'look') { const q = v.split(':'); st.look[q[0]] = +q[1]; return title(); }
+    if (a === 'look') { const q = v.split(':'); st.look[q[0]] = q[0] === 'style' ? q[1] : +q[1]; return title(); }
     if (a === 'new') { if (loadSave() && !st.confirm) { st.confirm = true; const b = document.getElementById('newb'); b.textContent = 'Точно? Нажми ещё раз — сохранение сотрётся'; b.classList.add('red'); return; } return begin(null); }
     if (a === 'tab') { st.tab = v; st.res = null; return drawAltar(); }
     if (a === 'sel') { st.sel = st.sel === v ? null : v; return drawAltar(); }
@@ -179,6 +200,10 @@ const Menus = (() => {
     if (a === 'iun') { unequipItem(p, v); return redraw(); }
     if (a === 'isell') { const it = findItem(p, st.isel), i = p.bag.indexOf(it); if (i >= 0) { p.bag.splice(i, 1); p.gold += itemPrice(it); st.isel = null; Sfx.play('coin'); } return redraw(); }
     if (a === 'ijunk') { for (let i = p.bag.length - 1; i >= 0; i--) if (p.bag[i].rank === 0) { p.gold += itemPrice(p.bag[i]); p.bag.splice(i, 1); } Sfx.play('coin'); return redraw(); }
+    if (a === 'sbuy') { const o = SHOP.find(q => q.id === v); if (o && o.ok(p) && p.gold >= o.c) { p.gold -= o.c; o.buy(p); Sfx.play('coin'); } return drawShop(); }
+    if (a === 'xsel') { st.xsel = st.xsel === v ? null : v; return drawAltar(); }
+    if (a === 'xsac') { const id = st.xsel; if (id && p.souls[id]) { p.ess = (p.ess | 0) + SRAR[soulDef(id).rar].e; takeSoul(p, id); if (!p.souls[id]) { delete p.slv[id]; st.xsel = null; } Sfx.play('fire'); saveGame(); } return drawAltar(); }
+    if (a === 'xup') { const id = st.xsel, d = id && soulDef(id), lv = id ? p.slv[id] | 0 : 0; if (d && lv < SLV_MAX && (p.ess | 0) >= slvCost(d, lv)) { p.ess -= slvCost(d, lv); p.slv[id] = lv + 1; Sfx.play('levelup'); saveGame(); } return drawAltar(); }
     if (a === 'buy') { const n = Math.min(+v, POTION_MAX - p.potions, Math.floor(p.gold / POTION_COST)); if (n > 0) { p.gold -= n * POTION_COST; p.potions += n; Sfx.play('coin'); } return drawShop(); }
   }
   ui.addEventListener('click', e => { const t = e.target.closest('[data-a]'); if (!t || t.disabled) return; Sfx.init(); Sfx.play('ui'); act(t.dataset.a, t.dataset.v); });

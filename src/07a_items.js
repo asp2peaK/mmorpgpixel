@@ -17,17 +17,17 @@ let itemUid = 1;
 function rollRank(w) { let r = rand(w.reduce((a, c) => a + c, 0)); for (let i = 0; i < w.length; i++) { r -= w[i]; if (r < 0) return i; } return 0; }
 function makeItem(lvl, rank, slot) {
   slot = slot || pick(ISLOTS); const R = RANKS[rank], m = R.m; lvl = clamp(lvl | 0, 1, 12);
-  const base = slot === 'weapon' ? ['atk', Math.round((3 + 1.5 * lvl) * m)] : slot === 'armor' ? ['hp', Math.round((15 + 8 * lvl) * m)] : slot === 'amulet' ? ['soul', Math.round((6 + .8 * lvl) * m)] : ['crit', Math.round((3 + .3 * lvl) * m)];
+  const base = slot === 'weapon' ? ['atk', Math.round((2 + .9 * lvl) * m)] : slot === 'armor' ? ['hp', Math.round((10 + 5 * lvl) * m)] : slot === 'amulet' ? ['soul', Math.round((4 + .5 * lvl) * m)] : ['crit', Math.round((2 + .25 * lvl) * m)];
   const keys = Object.keys(AFF).filter(k => k !== base[0]), aff = [];
   for (let i = 0; i < R.aff; i++) { const k = keys.splice(Math.floor(rand(keys.length)), 1)[0]; aff.push([k, Math.max(1, Math.round(AFF[k].f(lvl) * rand(.8, 1.2) * Math.pow(m, .6)))]); }
   const nm = INAMES[slot][clamp(Math.floor((lvl - 1) / 3), 0, 3)] + (aff.length ? ' ' + AFF[aff[0][0]].sx : '');
   return { uid: Date.now().toString(36) + (itemUid++), slot, rank, lvl, base, aff, name: nm, curse: rank === 4 };
 }
 // Ковка: +1..+10, каждый уровень даёт +10% к основному свойству. Зачарование: душа даёт предмету стихию.
-const FORGE_CH = [100, 100, 100, 80, 65, 50, 40, 30, 20, 10], ENCH_COST = 60;
-const baseVal = it => Math.round(it.base[1] * (1 + .1 * (it.plus | 0)));
+const FORGE_CH = [100, 100, 100, 80, 65, 50, 40, 30, 20, 10], ENCH_COST = 200;
+const baseVal = it => Math.round(it.base[1] * (1 + .06 * (it.plus | 0)));
 const itemName = it => it.name + (it.plus ? ' +' + it.plus : '');
-const forgeCost = it => ({ gold: 15 * ((it.plus | 0) + 1) * (it.rank + 1), sh: (it.plus | 0) + 1 });
+const forgeCost = it => ({ gold: 35 * ((it.plus | 0) + 1) * (it.rank + 1), sh: (it.plus | 0) + 1 });
 const shardsOf = it => (it.rank + 1) * (it.rank + 1) + (it.plus | 0) * 2;
 function enchDesc(slot, el) { const n = EL[el].n; return slot === 'weapon' ? 'Удары мечом бьют стихией «' + n + '»: накладывают её эффект и запускают реакции' : slot === 'armor' ? 'Урон стихии «' + n + '» по тебе вдвое слабее, её эффект на тебя не действует' : slot === 'amulet' ? 'Души стихии «' + n + '» наносят на 25% больше урона' : 'Души стихии «' + n + '» перезаряжаются на 20% быстрее'; }
 function itemLines(it) {
@@ -37,9 +37,10 @@ function itemLines(it) {
   if (it.curse) L.push('<span class="bad">Проклятие: −8% здоровья</span>');
   return L;
 }
-const itemPrice = it => Math.round((4 + 2 * it.lvl) * (it.rank + 1) * (it.rank + 1) * .5);
+const itemPrice = it => Math.round((4 + 2 * it.lvl) * (it.rank + 1) * (it.rank + 1) * .3);
 const itemScore = it => it.rank * 100 + it.lvl + (it.plus | 0) * 3 + (it.ench ? 5 : 0);
-function itemIcon(it) { return makeIcon('it_' + it.slot + it.rank, 'i_' + it.slot, RANKS[it.rank].c); }
+const itemTier = it => clamp(Math.floor((it.lvl - 1) / 3), 0, 3);
+function itemIcon(it) { const t = itemTier(it), g = 'i_' + it.slot + t; return makeIcon('it_' + it.slot + t + '_' + it.rank, GLYPH[g] ? g : 'i_' + it.slot + (t & 1), RANKS[it.rank].c); }
 // Суммарные бонусы надетого
 function gearStats(list) {
   const s = { atk: 0, hp: 0, spd: 0, cdr: 0, crit: 0, soul: 0, pot: 0, el: {}, curse: 0 };
@@ -51,7 +52,7 @@ function unequipItem(p, slot) { const it = p.equip[slot]; if (!it || p.bag.lengt
 function giveItem(p, it) { if (!p.equip[it.slot]) { p.equip[it.slot] = it; recalc(p); } else p.bag.push(it); }
 function dropItem(x, y, it, owner) { const a = rand(TAU); G.pickups.push({ kind: 'item', x, y, v: it, age: 0, vx: Math.cos(a) * 2.5, vy: Math.sin(a) * 2.5, owner: owner ? owner.id : 0 }); }
 // Дроп с мобов: ранг зависит от того, кого убил
-const DROP = { mob: [.09, [70, 24, 5, 1, 0]], elite: [.6, [30, 45, 20, 5, 0]], chief: [1, [0, 45, 38, 12, 5]], boss: [1, [0, 0, 50, 35, 15]] };
+const DROP = { mob: [.03, [85, 13, 2, 0, 0]], elite: [.3, [55, 35, 9, 1, 0]], chief: [1, [20, 50, 25, 5, 0]], boss: [1, [0, 25, 50, 22, 3]] };
 Bus.on('mobDeath', (m) => {
   if (m.owner || m.type === 'spirit' || m.isNemesis || m.summoned) return; const p = m.lastHitBy || G.me; if (!p || dist(p.x, p.y, m.x, m.y) > 22) return;
   const D = DROP[m.boss ? 'boss' : m.chief ? 'chief' : m.elite ? 'elite' : 'mob'];

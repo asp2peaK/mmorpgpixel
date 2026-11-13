@@ -6,7 +6,7 @@ const Input = (() => {
   function buttons() {
     const w = V.w, h = V.h;
     return [{ id: 'atk', x: w - 32, y: h - 36, r: 19 }, { id: 'roll', x: w - 76, y: h - 24, r: 13 }, { id: 's0', x: w - 86, y: h - 54, r: 11 }, { id: 's1', x: w - 67, y: h - 78, r: 11 }, { id: 's2', x: w - 40, y: h - 89, r: 11 }, { id: 's3', x: w - 14, y: h - 80, r: 11 },
-    { id: 'pot', x: w - 16, y: h - 112, r: 10 }, { id: 'use', x: w - 44, y: h - 117, r: 10 }, { id: 'menu', x: w - 76, y: 14, r: 9 }];
+    { id: 'pot', x: w - 16, y: h - 112, r: 10 }, { id: 'mp', x: w - 16, y: h - 135, r: 9 }, { id: 'tp', x: w - 68, y: h - 104, r: 9 }, { id: 'use', x: w - 44, y: h - 117, r: 10 }, { id: 'menu', x: w - 76, y: 14, r: 9 }];
   }
   function init(c) {
     V.touch = ('ontouchstart' in window) || navigator.maxTouchPoints > 0;
@@ -48,7 +48,7 @@ const Input = (() => {
     return {
       mx: m[0], my: m[1], ax, ay, atk: mdown || !!held.atk, roll: !!(pr.Space || pr.Troll),
       cast: [!!(pr.Digit1 || pr.Ts0), !!(pr.Digit2 || pr.Ts1), !!(pr.Digit3 || pr.Ts2), !!(pr.Digit4 || pr.Ts3)],
-      potion: !!(pr.KeyQ || pr.Tpot), interact: !!(pr.KeyE || pr.Tuse), menu: !!(pr.Tab || pr.KeyI || pr.KeyK || pr.KeyJ || pr.KeyM || pr.Tmenu), mtab: pr.KeyI ? 'gear' : pr.KeyK ? 'souls' : pr.KeyJ ? 'journal' : pr.KeyM ? 'map' : null, esc: !!pr.Escape
+      potion: !!(pr.KeyQ || pr.Tpot), mpot: !!(pr.KeyR || pr.Tmp), scroll: !!(pr.KeyT || pr.Ttp), interact: !!(pr.KeyE || pr.Tuse), menu: !!(pr.Tab || pr.KeyI || pr.KeyK || pr.KeyJ || pr.KeyM || pr.Tmenu), mtab: pr.KeyI ? 'gear' : pr.KeyK ? 'souls' : pr.KeyJ ? 'journal' : pr.KeyM ? 'map' : null, esc: !!pr.Escape
     };
   }
   function endFrame() { for (const k in pr) delete pr[k]; }

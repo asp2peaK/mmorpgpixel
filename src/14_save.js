@@ -1,12 +1,12 @@
 // Сохранение в localStorage (всё в try/catch — в приватном режиме может быть недоступно)
-const SAVE_KEY = 'soul_eater_save_v1';
+const SAVE_KEY = 'soul_eater_save_v2';
 function saveGame() {
   if (!G.started || !G.me || G.prologue) return; const p = G.me, n = G.nemesis && !G.nemesis.dead ? Object.assign({}, G.nemesis.nd, { x: G.nemesis.x, y: G.nemesis.y }) : null;
-  try { localStorage.setItem(SAVE_KEY, JSON.stringify({ v: 1, name: p.name, lvl: p.lvl, xp: p.xp, gold: p.gold, potions: p.potions, souls: p.souls, slots: p.slots, J: G.J, equip: p.equip, bag: p.bag, shards: p.shards | 0, mpTrain: p.mpTrain | 0, mast: p.mast || {}, nem: n, look: p.look || {}, seen: packSeen() })); } catch (e) { }
+  try { localStorage.setItem(SAVE_KEY, JSON.stringify({ v: 2, name: p.name, lvl: p.lvl, xp: p.xp, gold: p.gold, potions: p.potions, souls: p.souls, slots: p.slots, J: G.J, equip: p.equip, bag: p.bag, shards: p.shards | 0, ess: p.ess | 0, slv: p.slv || {}, mpot: p.mpot | 0, scrolls: p.scrolls | 0, mpTrain: p.mpTrain | 0, mast: p.mast || {}, nem: n, look: p.look || {}, seen: packSeen() })); } catch (e) { }
 }
 function packSeen() { let s = ''; const a = (G.over ? G.over.W : W).seen; for (let i = 0; i < a.length; i += 6) { let v = 0; for (let k = 0; k < 6; k++) if (a[i + k]) v |= 1 << k; s += String.fromCharCode(48 + v); } return s; }
 function unpackSeen(s) { if (typeof s !== 'string') return; const a = W.seen; for (let i = 0, j = 0; i < a.length && j < s.length; i += 6, j++) { const v = s.charCodeAt(j) - 48; for (let k = 0; k < 6 && i + k < a.length; k++) a[i + k] = (v >> k) & 1; } W.mapDirty = true; }
-function loadSave() { try { const s = JSON.parse(localStorage.getItem(SAVE_KEY)); return s && s.v === 1 && s.name ? s : null; } catch (e) { return null; } }
+function loadSave() { try { const s = JSON.parse(localStorage.getItem(SAVE_KEY)); return s && s.v === 2 && s.name ? s : null; } catch (e) { return null; } }
 function wipeSave() { try { localStorage.removeItem(SAVE_KEY); } catch (e) { } }
 const validSoul = id => typeof id === 'string' && (!!SOULS[id] || !!CHIMERAS[id] || (id.slice(0, 2) === 'p_' && !!SOULS[id.split('_')[1]] && !!SOULS[id.split('_')[2]]));
 function applySave(p, s) {
@@ -15,7 +15,7 @@ function applySave(p, s) {
   if (!Object.keys(p.souls).length) p.souls.wolf = 1;
   p.slots = [0, 1, 2, 3].map(i => { const id = s.slots && s.slots[i]; return id && p.souls[id] ? id : null; });
   G.J = Object.assign(newJournal(), s.J || {}); for (const k of ['reactions', 'recipes', 'obtained', 'hints']) if (!G.J[k] || typeof G.J[k] !== 'object') G.J[k] = {};
-  p.shards = Math.max(0, s.shards | 0); p.mpTrain = Math.max(0, s.mpTrain | 0); p.mast = {}; for (const k in (s.mast || {})) if (EL[k]) p.mast[k] = +s.mast[k] || 0;
+  p.shards = Math.max(0, s.shards | 0); p.ess = Math.max(0, s.ess | 0); p.slv = {}; for (const k in (s.slv || {})) if (validSoul(k)) p.slv[k] = clamp(s.slv[k] | 0, 0, SLV_MAX); p.mpot = clamp(s.mpot | 0, 0, MPOT_MAX); p.scrolls = clamp(s.scrolls | 0, 0, SCROLL_MAX); p.style = s.look && s.look.style === 'ranged' ? 'ranged' : 'melee'; p.mpTrain = Math.max(0, s.mpTrain | 0); p.mast = {}; for (const k in (s.mast || {})) if (EL[k]) p.mast[k] = +s.mast[k] || 0;
   const okIt0 = it => { if (it && it.ench && !SOULS[it.ench]) delete it.ench; if (it) it.plus = clamp(it.plus | 0, 0, 10); return true; };
   const okIt = it => okIt0(it) && it && ISLOTS.indexOf(it.slot) >= 0 && RANKS[it.rank] && AFF[it.base && it.base[0]] && Array.isArray(it.aff) && it.aff.every(a => AFF[a[0]]);
   if (s.equip) for (const k of ISLOTS) p.equip[k] = okIt(s.equip[k]) && s.equip[k].slot === k ? s.equip[k] : null; if (Array.isArray(s.bag)) p.bag = s.bag.filter(okIt).slice(0, BAG_MAX + 8);

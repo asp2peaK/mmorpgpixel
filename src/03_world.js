@@ -1,25 +1,25 @@
 // Мир: генерация карты шумом, зоны, огонь/лужи/зарастание, точки спавна
-const MW = 210, MH = 170, MIDY = 85.5;
+const MW = 300, MH = 220, MIDY = 110.5, SX = MW / 210;
 const O = { NONE: 0, TREE: 1, DEAD: 2, ROCK: 3, ALTAR: 4, STONE: 5, MERCH: 6, HOUSE: 7, CRATE: 8, LAMP: 9, BLOCK: 10, TOMB: 11, TOTEM: 12, STAKE: 13, SMITH: 14, ANVIL: 15, WALL: 16, CRYPT: 17, EXIT: 18, CHEST: 19, ELDER: 20 };
-const TOWN = { x: 14.5, y: MIDY, r: 11 }, LAIR = { x: 196.5, y: MIDY, r: 8.5 };
+const TOWN = { x: 14.5, y: MIDY, r: 11 }, LAIR = { x: MW - 13.5, y: MIDY, r: 8.5 };
 const ZNAME = { town: 'Город', edge: 'Опушка', thicket: 'Чаща', scorch: 'Выжженная поляна', bog: 'Гнилые топи', grave: 'Костяной погост', lair: 'Логово Пепельного Волка' };
 const ZLVL = { town: '', edge: 'ур. 1–3', thicket: 'ур. 3–6', scorch: 'ур. 6–9', bog: 'ур. 4–7', grave: 'ур. 5–8', lair: 'босс, ур. 10' };
 // Горючесть тайлов: топливо (сек) и шанс перекинуться на соседа
 const FL = {}; FL[T.TALL] = { fuel: 5, sp: .2 }; FL[T.DTALL] = { fuel: 5, sp: .16 }; FL[T.DRY] = { fuel: 2.2, sp: .2 }; FL[T.DRYTALL] = { fuel: 4, sp: .45 };
 let W = null;
 
-function pathY(x) { const t = clamp((x - 26) / 22, 0, 1) * clamp((184 - x) / 16, 0, 1), s = t * t * (3 - 2 * t); return MIDY + (vnoise(x * .045, 3.3, SEED) - .5) * 46 * s; }
+function pathY(x) { const t = clamp((x - 26) / 22, 0, 1) * clamp((MW - 26 - x) / 16, 0, 1), s = t * t * (3 - 2 * t); return MIDY + (vnoise(x * .04, 3.3, SEED) - .5) * 62 * s; }
 const ZDARK = { dungeon: .8, town: .34, edge: .5, thicket: .64, scorch: .52, bog: .62, grave: .68, lair: .56 };
-function zoneLvl(z, x) { return z === 'edge' ? clamp(1 + Math.floor((x - 26) / 18), 1, 3) : z === 'thicket' ? clamp(3 + Math.floor((x - 80) / 14), 3, 6) : z === 'bog' ? clamp(4 + Math.floor((x - 36) / 45), 4, 7) : z === 'grave' ? clamp(5 + Math.floor((x - 46) / 42), 5, 8) : clamp(6 + Math.floor((x - 136) / 12), 6, 9); }
+function zoneLvl(z, x) { return z === 'edge' ? clamp(1 + Math.floor((x - 26) / (18 * SX)), 1, 3) : z === 'thicket' ? clamp(3 + Math.floor((x - 80 * SX) / (14 * SX)), 3, 6) : z === 'bog' ? clamp(4 + Math.floor((x - 36) / (45 * SX)), 4, 7) : z === 'grave' ? clamp(5 + Math.floor((x - 46) / (42 * SX)), 5, 8) : clamp(6 + Math.floor((x - 136 * SX) / (12 * SX)), 6, 9); }
 const ZTYPES = { edge: ['wolf', 'slime', 'shroom'], thicket: ['root', 'bat', 'skel'], scorch: ['imp', 'falcon'], bog: ['toad', 'shroom', 'slime', 'root'], grave: ['wraith', 'skel', 'bat', 'wolf'] };
 function zoneAt(x, y) {
   if (W && W.dun) return 'dungeon';
   if (dist(x, y, TOWN.x, TOWN.y) < TOWN.r + 1) return 'town';
   if (dist(x, y, LAIR.x, LAIR.y) < LAIR.r + 3) return 'lair';
-  if (x > 46 && x < 190 && y < 52 + (vnoise(x * .06, 1.1, SEED + 7) - .5) * 14) return 'grave';
-  if (x > 36 && x < 190 && y > 119 + (vnoise(x * .06, 5.1, SEED + 8) - .5) * 14) return 'bog';
+  if (x > 46 && x < MW - 20 && y < MIDY - 42 + (vnoise(x * .06, 1.1, SEED + 7) - .5) * 14) return 'grave';
+  if (x > 36 && x < MW - 20 && y > MIDY + 42 + (vnoise(x * .06, 5.1, SEED + 8) - .5) * 14) return 'bog';
   const w = x + (vnoise(y * .08, 7.7, SEED) - .5) * 8;
-  return w < 80 ? 'edge' : w < 136 ? 'thicket' : 'scorch';
+  return w < 80 * SX ? 'edge' : w < 136 * SX ? 'thicket' : 'scorch';
 }
 const tIdx = (x, y) => (y | 0) * MW + (x | 0);
 function blocked(x, y, fly) {
@@ -76,7 +76,7 @@ function genWorld() {
   }
   placeCrypts();
   // Город
-  const put = (x, y, o) => { W.o[(y + 35) * MW + x] = o; };
+  const put = (x, y, o) => { W.o[(y + MIDY - 50.5) * MW + x] = o; };
   put(14, 50, O.STONE); put(10, 46, O.ALTAR); put(18, 45, O.MERCH); put(16, 52, O.ELDER); put(9, 51, O.SMITH); put(10, 52, O.ANVIL); put(19, 46, O.CRATE);
   put(7, 53, O.HOUSE); put(6, 53, O.BLOCK); put(7, 52, O.BLOCK); put(6, 52, O.BLOCK);
   put(21, 54, O.HOUSE); put(20, 54, O.BLOCK); put(21, 53, O.BLOCK); put(20, 53, O.BLOCK);
@@ -84,9 +84,9 @@ function genWorld() {
   W.g0.set(W.g); W.o0.set(W.o);
 
   // Точки спавна мобов по сетке
-  const CS = 9, used = {};
+  const CS = 8, used = {};
   for (let cy = 0; cy * CS < MH; cy++) for (let cx = 0; cx * CS < MW; cx++) {
-    if (hash2(cx, cy, SEED + 9) > .7) continue;
+    if (hash2(cx, cy, SEED + 9) > .88) continue;
     for (let t = 0; t < 8; t++) {
       const x = cx * CS + 1 + Math.floor(hash2(cx * 7 + t, cy, SEED + 10) * (CS - 1)), y = cy * CS + 1 + Math.floor(hash2(cx, cy * 7 + t, SEED + 11) * (CS - 1));
       if (x < 4 || y < 4 || x >= MW - 4 || y >= MH - 4) continue;

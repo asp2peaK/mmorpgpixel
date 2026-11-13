@@ -70,6 +70,7 @@ function drawEnt(b, e) {
     let sc = null; if (e.wu) { const s = Math.sin(G.time * 34) * .07; sc = [1 + s, 1 - s]; } else if (e.swing) sc = [1.06, .96];
     if (e.elite) { sc = sc || [1, 1]; sc = [sc[0] * 1.3, sc[1] * 1.3]; }
     drawSpr(b, name, sx, sy - z - bob, e.face < 0, e.flash > 0, sc);
+    if ((e.isPlayer || e.isNemesis) && !(e.flash > 0)) drawGear(b, e, sx, sy - z - bob);
     if (e.enraged && !(e.flash > 0)) { b.globalAlpha = .28 + .12 * Math.sin(G.time * 10); b.globalCompositeOperation = 'lighter'; drawSpr(b, name, sx, sy - z - bob, e.face < 0, true); b.globalCompositeOperation = 'source-over'; }
   }
   b.globalAlpha = 1;
@@ -83,6 +84,18 @@ function drawEnt(b, e) {
   if (e.isNemesis) txt(e.name, sx, top - 14, '#ff5a6a', 6, 'center');
   else if (e.ai && !e.boss && !e.ghost && e.lvl && G.me && dist(e.x, e.y, G.me.x, G.me.y) < 7) txt(e.name + ' ' + e.lvl, sx, top - (e.hp < e.maxHp ? 13 : 9), e.chief ? '#ff5a6a' : e.elite ? '#c88aff' : e.lvl > G.me.lvl + 1 ? '#ff8a6a' : '#d8d0e0', 4.5, 'center', .85);
   if (e.sayT > 0 && e.sayS) txt('«' + e.sayS + '»', sx, top - 23, '#ffb0b8', 6.5, 'center', clamp(e.sayT, 0, 1));
+}
+// Надетое видно на персонаже: клинок или посох в руке, наплечники, амулет — цвет по рангу вещи
+function drawGear(b, e, sx, sy) {
+  const eq = e.isPlayer ? e.equip : null, items = eq ? ISLOTS.map(s => eq[s]) : (e.nd && e.nd.items) || [], f = e.face, get = s => items.find(i => i && i.slot === s);
+  const ar = get('armor'), am = get('amulet'), w = get('weapon');
+  if (ar) { const t = itemTier(ar), c = RANKS[ar.rank].c; b.fillStyle = c; b.fillRect(sx - 6, sy - 12, 2 + (t > 1 ? 1 : 0), 2); b.fillRect(sx + 4 - (t > 1 ? 1 : 0), sy - 12, 2 + (t > 1 ? 1 : 0), 2); if (t >= 2) { b.fillRect(sx - 2, sy - 9, 4, 1); } if (t >= 3) { b.fillRect(sx - 6, sy - 13, 1, 1); b.fillRect(sx + 5, sy - 13, 1, 1); } }
+  if (am) { b.fillStyle = RANKS[am.rank].c; b.fillRect(sx - 1, sy - 11, 2, 1); }
+  if (w) {
+    const t = itemTier(w), c = RANKS[w.rank].c, hx = sx + f * 7, tip = w.ench ? EL[soulDef(w.ench).el].c : '#ffffff', len = 6 + t * 2, up = e.swing ? 3 : 0;
+    if (e.isPlayer && e.style === 'ranged') { b.fillStyle = '#4a3626'; b.fillRect(hx, sy - 15, 1, 13); b.fillStyle = c; b.fillRect(hx - 1, sy - 18, 3, 3); b.fillStyle = tip; b.fillRect(hx, sy - 17, 1, 1); }
+    else { b.fillStyle = '#100a14'; b.fillRect(hx - 1, sy - 7 - len - up, 3, len + 2); b.fillStyle = c; b.fillRect(hx, sy - 6 - len - up, 1, len); b.fillStyle = '#4a3626'; b.fillRect(hx - 1, sy - 6 - up, 3, 1); b.fillRect(hx, sy - 5 - up, 1, 2); b.fillStyle = tip; b.fillRect(hx, sy - 6 - len - up, 1, 2); if (t >= 3) { b.fillStyle = c; b.fillRect(hx + f, sy - 6 - len - up, 1, 3); b.fillRect(hx + f * 2, sy - 5 - len - up, 1, 2); } }
+  }
 }
 function drawProj(b, p) {
   const s = w2s(p.x, p.y), sx = s[0], sy = s[1];
@@ -134,6 +147,8 @@ function drawTouch(b) {
     else if (bt.id === 'roll') { drawGlyph(b, 'rollg', bt.x, bt.y, p.rollCd > 0 ? '#6a5a80' : '#ffffff'); }
     else if (bt.id === 'pot') { drawGlyph(b, 'potion', bt.x, bt.y - 1, p.potions > 0 ? '#ff6a7a' : '#6a5a80'); txt(String(p.potions), bt.x + 5, bt.y + 2, '#fff', 5.5); }
     else if (bt.id === 'use') drawGlyph(b, 'hand', bt.x, bt.y, '#ffd870');
+    else if (bt.id === 'mp') { drawGlyph(b, 'potion', bt.x, bt.y - 1, p.mpot > 0 ? '#6a9aff' : '#6a5a80'); txt(String(p.mpot), bt.x + 5, bt.y + 2, '#fff', 5); }
+    else if (bt.id === 'tp') { drawGlyph(b, 'rollg', bt.x, bt.y, p.scrolls > 0 ? '#e0c060' : '#6a5a80'); txt(String(p.scrolls), bt.x + 5, bt.y + 2, '#fff', 5); }
     else if (bt.id === 'menu') drawGlyph(b, 'menu', bt.x, bt.y, '#c9a0ff');
     else drawSlotIcon(b, p, +bt.id[1], bt.x - 8, bt.y - 8);
   }

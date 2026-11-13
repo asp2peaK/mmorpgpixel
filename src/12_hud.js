@@ -9,7 +9,8 @@ function drawHud(b) {
   if (p.st.blind && !p.dead) { const g = b.createRadialGradient(V.w / 2, V.h / 2, 22, V.w / 2, V.h / 2, 90); g.addColorStop(0, 'rgba(210,210,220,0)'); g.addColorStop(1, 'rgba(210,210,220,.93)'); b.fillStyle = g; b.fillRect(0, 0, V.w, V.h); }
   if (p.hp < p.maxHp * .3 && !p.dead) { b.globalAlpha = .12 + .1 * Math.sin(G.time * 7); b.fillStyle = '#ff2020'; b.fillRect(0, 0, V.w, 5); b.fillRect(0, V.h - 5, V.w, 5); b.fillRect(0, 0, 5, V.h); b.fillRect(V.w - 5, 0, 5, V.h); b.globalAlpha = 1; }
   // левый верх
-  b.globalAlpha = .6; b.fillStyle = '#0b0810'; b.fillRect(2, 2, 96, 42); b.globalAlpha = 1;
+  b.globalAlpha = .6; b.fillStyle = '#0b0810'; b.fillRect(2, 2, 96, 51); b.globalAlpha = 1;
+  txt((V.touch ? '' : 'R ') + 'мана ×' + p.mpot, 5, 42, p.mpot ? '#a8c8ff' : '#6a6252', 4.5); txt((V.touch ? '' : 'T ') + 'свиток ×' + p.scrolls, 95, 42, p.scrolls ? '#e0c060' : '#6a6252', 4.5, 'right'); if (p.buffT > G.time) txt('заточка ' + Math.ceil(p.buffT - G.time) + 'с', 50, 42, '#ff9a6a', 4, 'center');
   txt(p.name, 5, 3, '#fff', 6); txt('Ур. ' + p.lvl, 95, 3, '#ffd870', 6, 'right');
   bar(b, 5, 13, 90, 6, p.hp / p.maxHp, p.hp < p.maxHp * .3 ? '#ff4a4a' : '#d83a4a');
   if (p.shield > 0) { b.fillStyle = '#6fe0b0'; b.fillRect(5, 13, Math.round(90 * clamp(p.shield / (p.shieldMax || 1), 0, 1)), 2); }

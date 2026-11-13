@@ -30,27 +30,31 @@ const CHIMERAS = {
 };
 const RECIPES = {};
 for (const id in CHIMERAS) RECIPES[CHIMERAS[id].from.slice().sort().join('+')] = id;
-const FUSE_COST = 40;
+const FUSE_COST = 150;
+// Редкость душ и эссенция: лишние души сжигаются на Алтаре, за эссенцию любая душа усиливается
+const SRAR = [{ n: 'Обычная', c: '#c8c8d0', e: 1 }, { n: 'Редкая', c: '#4aa8ff', e: 3 }, { n: 'Эпическая', c: '#b04ad8', e: 8 }, { n: 'Легендарная', c: '#ffb02e', e: 20 }];
+const SLV_MAX = 10;
+const slvCost = (def, lv) => (lv + 1) * 2 * (def.rar + 1);
 const SDEF = {};
 function soulDef(id) {
   if (SDEF[id]) return SDEF[id]; let d = null;
-  if (SOULS[id]) { const s = SOULS[id]; d = Object.assign({ id, base: true, els: [s.el], icon: makeIcon(id, s.ab, EL[s.el].c) }, s); }
-  else if (CHIMERAS[id]) { const c = CHIMERAS[id]; d = Object.assign({ id, chimera: true, unique: true, abName: c.name, mult: 1.15, s3: 'Сильнее и дольше', icon: makeIcon(id, c.glyph, EL[c.els[0]].c, EL[c.els[1]].c) }, c); }
+  if (SOULS[id]) { const s = SOULS[id]; d = Object.assign({ id, base: true, rar: s.boss ? 3 : 0, els: [s.el], icon: makeIcon(id, s.ab, EL[s.el].c) }, s); }
+  else if (CHIMERAS[id]) { const c = CHIMERAS[id]; d = Object.assign({ id, chimera: true, unique: true, rar: 2, abName: c.name, mult: 1.3, s3: 'Сильнее и дольше', icon: makeIcon(id, c.glyph, EL[c.els[0]].c, EL[c.els[1]].c) }, c); }
   else if (id.slice(0, 2) === 'p_') {
     const pp = id.split('_'), a = SOULS[pp[1]], b = SOULS[pp[2]]; if (!a || !b) return SDEF[id] = soulDef('wolf');
     const A = AB[a.ab], nm = EL[b.el].adj[A.g] + ' ' + A.noun;
-    d = { id, chimera: true, name: nm, abName: nm, ab: a.ab, el: b.el, els: [a.el, b.el], mult: 1.3, from: [pp[1], pp[2]], desc: a.abName + ' со стихией «' + EL[b.el].n + '». Урон +30%.', s3: a.s3, icon: makeIcon(id, a.ab, EL[a.el].c, EL[b.el].c) };
+    d = { id, chimera: true, name: nm, abName: nm, ab: a.ab, el: b.el, els: [a.el, b.el], rar: a.boss || b.boss ? 3 : 1, mult: a.boss || b.boss ? 1.5 : 1.15, from: [pp[1], pp[2]], desc: a.abName + ' со стихией «' + EL[b.el].n + '». Урон +' + (a.boss || b.boss ? 50 : 15) + '%.', s3: a.s3, icon: makeIcon(id, a.ab, EL[a.el].c, EL[b.el].c) };
   } else return soulDef('wolf');
   return SDEF[id] = d;
 }
 const recipeKey = (a, b) => [a, b].sort().join('+');
 // Что получится из a+b (порядок важен только для процедурных)
 function fuseResult(a, b) { return RECIPES[recipeKey(a, b)] || ('p_' + a + '_' + b); }
-function canFuse(p, a, b) { return a && b && a !== b && SOULS[a] && SOULS[b] && p.souls[a] >= 1 && p.souls[b] >= 1 && p.gold >= FUSE_COST; }
+function canFuse(p, a, b) { return a && b && a !== b && SOULS[a] && SOULS[b] && p.souls[a] >= 2 && p.souls[b] >= 2 && p.gold >= FUSE_COST; }
 function fuse(p, a, b) {
   if (!canFuse(p, a, b)) return null;
   const id = fuseResult(a, b), isNew = !G.J.recipes[a + '>' + b] && !(CHIMERAS[id] && G.J.recipes[recipeKey(a, b)]);
-  p.gold -= FUSE_COST; takeSoul(p, a); takeSoul(p, b);
+  p.gold -= FUSE_COST; takeSoul(p, a); takeSoul(p, a); takeSoul(p, b); takeSoul(p, b);
   G.J.recipes[CHIMERAS[id] ? recipeKey(a, b) : a + '>' + b] = id;
   giveSoul(p, id, 1, true); Sfx.play('fuse'); Bus.emit('fused', id, isNew);
   return { id, isNew };
