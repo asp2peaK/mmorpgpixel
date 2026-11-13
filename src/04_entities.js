@@ -27,6 +27,7 @@ function elStatus(t, el, src, amt) {
     case 'nature': addSt(t, 'root', .7); break;
     case 'bone': addSt(t, 'brittle', 4); break;
     case 'slime': addSt(t, 'slow', 2.5); break;
+    case 'shadow': addSt(t, 'blind', .8); addSt(t, 'brittle', 2); break;
     case 'beast': addSt(t, 'bleed', 3, Math.max(1, amt * .15), src); break;
   }
 }
@@ -178,6 +179,7 @@ function updateProjs(dt) {
       if (p.toss) { const a = rand(TAU); kb = [Math.cos(a) * 9, Math.sin(a) * 9]; if (!e.boss) e.toss = .4; }
       else if (p.kb) { const n = norm(p.vx, p.vy); kb = [n[0] * p.kb, n[1] * p.kb]; }
       damage(e, p.dmg, p.src, { el: p.el, kb });
+      if (p.pull && p.src && !p.src.dead && !e.dead) { const n = norm(p.src.x - e.x, p.src.y - e.y), k = e.boss ? .15 : e.heavy || 1; e.kx += n[0] * p.pull * k; e.ky += n[1] * p.pull * k; addSt(e, 'slow', 1.5); fxBolt(p.src.x, p.src.y, e.x, e.y, p.color); }
       if (p.chain && typeof chainFrom === 'function') chainFrom(p.src, e, p.dmg * .5, 2, p.team);
       if (!p.pierce) { projImpact(p, e); dead = true; break; }
     }

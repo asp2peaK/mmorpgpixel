@@ -11,7 +11,7 @@ let W = null;
 function pathY(x) { const t = clamp((x - 26) / 22, 0, 1) * clamp((184 - x) / 16, 0, 1), s = t * t * (3 - 2 * t); return MIDY + (vnoise(x * .045, 3.3, SEED) - .5) * 46 * s; }
 const ZDARK = { dungeon: .8, town: .34, edge: .5, thicket: .64, scorch: .52, bog: .62, grave: .68, lair: .56 };
 function zoneLvl(z, x) { return z === 'edge' ? clamp(1 + Math.floor((x - 26) / 18), 1, 3) : z === 'thicket' ? clamp(3 + Math.floor((x - 80) / 14), 3, 6) : z === 'bog' ? clamp(4 + Math.floor((x - 36) / 45), 4, 7) : z === 'grave' ? clamp(5 + Math.floor((x - 46) / 42), 5, 8) : clamp(6 + Math.floor((x - 136) / 12), 6, 9); }
-const ZTYPES = { edge: ['wolf', 'slime', 'shroom'], thicket: ['root', 'bat', 'skel'], scorch: ['imp', 'falcon'], bog: ['shroom', 'slime', 'root'], grave: ['skel', 'bat', 'wolf'] };
+const ZTYPES = { edge: ['wolf', 'slime', 'shroom'], thicket: ['root', 'bat', 'skel'], scorch: ['imp', 'falcon'], bog: ['toad', 'shroom', 'slime', 'root'], grave: ['wraith', 'skel', 'bat', 'wolf'] };
 function zoneAt(x, y) {
   if (W && W.dun) return 'dungeon';
   if (dist(x, y, TOWN.x, TOWN.y) < TOWN.r + 1) return 'town';
@@ -95,8 +95,8 @@ function genWorld() {
       if (W.o[i] || W.g[i] === T.DEEP || Math.abs(y - pathY(x)) < 2.5) continue;
       const r = hash2(cx, cy, SEED + 12); let type, lvl, cnt = 1;
       lvl = zoneLvl(z, x); let inCamp = false; for (const c of W.camps) if (dist(x, y, c.x, c.y) < 7) inCamp = true; if (inCamp) continue;
-      if (z === 'bog') { type = W.g[i] === T.SHALLOW ? 'water' : r < .4 ? 'shroom' : r < .75 ? 'slime' : 'root'; if (type === 'slime') cnt = 2; }
-      else if (z === 'grave') { type = r < .5 ? 'skel' : r < .8 ? 'bat' : 'wolf'; cnt = 2; }
+      if (z === 'bog') { type = W.g[i] === T.SHALLOW ? 'water' : r < .35 ? 'toad' : r < .6 ? 'shroom' : r < .82 ? 'slime' : 'root'; if (type === 'slime' || type === 'toad') cnt = 2; }
+      else if (z === 'grave') { type = r < .38 ? 'wraith' : r < .7 ? 'skel' : r < .88 ? 'bat' : 'wolf'; cnt = 2; }
       else if (z === 'edge') { type = r < .4 ? 'wolf' : r < .72 ? 'slime' : 'shroom'; if (type === 'wolf' && lvl > 1) cnt = 2; }
       else if (z === 'thicket') { type = W.g[i] === T.SHALLOW ? 'water' : r < .34 ? 'root' : r < .67 ? 'bat' : 'skel'; if (type === 'bat') cnt = 2; }
       else { type = r < .55 ? 'imp' : 'falcon'; if (type === 'imp' && r < .25) cnt = 2; }

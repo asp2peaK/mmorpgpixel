@@ -11,9 +11,10 @@ const EL = {
   nature: { n: 'Трава', c: '#6fae4a', adj: ['Терновый', 'Терновая', 'Терновое', 'Терновые'] },
   bone: { n: 'Кость', c: '#e8e4d0', adj: ['Костяной', 'Костяная', 'Костяное', 'Костяные'] },
   slime: { n: 'Слизь', c: '#6fe0b0', adj: ['Слизистый', 'Слизистая', 'Слизистое', 'Слизистые'] },
+  shadow: { n: 'Тьма', c: '#9a6ad8', adj: ['Теневой', 'Теневая', 'Теневое', 'Теневые'] },
   ash: { n: 'Пепел', c: '#ff5a3a', adj: ['Пепельный', 'Пепельная', 'Пепельное', 'Пепельные'] }
 };
-const ELSFX = { fire: 'fire', ash: 'fire', water: 'water', storm: 'zap', wind: 'wind', poison: 'poison', nature: 'roots', bone: 'arrow', slime: 'shield', beast: 'dash', phys: 'swing' };
+const ELSFX = { shadow: 'poison', fire: 'fire', ash: 'fire', water: 'water', storm: 'zap', wind: 'wind', poison: 'poison', nature: 'roots', bone: 'arrow', slime: 'shield', beast: 'dash', phys: 'swing' };
 const elSfx = el => Sfx.play(ELSFX[el] || 'swing');
 function areaDmg(src, team, x, y, r, dmg, el, o) {
   let n = 0;
@@ -68,6 +69,8 @@ const AB = {
   arrows: { noun: 'стрелы', g: 3, cd: 5, k: .6, ai: { range: 8, windup: .7, tele: 'cone', len: 8, ang: .34 }, cast(c, x) { doArrows(c, x, this.k, false); } },
   shield: { noun: 'щит', g: 0, cd: 12, k: 0, ai: { range: 99, windup: .35, tele: 'self', cond: 'hurt' }, cast(c, x) { c.shield = Math.round(c.maxHp * (.3 + .1 * (x.stars - 1)) * Math.min(1.5, x.mult)); c.shieldMax = c.shield; c.shieldT = 6; c.shieldEl = (x.el === 'slime' && x.stars < 3) ? null : x.el; c.shieldDmg = c.atk * .5; Sfx.play('shield'); fxRing(c.x, c.y, .2, 1.4, EL[x.el].c, .35); } },
   ashstorm: { noun: 'буря', g: 1, cd: 22, k: 1.3, maxRange: 6, ai: { range: 8, windup: 1.3, tele: 'circle', r: 5 }, cast(c, x) { const p = clampPt(c, x, 8); addZone({ kind: 'ashstorm', x: p[0], y: p[1], r: 5, life: 2.7, tick: x.stars >= 3 ? .15 : .22, team: c.team, src: c, dmg: c.atk * this.k * x.mult, el: x.el }); Sfx.play('howl'); shake(4); } },
+  hook: { noun: 'крюк', g: 0, cd: 6, k: 1.1, ai: { range: 7, min: 2.5, windup: .6, tele: 'line', len: 7.5, w: .6 }, cast(c, x) { const n = x.stars >= 3 ? 3 : 1, a0 = Math.atan2(x.dy, x.dx); for (let i = 0; i < n; i++) { const a = a0 + (i - (n - 1) / 2) * .3; spawnProj({ kind: 'arrow', x: c.x + Math.cos(a) * .4, y: c.y + Math.sin(a) * .4, vx: Math.cos(a) * 12, vy: Math.sin(a) * 12, r: .4, life: .62, team: c.team, src: c, dmg: c.atk * this.k * x.mult, el: x.el, color: EL[x.el].c, pull: 22 }); } Sfx.play('dash'); } },
+  drain: { noun: 'жатва', g: 1, cd: 9, k: 1.3, ai: { range: 3, windup: .7, tele: 'cone', len: 3.4, ang: .7 }, cast(c, x) { let got = 0; const col = EL[x.el].c; for (const e of G.ents) { if (e.dead || !hostile(c, e)) continue; const d = dist(c.x, c.y, e.x, e.y); if (d > 3.4 + e.r || (d > .5 && ((e.x - c.x) * x.dx + (e.y - c.y) * x.dy) / d < .7)) continue; got += damage(e, c.atk * this.k * x.mult, c, { el: x.el }); fxBolt(e.x, e.y, c.x, c.y, col); } fxSlash(c.x, c.y, x.dx, x.dy, 3, 1.5, col); if (got > 0) heal(c, got * (x.stars >= 3 ? .8 : .5)); Sfx.play('poison'); } },
   // --- души боссов подземелий ---
   bonecage: { noun: 'клеть', g: 1, cd: 16, k: 1.2, maxRange: 6, ai: { range: 7, windup: .9, tele: 'circle', r: 3 }, cast(c, x) { const p = clampPt(c, x, 7), n = x.stars >= 3 ? 12 : 8; for (let i = 0; i <= n; i++) { const a = i / n * TAU, r = i === n ? 0 : 2.5; addZone({ kind: 'blast', x: p[0] + Math.cos(a) * r, y: p[1] + Math.sin(a) * r, r: 1.1, life: .6 + i * .03, max: .6 + i * .03, team: c.team, src: c, dmg: c.atk * this.k * x.mult, el: x.el, stun: .8 }); } Sfx.play('roots'); } },
   tidal: { noun: 'прилив', g: 0, cd: 14, k: 1, ai: { range: 6, windup: .8, tele: 'cone', len: 6, ang: .6 }, cast(c, x) { const a0 = Math.atan2(x.dy, x.dx), n = x.stars >= 3 ? 5 : 3; for (let i = 0; i < n; i++) { const a = a0 + (i - (n - 1) / 2) * .4; spawnProj({ kind: 'wave', x: c.x + Math.cos(a) * .5, y: c.y + Math.sin(a) * .5, vx: Math.cos(a) * 6.5, vy: Math.sin(a) * 6.5, r: 1.1, life: .9, team: c.team, src: c, dmg: c.atk * this.k * x.mult, el: x.el, color: EL[x.el].c, pierce: true, kb: 11, trail: true }); } Sfx.play('water'); Sfx.play('poison'); } },

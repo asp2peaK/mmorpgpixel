@@ -9,15 +9,16 @@ function drawHud(b) {
   if (p.st.blind && !p.dead) { const g = b.createRadialGradient(V.w / 2, V.h / 2, 22, V.w / 2, V.h / 2, 90); g.addColorStop(0, 'rgba(210,210,220,0)'); g.addColorStop(1, 'rgba(210,210,220,.93)'); b.fillStyle = g; b.fillRect(0, 0, V.w, V.h); }
   if (p.hp < p.maxHp * .3 && !p.dead) { b.globalAlpha = .12 + .1 * Math.sin(G.time * 7); b.fillStyle = '#ff2020'; b.fillRect(0, 0, V.w, 5); b.fillRect(0, V.h - 5, V.w, 5); b.fillRect(0, 0, 5, V.h); b.fillRect(V.w - 5, 0, 5, V.h); b.globalAlpha = 1; }
   // левый верх
-  b.globalAlpha = .6; b.fillStyle = '#0b0810'; b.fillRect(2, 2, 96, 37); b.globalAlpha = 1;
+  b.globalAlpha = .6; b.fillStyle = '#0b0810'; b.fillRect(2, 2, 96, 42); b.globalAlpha = 1;
   txt(p.name, 5, 3, '#fff', 6); txt('Ур. ' + p.lvl, 95, 3, '#ffd870', 6, 'right');
   bar(b, 5, 13, 90, 6, p.hp / p.maxHp, p.hp < p.maxHp * .3 ? '#ff4a4a' : '#d83a4a');
   if (p.shield > 0) { b.fillStyle = '#6fe0b0'; b.fillRect(5, 13, Math.round(90 * clamp(p.shield / (p.shieldMax || 1), 0, 1)), 2); }
   txt(Math.ceil(p.hp) + ' / ' + p.maxHp, 50, 12.5, '#fff', 5, 'center');
-  bar(b, 5, 22, 90, 2, p.lvl >= MAXLVL ? 1 : p.xp / xpNext(p.lvl), '#8a6aff');
-  b.fillStyle = '#8a5a10'; b.fillRect(5, 28, 6, 6); b.fillStyle = '#ffd870'; b.fillRect(6, 28, 4, 6); b.fillRect(5, 29, 6, 4); txt(String(p.gold), 13, 27, '#ffd870', 6);
-  drawGlyph(b, 'potion', 54, 31, '#ff6a7a'); txt('×' + p.potions, 60, 27, '#fff', 6);
-  if (!V.touch) txt('Q', 80, 28, '#9a8ab0', 5);
+  bar(b, 5, 22, 90, 3, p.mp / p.maxMp, '#3a6ae0'); txt(Math.floor(p.mp) + '', 94, 20.5, '#a8c8ff', 4, 'right');
+  bar(b, 5, 28, 90, 2, p.lvl >= MAXLVL ? 1 : p.xp / xpNext(p.lvl), '#c8a850');
+  b.fillStyle = '#8a5a10'; b.fillRect(5, 33, 6, 6); b.fillStyle = '#ffd870'; b.fillRect(6, 33, 4, 6); b.fillRect(5, 34, 6, 4); txt(String(p.gold), 13, 32, '#ffd870', 6);
+  drawGlyph(b, 'potion', 54, 36, '#ff6a7a'); txt('×' + p.potions, 60, 32, '#fff', 6);
+  if (!V.touch) txt('Q', 80, 33, '#9a8ab0', 5);
   // слоты душ (на ПК — снизу по центру; на телефоне это кнопки справа)
   if (!V.touch) {
     const x0 = Math.round(V.w / 2 - 44);
@@ -53,6 +54,7 @@ function drawHud(b) {
     else if (!H.drop && H.soul && !inTown(p)) setHint('drop', 'С мобов падают души — их способности. Дубликаты усиливают душу: ★2 за 3 копии, ★3 за 6', 9);
     else if (!H.potion && p.hp < p.maxHp * .45 && p.potions > 0) setHint('potion', V.touch ? 'Мало здоровья! Кнопка с зельем лечит' : 'Мало здоровья! Q — выпить зелье', 6);
     else if (!H.dark && H.drop && p.moved > 20) setHint('dark', 'Лес не прощает. Карта открывается только там, где ты прошёл. Красные тотемы — лагеря врагов с вожаком', 10);
+    else if (!H.mana && p.mp < p.maxMp * .3) setHint('mana', 'Синяя полоса — мана. Она сама восстанавливается, а её запас растёт, чем больше ты кастуешь', 9);
     else if (!H.altar && Object.keys(p.souls).length >= 2) setHint('altar', 'Две души! На Алтаре в городе их можно слить в химеру. Рецепты скрыты — экспериментируй', 10);
     else if (!H.react && Object.keys(p.souls).length >= 3) setHint('react', 'Стихии вступают в реакции: огонь жжёт траву, молния бьёт по мокрым, огонь взрывает яд...', 10);
   }

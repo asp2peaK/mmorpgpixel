@@ -12,7 +12,7 @@ function react(id, x, y) {
   const p = G.me; if (!p || dist(x, y, p.x, p.y) > 16) return;
   if (rxCd[id] !== undefined && G.time - rxCd[id] < 1.2) return; rxCd[id] = G.time;
   const R = REACT[id], first = !G.J.reactions[id]; G.J.reactions[id] = (G.J.reactions[id] || 0) + 1;
-  floatText(x, y, R.n + '!', R.c, 8);
+  floatText(x, y, R.n + '!', R.c, 8); for (const el of R.els) if (el !== 'nature' || id === 'wildfire') mastGain(p, el, 3);
   if (first) { banner('НОВАЯ РЕАКЦИЯ: ' + R.n.toUpperCase(), R.d, R.c); Bus.emit('newReaction', id); }
 }
 const entInWater = e => !e.fly && isWaterTile(tIdx(e.x, e.y));

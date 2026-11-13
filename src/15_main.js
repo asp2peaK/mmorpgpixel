@@ -19,6 +19,7 @@ function update(dt) {
   for (let i = G.ents.length - 1; i >= 0; i--) if (G.ents[i].dead && !G.ents[i].isPlayer) G.ents.splice(i, 1);
   updateProjs(dt); updateZones(dt); updateWorld(dt); updatePickups(dt);
   for (const f of G.systems) f(dt);
+  G.musT = (G.musT || 0) - dt; if (G.musT <= 0) { G.musT = 2; const z = zoneAt(G.me.x, G.me.y); Sfx.music({ town: 65.4, edge: 55, thicket: 49, scorch: 51.9, bog: 46.2, grave: 43.6, lair: 41.2, dungeon: 36.7 }[z] || 55); }
   const p = G.me, cam = G.cam, k = Math.min(1, dt * 7);
   cam.x += (p.x + (V.touch ? 0 : p.dirx * .6) - cam.x) * k; cam.y += (p.y + (V.touch ? 0 : p.diry * .6) - cam.y) * k;
 }
@@ -43,7 +44,7 @@ function startGame(o) {
   if (o && o.save && typeof applySave === 'function') applySave(p, o.save);
   else if (typeof giveSoul === 'function' && typeof soulDef === 'function') giveSoul(p, 'wolf', 1, true);
   G.cam.x = p.x; G.cam.y = p.y; G.started = true; G.paused = false; Input.clear();
-  Bus.emit('start', p);
+  p.mp = p.maxMp; Bus.emit('start', p);
 }
 function boot() {
   G.canvas = document.getElementById('c'); G.ctx = G.canvas.getContext('2d'); G.buf = mkCanvas(V.w, V.h); G.bctx = G.buf.getContext('2d'); G.light = mkCanvas(V.w, V.h); G.lctx = G.light.getContext('2d');

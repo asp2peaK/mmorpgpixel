@@ -2,13 +2,13 @@
 const MAXLVL = 10, POTION_MAX = 6, POTION_COST = 25;
 const xpNext = l => Math.round(20 * Math.pow(l, 1.7));
 function mkPlayer(name) {
-  const p = mkEnt({ isPlayer: true, humanoid: true, name: name || 'Герой', team: 1, spr: 'hero', r: .3, spd: 4.3, lvl: 1, xp: 0, gold: 0, potions: 2, souls: {}, shards: 0, equip: { weapon: null, armor: null, amulet: null, ring: null }, bag: [], slots: [null, null, null, null], sl: [0, 1, 2, 3].map(() => ({ cd: 0, ch: 1 })), combo: 0, comboT: 0, swing: null, roll: null, rollCd: 0, potCd: 0, respawn: 0, blood: '#ff5a5a', x: TOWN.x, y: TOWN.y + 1.6 });
+  const p = mkEnt({ isPlayer: true, humanoid: true, name: name || 'Герой', team: 1, spr: 'hero', r: .3, spd: 4.3, lvl: 1, xp: 0, gold: 0, potions: 2, souls: {}, mp: 60, mpTrain: 0, mast: {}, shards: 0, equip: { weapon: null, armor: null, amulet: null, ring: null }, bag: [], slots: [null, null, null, null], sl: [0, 1, 2, 3].map(() => ({ cd: 0, ch: 1 })), combo: 0, comboT: 0, swing: null, roll: null, rollCd: 0, potCd: 0, respawn: 0, blood: '#ff5a5a', x: TOWN.x, y: TOWN.y + 1.6 });
   recalc(p); p.hp = p.maxHp; return p;
 }
 function recalc(p) {
   const g = gearStats(ISLOTS.map(s => p.equip[s])); p.gs = g;
   p.maxHp = Math.round((100 + 22 * (p.lvl - 1) + g.hp) * (1 - .08 * g.curse)); p.atk = 10 + 3 * (p.lvl - 1) + g.atk; p.spd = 4.3 * (1 + Math.min(30, g.spd) / 100);
-  p.cdm = 1 - Math.min(40, g.cdr) / 100; p.crit = .1 + g.crit / 100; p.potB = 1 + g.pot / 100;
+  p.cdm = 1 - Math.min(40, g.cdr) / 100; p.crit = .1 + g.crit / 100; p.potB = 1 + g.pot / 100; p.maxMp = 60 + 6 * (p.lvl - 1) + manaBonus(p); if (p.mp > p.maxMp) p.mp = p.maxMp;
   const en = s => p.equip[s] && p.equip[s].ench ? soulDef(p.equip[s].ench).el : null; p.wEl = en('weapon'); p.resist = en('armor'); p.aEl = en('amulet'); p.rEl = en('ring');
   p.immune = {}; const im = { fire: 'burn', ash: 'burn', poison: 'poison', slime: 'slow', beast: 'bleed', nature: 'root', bone: 'brittle', storm: 'stun' }[p.resist]; if (im) p.immune[im] = 1; if (p.hp > p.maxHp) p.hp = p.maxHp;
 }
@@ -52,13 +52,23 @@ function usePotion(p) {
   if (p.potions <= 0 || p.hp >= p.maxHp) { Sfx.play('deny'); return; }
   p.potions--; p.potCd = 1; heal(p, p.maxHp * .35 * p.potB); Sfx.play('potion'); burst(p.x, p.y, ['#6aff8a', '#ffffff'], 12, 3, { z: 10, grav: -20 });
 }
+// Мана растёт от использования: чем больше потратил за жизнь, тем больше запас (с убывающей отдачей)
+const manaBonus = p => Math.min(140, Math.floor(Math.sqrt((p.mpTrain || 0) / 6)));
+const manaCost = (ab) => Math.round(5 + ab.cd * 2.1);
+// Владение стихией: растёт от кастов и реакций, усиливает души этой стихии
+const MAST_T = [0, 15, 45, 110, 240, 500], MAST_N = ['Послушник', 'Адепт', 'Мастер', 'Магистр', 'Архонт', 'Владыка'];
+function mastRank(p, el) { const v = (p.mast && p.mast[el]) || 0; let r = 0; while (r < 5 && v >= MAST_T[r + 1]) r++; return r; }
+function mastGain(p, el, n) { if (!EL[el] || el === 'phys') return; p.mast = p.mast || {}; const b = mastRank(p, el); p.mast[el] = (p.mast[el] || 0) + n; const a = mastRank(p, el); if (a > b) { banner('СТИХИЯ «' + EL[el].n.toUpperCase() + '»: ' + MAST_N[a].toUpperCase(), 'Души этой стихии: урон +' + a * 6 + '%' + (a >= 3 ? ', перезарядка −10%' : ''), EL[el].c); Sfx.play('levelup'); } }
+Bus.on('newReaction', () => { }); 
 function castSlot(p, s, dx, dy, ax, ay) {
   const id = p.slots[s]; if (!id) return; const sl = p.sl[s];
   if (sl.ch <= 0) { Sfx.play('deny'); return; }
-  const def = soulDef(id), stars = starsOf(p.souls[id]), ab = AB[def.ab], mr = ab.maxRange || 6;
+  const def = soulDef(id), stars = starsOf(p.souls[id]), ab = AB[def.ab], mr = ab.maxRange || 6, cost = manaCost(ab), mr0 = mastRank(p, def.el);
+  if (p.mp < cost) { Sfx.play('deny'); if (!(p.noMpT > G.time)) { p.noMpT = G.time + 1; floatText(p.x, p.y, 'Нет маны', '#6a9aff', 6); } return; }
+  p.mp -= cost; const tb = manaBonus(p); p.mpTrain = (p.mpTrain || 0) + cost * (p.mp < p.maxMp * .15 ? 2 : 1); if (manaBonus(p) > tb) { recalc(p); floatText(p.x, p.y, 'Запас маны вырос: ' + p.maxMp, '#6a9aff', 6); } mastGain(p, def.el, 1);
   let tx = ax, ty = ay; const d = dist(p.x, p.y, ax, ay); if (d > mr) { tx = p.x + (ax - p.x) / d * mr; ty = p.y + (ay - p.y) / d * mr; }
-  castSoul(p, def, stars, dx, dy, tx, ty, 1 + (p.gs.soul + (p.gs.el[def.el] || 0) + (p.aEl === def.el ? 25 : 0)) / 100);
-  sl.ch--; if (sl.cd <= 0) sl.cd = ab.cd * p.cdm * (p.rEl === def.el ? .8 : 1); p.swing = null; p.usedSoul = true;
+  castSoul(p, def, stars, dx, dy, tx, ty, 1 + (p.gs.soul + (p.gs.el[def.el] || 0) + (p.aEl === def.el ? 25 : 0) + mr0 * 6) / 100);
+  sl.ch--; if (sl.cd <= 0) sl.cd = ab.cd * p.cdm * (p.rEl === def.el ? .8 : 1) * (mr0 >= 3 ? .9 : 1); p.swing = null; p.usedSoul = true;
 }
 const SWING = [{ dur: .24, at: .08, r: 1.6, cos: .2, k: 1, kb: 4 }, { dur: .24, at: .08, r: 1.6, cos: .2, k: 1.1, kb: 4 }, { dur: .4, at: .15, r: 2, cos: -.15, k: 1.9, kb: 12 }];
 function swingHit(p, s) {
@@ -104,10 +114,11 @@ function updatePlayer(p, dt, I) {
   if (p.swing) { const s = p.swing, S = SWING[s.n - 1]; s.t += dt; if (!s.done && s.t >= S.at) { s.done = true; swingHit(p, s); } if (s.t >= S.dur) { p.swing = null; p.comboT = .5; } }
   if (I.potion) usePotion(p);
   if (I.interact) { const n = nearInteract(p); if (n) Bus.emit('interact', p, n); }
+  if (p.mp < p.maxMp) p.mp = Math.min(p.maxMp, p.mp + p.maxMp * (inTown(p) ? .2 : .05) * dt);
   if (inTown(p) && p.hp < p.maxHp) p.hp = Math.min(p.maxHp, p.hp + p.maxHp * .12 * dt);
 }
 function respawnPlayer(p) {
-  p.dead = false; p.x = TOWN.x; p.y = TOWN.y + 1.6; p.hp = p.maxHp; p.st = {}; p.kx = p.ky = 0; p.inv = 2; p.shield = 0; p.swing = p.roll = p.dash = null;
+  p.mp = p.maxMp; p.dead = false; p.x = TOWN.x; p.y = TOWN.y + 1.6; p.hp = p.maxHp; p.st = {}; p.kx = p.ky = 0; p.inv = 2; p.shield = 0; p.swing = p.roll = p.dash = null;
   for (let s = 0; s < 4; s++) resetSlot(p, s);
   G.cam.x = p.x; G.cam.y = p.y; Bus.emit('respawn', p);
 }

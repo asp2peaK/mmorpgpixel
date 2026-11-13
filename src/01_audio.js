@@ -47,5 +47,20 @@ const Sfx = (() => {
     fuse() { tone('sine', 200, 900, .6, .2); noise(.6, .12, 3000, 'bandpass'); tone('triangle', 900, 1400, .4, .18, .55); }
   };
   function play(n) { if (!ac) return; const now = performance.now(); if (last[n] && now - last[n] < 45) return; last[n] = now; try { lib[n] && lib[n](); } catch (e) { } }
-  return { init, play };
+  // Фоновая музыка: низкий гул + редкие колокольные ноты в миноре. Тон зависит от зоны.
+  let mus = null, musOn = true, musRoot = 55;
+  function music(root) {
+    if (root) musRoot = root; if (!ac || !musOn) return;
+    if (!mus) {
+      const g = ac.createGain(); g.gain.value = 0; g.connect(master); const f = ac.createBiquadFilter(); f.type = 'lowpass'; f.frequency.value = 320; f.connect(g);
+      const o1 = ac.createOscillator(), o2 = ac.createOscillator(), o3 = ac.createOscillator(); o1.type = 'sawtooth'; o2.type = 'sawtooth'; o3.type = 'sine';
+      const l = ac.createOscillator(), lg = ac.createGain(); l.frequency.value = .07; lg.gain.value = 140; l.connect(lg); lg.connect(f.frequency);
+      for (const o of [o1, o2, o3]) { o.connect(f); o.start(); } l.start(); g.gain.linearRampToValueAtTime(.16, ac.currentTime + 4);
+      mus = { g, o1, o2, o3, t: 0 };
+      mus.iv = setInterval(() => { if (!ac || !musOn || ac.state !== 'running' || G.paused) return; const sc = [1, 1.2, 1.335, 1.5, 1.8, 2], f0 = musRoot * 4 * sc[Math.floor(Math.random() * sc.length)]; tone('sine', f0, f0 * .995, 2.6, .05); if (Math.random() < .4) tone('triangle', f0 * 1.5, f0 * 1.49, 2.2, .025, .35); }, 3400);
+    }
+    const t = ac.currentTime; mus.o1.frequency.setTargetAtTime(musRoot, t, 1.5); mus.o2.frequency.setTargetAtTime(musRoot * 1.006, t, 1.5); mus.o3.frequency.setTargetAtTime(musRoot * 1.5, t, 1.5);
+  }
+  function toggleMusic() { musOn = !musOn; if (mus) mus.g.gain.setTargetAtTime(musOn ? .16 : 0, ac.currentTime, .3); else if (musOn) music(); return musOn; }
+  return { init, play, music, toggleMusic, isMusic: () => musOn };
 })();

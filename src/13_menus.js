@@ -5,7 +5,7 @@ const Menus = (() => {
   const stars = n => '★'.repeat(starsOf(n)) + '<span class="q">' + '★'.repeat(3 - starsOf(n)) + '</span>';
   const elChip = el => '<span class="el" style="background:' + EL[el].c + '">' + EL[el].n + '</span>';
   let lastKey = '', lastTab = 'gear';
-  const res = p => '<span class="res"><span>Ур. ' + p.lvl + '</span><span class="gd">● ' + p.gold + '</span><span class="sh">◆ ' + (p.shards | 0) + '</span><span class="bad">✚ ' + p.potions + '</span></span>';
+  const res = p => '<span class="res"><span data-a="mus" style="cursor:pointer" title="Музыка">' + (Sfx.isMusic() ? '♪ вкл' : '♪ выкл') + '</span><span>Ур. ' + p.lvl + '</span><span class="gd">● ' + p.gold + '</span><span class="sh">◆ ' + (p.shards | 0) + '</span><span class="bad">✚ ' + p.potions + '</span></span>';
   // Окно: шапка сверху, слева список, справа детали выбранного. Прокрутка не сбрасывается при клике.
   function show(html) {
     const key = st ? st.kind + ':' + (st.tab || '') : '', sc = {}; if (key === lastKey) for (const c of ['panel', 'cl', 'cr']) { const e = ui.querySelector('.' + c); if (e) sc[c] = e.scrollTop; }
@@ -123,7 +123,8 @@ const Menus = (() => {
     return h;
   }
   function tabJournal(p) {
-    const J = G.J; let h = '<h3>Задания</h3><ul class="j">' + (QORDER.filter(id => Quests.S()[id]).map(id => { const q = QUESTS[id], s = Quests.S()[id]; return '<li>' + (s.st === 'turned' ? '<span class="q">✔ ' + q.title + '</span>' : '<b style="color:' + (q.main ? '#ff8a8a' : '#e0c060') + '">' + (q.main ? '◆ ' : '◇ ') + q.title + '</b> — ' + (Quests.isDone(id) ? '<span class="ok">вернись: ' + NPCS[q.giver].name + '</span>' : q.obj.map((o, i) => o.s + (o.n > 1 ? ' ' + Math.min(o.n, Quests.prog(id, i)) + '/' + o.n : '')).join(' · '))) + '</li>'; }).join('') || '<li class="q">Поговори со Старейшиной в городе</li>') + '</ul><h3>Реакции стихий (' + Object.keys(J.reactions).length + '/5)</h3><ul class="j">';
+    const mastH = '<h3>Владение стихиями</h3><ul class="j">' + (Object.keys(p.mast || {}).length ? Object.keys(p.mast).sort((x, y) => p.mast[y] - p.mast[x]).map(el => { const r = mastRank(p, el), v = Math.floor(p.mast[el]); return '<li>' + elChip(el) + ' <b>' + MAST_N[r] + '</b> — урон душ +' + r * 6 + '%' + (r >= 3 ? ', перезарядка −10%' : '') + ' <span class="q">' + (r < 5 ? v + ' / ' + MAST_T[r + 1] : 'предел') + '</span></li>'; }).join('') : '<li class="q">Кастуй души и вызывай реакции — стихии начнут слушаться</li>') + '</ul><div class="det">Мана: <b class="sh">' + p.maxMp + '</b> (натренировано +' + manaBonus(p) + '). Запас растёт от использования, быстрее — когда выжимаешь ману почти до нуля.</div>';
+    const J = G.J; let h = '<h3>Задания</h3><ul class="j">' + (QORDER.filter(id => Quests.S()[id]).map(id => { const q = QUESTS[id], s = Quests.S()[id]; return '<li>' + (s.st === 'turned' ? '<span class="q">✔ ' + q.title + '</span>' : '<b style="color:' + (q.main ? '#ff8a8a' : '#e0c060') + '">' + (q.main ? '◆ ' : '◇ ') + q.title + '</b> — ' + (Quests.isDone(id) ? '<span class="ok">вернись: ' + NPCS[q.giver].name + '</span>' : q.obj.map((o, i) => o.s + (o.n > 1 ? ' ' + Math.min(o.n, Quests.prog(id, i)) + '/' + o.n : '')).join(' · '))) + '</li>'; }).join('') || '<li class="q">Поговори со Старейшиной в городе</li>') + '</ul>' + mastH + '<h3>Реакции стихий (' + Object.keys(J.reactions).length + '/5)</h3><ul class="j">';
     for (const id in REACT) { const R = REACT[id], n = J.reactions[id]; h += n ? '<li><b style="color:' + R.c + '">' + R.n + '</b> ×' + n + ' — ' + R.d + '</li>' : '<li class="q">??? — ' + R.els.map(e => EL[e].n).join(' + ') + '</li>'; }
     const found = {}; for (const k in J.recipes) found[J.recipes[k]] = k;
     const uq = Object.keys(CHIMERAS), fu = uq.filter(id => found[id]);
@@ -148,6 +149,7 @@ const Menus = (() => {
     const p = G.me;
     if (a === 'close') return close();
     if (a === 'dnext') return dialogNext();
+    if (a === 'mus') { Sfx.toggleMusic(); return st.kind === 'shop' ? drawShop() : st.kind === 'smith' ? drawSmith() : drawAltar(); }
     if (a === 'cont') return begin(loadSave());
     if (a === 'look') { const q = v.split(':'); st.look[q[0]] = +q[1]; return title(); }
     if (a === 'new') { if (loadSave() && !st.confirm) { st.confirm = true; const b = document.getElementById('newb'); b.textContent = 'Точно? Нажми ещё раз — сохранение сотрётся'; b.classList.add('red'); return; } return begin(null); }

@@ -1,8 +1,8 @@
 // Подземелья: отдельный экземпляр мира (W подменяется, наземный мир ждёт в G.over). Комнаты, коридоры, ловушки, сундуки, босс.
 const DUNGEONS = [
   { id: 'nest', name: 'Гнездо Грозы', z: 'thicket', lvl: 5, types: ['bat', 'root', 'skel'], boss: 'stormmother' },
-  { id: 'mire', name: 'Утроба Топи', z: 'bog', lvl: 6, types: ['slime', 'shroom', 'root'], boss: 'slimequeen' },
-  { id: 'crypt', name: 'Склеп Костяного Короля', z: 'grave', lvl: 8, types: ['skel', 'bat', 'wolf'], boss: 'boneking' }
+  { id: 'mire', name: 'Утроба Топи', z: 'bog', lvl: 6, types: ['toad', 'slime', 'shroom', 'root'], boss: 'slimequeen' },
+  { id: 'crypt', name: 'Склеп Костяного Короля', z: 'grave', lvl: 8, types: ['wraith', 'skel', 'bat', 'wolf'], boss: 'boneking' }
 ];
 function placeCrypts() {
   W.crypts = [];

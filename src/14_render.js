@@ -116,6 +116,7 @@ function drawSlotIcon(b, p, s, x, y) { // иконка души 16x16 + пере
   const id = p.slots[s]; if (!id || typeof soulDef !== 'function') return;
   const def = soulDef(id), sl = p.sl[s]; b.drawImage(def.icon, x, y);
   const st = starsOf(p.souls[id]); b.fillStyle = '#ffd870'; for (let i = 0; i < st; i++) b.fillRect(x + 3 + i * 4, y + 17, 2, 2);
+  if (sl.ch > 0 && p.mp < manaCost(AB[def.ab])) { b.globalAlpha = .6; b.fillStyle = '#10204a'; b.fillRect(x, y, 16, 16); b.globalAlpha = 1; }
   if (sl.ch <= 0) { const cd = AB[def.ab].cd, f = clamp(sl.cd / cd, 0, 1); b.globalAlpha = .72; b.fillStyle = '#0b0810'; b.fillRect(x, y + 16 - Math.ceil(16 * f), 16, Math.ceil(16 * f)); b.globalAlpha = 1; txt(sl.cd < 1 ? sl.cd.toFixed(1) : String(Math.ceil(sl.cd)), x + 8, y + 4, '#fff', 6, 'center'); }
   else if (maxCharges(def, st) > 1) txt('×' + sl.ch, x + 16, y + 9, '#ffe95a', 5, 'right');
 }
