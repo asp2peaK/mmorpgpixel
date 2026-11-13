@@ -37,7 +37,7 @@ function drawHud(b) {
   if (G.nemesis && !G.nemesis.dead && !W.dun) mk(G.nemesis.x, G.nemesis.y, '#ff2a4a', 2, true);
   b.fillStyle = '#fff'; b.fillRect(cx - 1, cy - 1, 3, 3);
   const z = zoneAt(p.x, p.y); if (z !== zoneShown) { zoneShown = z; zoneT = 4; }
-  const zn = W.dun ? W.dun.name : ZNAME[z], zl = W.dun ? 'подземелье · ур. ' + W.dun.lvl : ZLVL[z];
+  const zn = W.dun ? W.dun.name : ZNAME[z], zl = W.dun ? (W.dun.pro ? 'тысячу лет назад' : 'подземелье · ур. ' + W.dun.lvl) : ZLVL[z];
   txt(zn, V.w - 4, my + ms + 3, '#d8d0e0', 5, 'right');
   if (zoneT > 0) { zoneT -= dtf; const a = clamp(zoneT, 0, 1) * clamp((4 - zoneT) * 2, 0, 1); txt(zn, V.w / 2, 30, '#fff', 11, 'center', a); if (zl) txt(zl, V.w / 2, 44, '#ffd870', 6, 'center', a); }
   // босс
@@ -51,6 +51,7 @@ function drawHud(b) {
     if (!H.move) setHint('move', V.touch ? 'Джойстик слева — движение. Кнопка с мечом — удар (комбо из 3)' : 'WASD — движение. ЛКМ — удар (комбо из 3 ударов)', 9);
     else if (!H.roll && p.moved > 2.5) setHint('roll', V.touch ? 'Кнопка-круг — перекат с неуязвимостью. Красные зоны — уворачивайся!' : 'ПРОБЕЛ — перекат с неуязвимостью. Красные зоны — уворачивайся!', 8);
     else if (!H.soul && H.roll && p.moved > 7) setHint('soul', V.touch ? 'Кнопки с иконками — твои души. Сейчас у тебя душа волка: рывок' : 'Клавиши 1–4 — души. Сейчас у тебя душа волка: рывок (1)', 8);
+    else if (G.prologue) { }
     else if (!H.drop && H.soul && !inTown(p)) setHint('drop', 'С мобов падают души — их способности. Дубликаты усиливают душу: ★2 за 3 копии, ★3 за 6', 9);
     else if (!H.potion && p.hp < p.maxHp * .45 && p.potions > 0) setHint('potion', V.touch ? 'Мало здоровья! Кнопка с зельем лечит' : 'Мало здоровья! Q — выпить зелье', 6);
     else if (!H.dark && H.drop && p.moved > 20) setHint('dark', 'Лес не прощает. Карта открывается только там, где ты прошёл. Красные тотемы — лагеря врагов с вожаком', 10);

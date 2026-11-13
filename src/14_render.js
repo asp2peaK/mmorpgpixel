@@ -200,7 +200,7 @@ function render() {
   // мрак: тьма с пятнами света вокруг героя, огня, фонарей
   if (G.me) {
     const L = G.light, lx = G.lctx; if (L.width !== V.w || L.height !== V.h) { L.width = V.w; L.height = V.h; }
-    const target = ZDARK[zoneAt(G.me.x, G.me.y)] || .5; G.dark = G.dark === undefined ? target : G.dark + (target - G.dark) * .03;
+    const target = (W.dun && W.dun.dark) || ZDARK[zoneAt(G.me.x, G.me.y)] || .5; G.dark = G.dark === undefined ? target : G.dark + (target - G.dark) * .03;
     lx.globalCompositeOperation = 'source-over'; lx.clearRect(0, 0, V.w, V.h); lx.globalAlpha = G.dark; lx.fillStyle = '#05040c'; lx.fillRect(0, 0, V.w, V.h); lx.globalAlpha = 1;
     lx.globalCompositeOperation = 'destination-out';
     const lit = (x, y, w, a) => { lx.globalAlpha = a; lx.drawImage(LIGHT, x - w / 2, y - w * .3125, w, w * .625); };

@@ -1,7 +1,7 @@
 // Сохранение в localStorage (всё в try/catch — в приватном режиме может быть недоступно)
 const SAVE_KEY = 'soul_eater_save_v1';
 function saveGame() {
-  if (!G.started || !G.me) return; const p = G.me, n = G.nemesis && !G.nemesis.dead ? Object.assign({}, G.nemesis.nd, { x: G.nemesis.x, y: G.nemesis.y }) : null;
+  if (!G.started || !G.me || G.prologue) return; const p = G.me, n = G.nemesis && !G.nemesis.dead ? Object.assign({}, G.nemesis.nd, { x: G.nemesis.x, y: G.nemesis.y }) : null;
   try { localStorage.setItem(SAVE_KEY, JSON.stringify({ v: 1, name: p.name, lvl: p.lvl, xp: p.xp, gold: p.gold, potions: p.potions, souls: p.souls, slots: p.slots, J: G.J, equip: p.equip, bag: p.bag, shards: p.shards | 0, mpTrain: p.mpTrain | 0, mast: p.mast || {}, nem: n, look: p.look || {}, seen: packSeen() })); } catch (e) { }
 }
 function packSeen() { let s = ''; const a = (G.over ? G.over.W : W).seen; for (let i = 0; i < a.length; i += 6) { let v = 0; for (let k = 0; k < 6; k++) if (a[i + k]) v |= 1 << k; s += String.fromCharCode(48 + v); } return s; }

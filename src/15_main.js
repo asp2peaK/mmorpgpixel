@@ -45,6 +45,7 @@ function startGame(o) {
   else if (typeof giveSoul === 'function' && typeof soulDef === 'function') giveSoul(p, 'wolf', 1, true);
   G.cam.x = p.x; G.cam.y = p.y; G.started = true; G.paused = false; Input.clear();
   p.mp = p.maxMp; Bus.emit('start', p);
+  if (!(o && o.save) && !(o && o.skipIntro)) startPrologue();
 }
 function boot() {
   G.canvas = document.getElementById('c'); G.ctx = G.canvas.getContext('2d'); G.buf = mkCanvas(V.w, V.h); G.bctx = G.buf.getContext('2d'); G.light = mkCanvas(V.w, V.h); G.lctx = G.light.getContext('2d');

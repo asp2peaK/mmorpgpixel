@@ -22,6 +22,7 @@ function spawnNemesis(d) {
 }
 Bus.on('aggro', (m) => { if (m.isNemesis && !(m.sayT > 0)) nemSay(m, 'aggro'); });
 Bus.on('playerDeath', (p, src) => {
+  if (G.prologue) return;
   const killer = ownerOf(src), n = G.nemesis && !G.nemesis.dead ? G.nemesis : null;
   G.deathMsg = 'Возрождение в городе...'; G.deathMsg2 = '';
   if (n) {

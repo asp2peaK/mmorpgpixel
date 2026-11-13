@@ -28,14 +28,15 @@ const Menus = (() => {
       '<h3>Создание героя</h3><div class="row" style="align-items:flex-start;flex-wrap:nowrap"><img src="' + pv.toDataURL() + '" style="image-rendering:pixelated;width:84px;flex:none;background:#07060a;border:2px solid #3a3024;padding:6px"><div style="flex:1">' + sw('cloak', 'Плащ') + sw('skin', 'Кожа') + sw('eyes', 'Глаза') + sw('scarf', 'Шарф') + '</div></div>' +
       '<input class="name" id="nm" maxlength="12" placeholder="Имя героя" value="' + esc(keepName !== null ? keepName : (s ? '' : 'Герой')) + '" style="margin-top:8px">' +
       '<button class="btn" style="width:100%;margin-top:8px" data-a="new" id="newb">' + (s ? 'Новая игра (сотрёт сохранение)' : 'Начать игру') + '</button>' +
+      '<button class="btn" style="width:100%;margin-top:6px;font-size:12px;opacity:.75" data-a="newskip">' + (s ? 'Новая игра без вступления' : 'Начать без вступления') + '</button>' +
       '<div class="help"><b>ПК:</b> <kbd>WASD</kbd> движение · <kbd>мышь</kbd> прицел · <kbd>ЛКМ</kbd> удар · <kbd>Пробел</kbd> перекат · <kbd>1</kbd>–<kbd>4</kbd> души · <kbd>Q</kbd> зелье · <kbd>E</kbd> взаимодействие · <kbd>I</kbd> снаряжение · <kbd>K</kbd> души · <kbd>J</kbd> журнал · <kbd>M</kbd> карта<br>' +
       '<b>Телефон:</b> джойстик слева, кнопки справа, автоприцел на ближайшего врага.<br><br>' +
       'Мобы роняют свои <b>души</b> — способность + стихия. Стихии вступают в <b>реакции</b>. На Алтаре души сливаются в <b>химер</b>. А если погибнешь — твой труп встанет <b>Тенью</b> с твоими же душами.</div>');
   }
-  function begin(save) {
+  function begin(save, skip) {
     const nm = document.getElementById('nm'), name = (nm && nm.value.trim()) || 'Герой';
     const look = st && st.look; ui.classList.remove('on'); ui.innerHTML = ''; st = null; Sfx.init();
-    if (save) startGame({ name: save.name, save }); else { wipeSave(); startGame({ name: name.slice(0, 12), look }); }
+    if (save) startGame({ name: save.name, save }); else { wipeSave(); startGame({ name: name.slice(0, 12), look, skipIntro: !!skip }); }
   }
 
   // ---------- Алтарь ----------
@@ -151,6 +152,7 @@ const Menus = (() => {
     if (a === 'dnext') return dialogNext();
     if (a === 'mus') { Sfx.toggleMusic(); return st.kind === 'shop' ? drawShop() : st.kind === 'smith' ? drawSmith() : drawAltar(); }
     if (a === 'cont') return begin(loadSave());
+    if (a === 'newskip') { if (loadSave() && !st.confirm2) { st.confirm2 = true; return; } return begin(null, true); }
     if (a === 'look') { const q = v.split(':'); st.look[q[0]] = +q[1]; return title(); }
     if (a === 'new') { if (loadSave() && !st.confirm) { st.confirm = true; const b = document.getElementById('newb'); b.textContent = 'Точно? Нажми ещё раз — сохранение сотрётся'; b.classList.add('red'); return; } return begin(null); }
     if (a === 'tab') { st.tab = v; st.res = null; return drawAltar(); }
@@ -195,5 +197,5 @@ const Menus = (() => {
     if (n.o === O.ALTAR) openAltar(true); else if (n.o === O.MERCH) openShop(); else if (n.o === O.SMITH) openSmith();
     else if (n.o === O.STONE) { p.hp = p.maxHp; p.st = {}; floatText(p.x, p.y, 'Силы восстановлены. Игра сохранена', '#5af0ff', 7); Sfx.play('potion'); fxRing(n.x, n.y, .3, 2.5, '#5af0ff', .5); if (typeof saveGame === 'function') saveGame(); }
   });
-  return { title, openAltar, openShop, close, isOpen };
+  return { title, openAltar, openShop, openDialog, close, isOpen };
 })();

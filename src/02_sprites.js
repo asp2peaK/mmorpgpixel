@@ -267,6 +267,7 @@ function genWall() {
 const WALLSPR = genWall();
 reg('toad', ascii(['...gg....gg...', '..gyyg..gyyg..', '..gkyg..gkyg..', '.gGGGggggGGGg.', 'gGGGGGGGGGGGGg', 'gGvGGGGGGGGvGg', 'gGGGwwwwwwGGGg', '.gGGGGGGGGGGg.', 'gg.gGGggGGg.gg', 'gGg.gg..gg.gGg'], { g: '#2a4a1a', G: '#5a8a2a', y: '#e8d84a', k: '#1a1408', v: '#8a5ab8', w: '#c8d8a0' }));
 reg('wraith', ascii(['....pppp....', '...pPPPPp...', '..pPPPPPPp..', '..pPrPPrPp..', '..pPPPPPPp..', '.pPPPkkPPPp.', '.pPPPPPPPPp.', 'pPPpPPPPpPPp', 'pPp.pPPp.pPp', '.p..pPPp..p.', '....pPPp....', '.....pp.....'], { p: '#3a2a5a', P: '#8a7ab8', r: '#ff3a4a', k: '#1a1024' }));
+reg('guardian', tinted(scaled(SPR.wolf.c, 3), '#fff8d0', .5));
 reg('tomb', ascii(['..ssss..', '.sSSSSs.', '.sSkkSs.', '.sSSSSs.', '.sSkSSs.', '.sSSSSs.', '.sSSSSs.', 'ssssssss'], { s: '#3a3a48', S: '#6a6a7a', k: '#2a2a36' }));
 reg('totem', ascii(['..r..r..', '.rRr.rRr', '..bbbb..', '.bWkkWb.', '.bWWWWb.', '.bkWWkb.', '..bWWb..', '..bbbb..', '...bb...', '...bb...', '..rbbr..', '...bb...', '...bb...', '..bbbb..'], { r: '#8a1a2a', R: '#ff2a4a', b: '#3a2a20', W: '#d8d0b8', k: '#1a1014' }));
 reg('stake', ascii(['..w..', '.wWw.', '.bBb.', '.bBb.', '.bBb.', '.bBb.', '.bBb.', '.bBb.', '.bBb.', 'bbBbb'], { w: '#b8b4a0', W: '#e8e4d0', b: '#2e2018', B: '#4a3626' }));

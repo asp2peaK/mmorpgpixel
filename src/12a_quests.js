@@ -53,7 +53,7 @@ const Quests = (() => {
   Bus.on('campClear', () => { for (const id of active()) QUESTS[id].obj.forEach((o, i) => { if (o.t === 'camp') S()[id].p[i]++; }); });
   // трекер на экране
   G.hud.push(() => {
-    if (!G.started || !G.me || G.me.dead) return; let y = 76; const x = V.w - 4, A = active();
+    if (!G.started || !G.me || G.me.dead || G.prologue) return; let y = 76; const x = V.w - 4, A = active();
     if (!A.length && !turned('m1') && !S().m1) { txt('! Поговори со Старейшиной', x, y, '#e0c060', 5.5, 'right'); return; }
     for (const id of A.slice(0, 3)) {
       const q = QUESTS[id], dn = isDone(id); txt((q.main ? '◆ ' : '◇ ') + q.title, x, y, q.main ? '#ff8a8a' : '#e0c060', 5.5, 'right'); y += 8;

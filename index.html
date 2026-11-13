@@ -432,6 +432,7 @@ function genWall() {
 const WALLSPR = genWall();
 reg('toad', ascii(['...gg....gg...', '..gyyg..gyyg..', '..gkyg..gkyg..', '.gGGGggggGGGg.', 'gGGGGGGGGGGGGg', 'gGvGGGGGGGGvGg', 'gGGGwwwwwwGGGg', '.gGGGGGGGGGGg.', 'gg.gGGggGGg.gg', 'gGg.gg..gg.gGg'], { g: '#2a4a1a', G: '#5a8a2a', y: '#e8d84a', k: '#1a1408', v: '#8a5ab8', w: '#c8d8a0' }));
 reg('wraith', ascii(['....pppp....', '...pPPPPp...', '..pPPPPPPp..', '..pPrPPrPp..', '..pPPPPPPp..', '.pPPPkkPPPp.', '.pPPPPPPPPp.', 'pPPpPPPPpPPp', 'pPp.pPPp.pPp', '.p..pPPp..p.', '....pPPp....', '.....pp.....'], { p: '#3a2a5a', P: '#8a7ab8', r: '#ff3a4a', k: '#1a1024' }));
+reg('guardian', tinted(scaled(SPR.wolf.c, 3), '#fff8d0', .5));
 reg('tomb', ascii(['..ssss..', '.sSSSSs.', '.sSkkSs.', '.sSSSSs.', '.sSkSSs.', '.sSSSSs.', '.sSSSSs.', 'ssssssss'], { s: '#3a3a48', S: '#6a6a7a', k: '#2a2a36' }));
 reg('totem', ascii(['..r..r..', '.rRr.rRr', '..bbbb..', '.bWkkWb.', '.bWWWWb.', '.bkWWkb.', '..bWWb..', '..bbbb..', '...bb...', '...bb...', '..rbbr..', '...bb...', '...bb...', '..bbbb..'], { r: '#8a1a2a', R: '#ff2a4a', b: '#3a2a20', W: '#d8d0b8', k: '#1a1014' }));
 reg('stake', ascii(['..w..', '.wWw.', '.bBb.', '.bBb.', '.bBb.', '.bBb.', '.bBb.', '.bBb.', '.bBb.', 'bbBbb'], { w: '#b8b4a0', W: '#e8e4d0', b: '#2e2018', B: '#4a3626' }));
@@ -1372,6 +1373,7 @@ const MOBS = {
   stormmother: { name: 'Грозовая Матка', hp: 1100, atk: 17, spd: 4, fly: true, keep: 3.5, abils: [{ ab: 'tempest', el: 'storm', cdm: .6 }, { ab: 'chain', el: 'storm', cdm: .8 }, { ab: 'whirl', el: 'wind', cdm: 1 }], el: 'storm', soul: 'stormmother', boss: true, r: .6, immune: { stun: 1 }, aggro: 9, leash: 12, blood: '#ffe95a', summon: ['bat', 4, 4, 'Она зовёт выводок!'] },
   toad: { name: 'Болотная жаба', hp: 62, atk: 8, spd: 2.4, hop: true, abils: ['hook', 'bite'], el: 'poison', soul: 'toad', immune: { poison: 1 }, weak: 'storm', blood: '#5a8a2a' },
   wraith: { name: 'Призрак', hp: 44, atk: 9, spd: 3.4, fly: true, abils: ['drain'], el: 'shadow', soul: 'wraith', immune: { poison: 1, bleed: 1, root: 1 }, weak: 'fire', blood: '#8a7ab8' },
+  guardian: { name: 'Хранитель леса', hp: 32000, atk: 21, spd: 4, abils: [{ ab: 'dash', el: 'beast', cdm: .7 }, { ab: 'tempest', el: 'storm', cdm: .45 }, { ab: 'roots', el: 'nature', cdm: .7 }, { ab: 'bonecage', el: 'nature', cdm: .5 }, { ab: 'bite', el: 'beast', cdm: 1 }], el: 'nature', boss: true, r: 1, immune: { burn: 1, poison: 1, stun: 1, root: 1, slow: 1, blind: 1, bleed: 1, brittle: 1 }, aggro: 12, leash: 40, blood: '#fff8d0' },
   spirit: { name: 'Призрачный волк', spr: 'spirit', hp: 30, atk: 5, spd: 5, abils: [{ ab: 'dash', cdm: .6 }, { ab: 'bite', cdm: .7 }], el: 'beast', aggro: 9, leash: 99, blood: '#a8f0ff' },
   nemesis: { name: 'Тень', spr: 'nem', hp: 100, atk: 10, spd: 3.6, abils: [], el: 'phys', aggro: 8.5, leash: 14, heavy: .5, blood: '#8a1a2a' }
 };
@@ -1623,6 +1625,7 @@ function spawnNemesis(d) {
 }
 Bus.on('aggro', (m) => { if (m.isNemesis && !(m.sayT > 0)) nemSay(m, 'aggro'); });
 Bus.on('playerDeath', (p, src) => {
+  if (G.prologue) return;
   const killer = ownerOf(src), n = G.nemesis && !G.nemesis.dead ? G.nemesis : null;
   G.deathMsg = 'Возрождение в городе...'; G.deathMsg2 = '';
   if (n) {
@@ -1888,7 +1891,7 @@ function drawHud(b) {
   if (G.nemesis && !G.nemesis.dead && !W.dun) mk(G.nemesis.x, G.nemesis.y, '#ff2a4a', 2, true);
   b.fillStyle = '#fff'; b.fillRect(cx - 1, cy - 1, 3, 3);
   const z = zoneAt(p.x, p.y); if (z !== zoneShown) { zoneShown = z; zoneT = 4; }
-  const zn = W.dun ? W.dun.name : ZNAME[z], zl = W.dun ? 'подземелье · ур. ' + W.dun.lvl : ZLVL[z];
+  const zn = W.dun ? W.dun.name : ZNAME[z], zl = W.dun ? (W.dun.pro ? 'тысячу лет назад' : 'подземелье · ур. ' + W.dun.lvl) : ZLVL[z];
   txt(zn, V.w - 4, my + ms + 3, '#d8d0e0', 5, 'right');
   if (zoneT > 0) { zoneT -= dtf; const a = clamp(zoneT, 0, 1) * clamp((4 - zoneT) * 2, 0, 1); txt(zn, V.w / 2, 30, '#fff', 11, 'center', a); if (zl) txt(zl, V.w / 2, 44, '#ffd870', 6, 'center', a); }
   // босс
@@ -1902,6 +1905,7 @@ function drawHud(b) {
     if (!H.move) setHint('move', V.touch ? 'Джойстик слева — движение. Кнопка с мечом — удар (комбо из 3)' : 'WASD — движение. ЛКМ — удар (комбо из 3 ударов)', 9);
     else if (!H.roll && p.moved > 2.5) setHint('roll', V.touch ? 'Кнопка-круг — перекат с неуязвимостью. Красные зоны — уворачивайся!' : 'ПРОБЕЛ — перекат с неуязвимостью. Красные зоны — уворачивайся!', 8);
     else if (!H.soul && H.roll && p.moved > 7) setHint('soul', V.touch ? 'Кнопки с иконками — твои души. Сейчас у тебя душа волка: рывок' : 'Клавиши 1–4 — души. Сейчас у тебя душа волка: рывок (1)', 8);
+    else if (G.prologue) { }
     else if (!H.drop && H.soul && !inTown(p)) setHint('drop', 'С мобов падают души — их способности. Дубликаты усиливают душу: ★2 за 3 копии, ★3 за 6', 9);
     else if (!H.potion && p.hp < p.maxHp * .45 && p.potions > 0) setHint('potion', V.touch ? 'Мало здоровья! Кнопка с зельем лечит' : 'Мало здоровья! Q — выпить зелье', 6);
     else if (!H.dark && H.drop && p.moved > 20) setHint('dark', 'Лес не прощает. Карта открывается только там, где ты прошёл. Красные тотемы — лагеря врагов с вожаком', 10);
@@ -1972,7 +1976,7 @@ const Quests = (() => {
   Bus.on('campClear', () => { for (const id of active()) QUESTS[id].obj.forEach((o, i) => { if (o.t === 'camp') S()[id].p[i]++; }); });
   // трекер на экране
   G.hud.push(() => {
-    if (!G.started || !G.me || G.me.dead) return; let y = 76; const x = V.w - 4, A = active();
+    if (!G.started || !G.me || G.me.dead || G.prologue) return; let y = 76; const x = V.w - 4, A = active();
     if (!A.length && !turned('m1') && !S().m1) { txt('! Поговори со Старейшиной', x, y, '#e0c060', 5.5, 'right'); return; }
     for (const id of A.slice(0, 3)) {
       const q = QUESTS[id], dn = isDone(id); txt((q.main ? '◆ ' : '◇ ') + q.title, x, y, q.main ? '#ff8a8a' : '#e0c060', 5.5, 'right'); y += 8;
@@ -2015,14 +2019,15 @@ const Menus = (() => {
       '<h3>Создание героя</h3><div class="row" style="align-items:flex-start;flex-wrap:nowrap"><img src="' + pv.toDataURL() + '" style="image-rendering:pixelated;width:84px;flex:none;background:#07060a;border:2px solid #3a3024;padding:6px"><div style="flex:1">' + sw('cloak', 'Плащ') + sw('skin', 'Кожа') + sw('eyes', 'Глаза') + sw('scarf', 'Шарф') + '</div></div>' +
       '<input class="name" id="nm" maxlength="12" placeholder="Имя героя" value="' + esc(keepName !== null ? keepName : (s ? '' : 'Герой')) + '" style="margin-top:8px">' +
       '<button class="btn" style="width:100%;margin-top:8px" data-a="new" id="newb">' + (s ? 'Новая игра (сотрёт сохранение)' : 'Начать игру') + '</button>' +
+      '<button class="btn" style="width:100%;margin-top:6px;font-size:12px;opacity:.75" data-a="newskip">' + (s ? 'Новая игра без вступления' : 'Начать без вступления') + '</button>' +
       '<div class="help"><b>ПК:</b> <kbd>WASD</kbd> движение · <kbd>мышь</kbd> прицел · <kbd>ЛКМ</kbd> удар · <kbd>Пробел</kbd> перекат · <kbd>1</kbd>–<kbd>4</kbd> души · <kbd>Q</kbd> зелье · <kbd>E</kbd> взаимодействие · <kbd>I</kbd> снаряжение · <kbd>K</kbd> души · <kbd>J</kbd> журнал · <kbd>M</kbd> карта<br>' +
       '<b>Телефон:</b> джойстик слева, кнопки справа, автоприцел на ближайшего врага.<br><br>' +
       'Мобы роняют свои <b>души</b> — способность + стихия. Стихии вступают в <b>реакции</b>. На Алтаре души сливаются в <b>химер</b>. А если погибнешь — твой труп встанет <b>Тенью</b> с твоими же душами.</div>');
   }
-  function begin(save) {
+  function begin(save, skip) {
     const nm = document.getElementById('nm'), name = (nm && nm.value.trim()) || 'Герой';
     const look = st && st.look; ui.classList.remove('on'); ui.innerHTML = ''; st = null; Sfx.init();
-    if (save) startGame({ name: save.name, save }); else { wipeSave(); startGame({ name: name.slice(0, 12), look }); }
+    if (save) startGame({ name: save.name, save }); else { wipeSave(); startGame({ name: name.slice(0, 12), look, skipIntro: !!skip }); }
   }
 
   // ---------- Алтарь ----------
@@ -2138,6 +2143,7 @@ const Menus = (() => {
     if (a === 'dnext') return dialogNext();
     if (a === 'mus') { Sfx.toggleMusic(); return st.kind === 'shop' ? drawShop() : st.kind === 'smith' ? drawSmith() : drawAltar(); }
     if (a === 'cont') return begin(loadSave());
+    if (a === 'newskip') { if (loadSave() && !st.confirm2) { st.confirm2 = true; return; } return begin(null, true); }
     if (a === 'look') { const q = v.split(':'); st.look[q[0]] = +q[1]; return title(); }
     if (a === 'new') { if (loadSave() && !st.confirm) { st.confirm = true; const b = document.getElementById('newb'); b.textContent = 'Точно? Нажми ещё раз — сохранение сотрётся'; b.classList.add('red'); return; } return begin(null); }
     if (a === 'tab') { st.tab = v; st.res = null; return drawAltar(); }
@@ -2182,8 +2188,58 @@ const Menus = (() => {
     if (n.o === O.ALTAR) openAltar(true); else if (n.o === O.MERCH) openShop(); else if (n.o === O.SMITH) openSmith();
     else if (n.o === O.STONE) { p.hp = p.maxHp; p.st = {}; floatText(p.x, p.y, 'Силы восстановлены. Игра сохранена', '#5af0ff', 7); Sfx.play('potion'); fxRing(n.x, n.y, .3, 2.5, '#5af0ff', .5); if (typeof saveGame === 'function') saveGame(); }
   });
-  return { title, openAltar, openShop, close, isOpen };
+  return { title, openAltar, openShop, openDialog, close, isOpen };
 })();
+
+// ===== 13a_prologue.js =====
+// Вступление: тысячу лет назад. Герой на пике силы идёт за душой Хранителя — и проигрывает. Потом просыпается у камня без памяти.
+const NARR = 'Шёпот';
+function genArena() {
+  const n = MW * MH, cx = 110, cy = 85, R = 11.5;
+  const D = { g: new Uint8Array(n).fill(T.GRASS), g0: new Uint8Array(n), o: new Uint8Array(n).fill(O.TREE), o0: new Uint8Array(n), zi: new Uint8Array(n), fire: new Float32Array(n), puddle: new Float32Array(n), regrow: new Float32Array(n), burning: new Set(), puddles: new Set(), regrowing: new Set(), spawns: [], camps: [], crypts: [], seen: new Uint8Array(n), revT: 0, map: mkCanvas(MW, MH), mapDirty: true, tick: 0, dun: { id: 'prologue', name: 'Сердце леса', lvl: 10, pro: true, dark: .2 }, traps: [], trap: new Uint8Array(n), rooms: [], trapT: 0, start: [cx - 7, cy], pop: [] };
+  for (let y = cy - 14; y <= cy + 14; y++) for (let x = cx - 14; x <= cx + 14; x++) {
+    const d = Math.hypot(x + .5 - cx, y + .5 - cy), k = y * MW + x; if (d > R + (hash2(x, y, 5) - .5) * 1.6) continue;
+    D.o[k] = 0; D.g[k] = d < 2.2 ? T.PLAZA : fbm(x * .2, y * .2, 77) > .52 ? T.TALL : T.GRASS; if (d > 5 && hash2(x, y, 9) > .975) D.o[k] = O.ROCK;
+  }
+  D.o[cy * MW + cx] = O.ALTAR; D.g0.set(D.g); D.o0.set(D.o); return D;
+}
+function startPrologue() {
+  const p = G.me;
+  G.over = { W, ents: G.ents.filter(e => !e.isPlayer), zones: [], projs: [], pickups: [], px: TOWN.x, py: TOWN.y + 1.6 };
+  G.ents = G.players.slice(); G.zones = []; G.projs = []; G.pickups = []; W = genArena(); p.x = W.start[0]; p.y = W.start[1];
+  // герой на пике силы
+  p.lvl = 10; p.souls = { ch_blazedash: 6, imp: 6, ch_pack: 6, stormmother: 6 }; p.slots = ['ch_blazedash', 'imp', 'ch_pack', 'stormmother'];
+  for (const s of ISLOTS) { const it = makeItem(10, 3, s); it.plus = 7; p.equip[s] = it; } p.equip.weapon.ench = 'imp'; p.equip.armor.ench = 'imp';
+  p.mpTrain = 40000; p.potions = POTION_MAX; recalc(p); p.hp = p.maxHp; p.mp = p.maxMp; for (let i = 0; i < 4; i++) resetSlot(p, i);
+  const b = mkMob('guardian', 116, 85, 10); b.leash = 40; b.hx = 110; b.hy = 85; G.prologue = { t: 0, ph: 0, boss: b, said: 0 };
+  G.cam.x = p.x; G.cam.y = p.y; G.dark = undefined;
+  Menus.openDialog({ name: NARR, spr: 'hero', lines: ['Тысячу лет назад. Сердце Шепчущего леса.', 'Ты — Пожиратель. Сильнейший из всех, кто когда-либо ел души. В тебе их сотни, и каждая даёт тебе силу.', 'Осталась одна, которую ты ещё не пробовал. Душа Хранителя. Того, кто старше самого леса.', 'Говорят, его нельзя победить. Говорят, эту душу нельзя есть. Тебе всё равно. Ты голоден.'], last: 'В бой', end() { banner('СЕРДЦЕ ЛЕСА', 'Тысячу лет назад · ты на пике силы — используй всё: ЛКМ, Пробел, 1–4', '#ffe9a0'); b.target = p; b.state = 'chase'; Sfx.play('howl'); } });
+}
+function resetHero(p) {
+  const h = G.J.hints || {}; G.J = newJournal(); G.J.hints = h; G.J.prologue = 1; delete G.J.hints.soul; delete G.J.hints.drop;
+  p.lvl = 1; p.xp = 0; p.gold = 0; p.potions = 2; p.souls = {}; p.slots = [null, null, null, null]; p.bag = []; p.shards = 0; p.mpTrain = 0; p.mast = {};
+  for (const s of ISLOTS) p.equip[s] = null; recalc(p); giveSoul(p, 'wolf', 1, true); p.hp = p.maxHp; p.mp = p.maxMp; for (let i = 0; i < 4; i++) resetSlot(p, i);
+}
+const GUARD_SAY = [[2, 'Ты пришёл за последней душой.'], [11, 'Сотни голосов кричат в тебе. Ты их ещё слышишь?'], [21, 'Этот лес старше твоего голода.'], [32, 'Бей. Жги. Это ничего не изменит.']];
+G.systems.push(dt => {
+  const P = G.prologue; if (!P || !W.dun || !W.dun.pro) return; const b = P.boss, p = G.me; if (p.dead || b.dead) return;
+  P.t += dt;
+  if (P.said < GUARD_SAY.length && P.t > GUARD_SAY[P.said][0] && P.ph === 0) { b.sayS = GUARD_SAY[P.said][1]; b.sayT = 4; P.said++; }
+  if (P.ph === 0 && (b.hp < b.maxHp * .6 || P.t > 50 || p.hp < p.maxHp * .12)) {
+    P.ph = 1; P.jt = 3.2; b.inv = 99; b.wu = null; b.dash = null; b.state = 'recover'; b.stT = 99; b.sayS = 'ДОВОЛЬНО.'; b.sayT = 4;
+    banner('СУД ЛЕСА', 'От этого не увернуться', '#ffffff'); Sfx.play('howl'); shake(8);
+    addZone({ kind: 'blast', x: b.x, y: b.y, r: 15, life: 3.2, max: 3.2, team: b.team, src: b, dmg: 0, el: 'storm' });
+  }
+  if (P.ph === 1) {
+    P.jt -= dt; shake(1.5 + (3.2 - P.jt)); if (chance(dt * 40)) { const a = rand(TAU), r = rand(2, 12); part(b.x + Math.cos(a) * r, b.y + Math.sin(a) * r, 0, 0, 0, rand(40, 90), .8, pick(['#ffffff', '#fff3a0', '#a8f0ff']), 2, -20, 1); }
+    if (P.jt <= 0) { P.ph = 2; p.inv = 0; p.shield = 0; for (let i = 0; i < 6; i++) fxRing(b.x, b.y, .5, 4 + i * 2.5, '#ffffff', .5 + i * .12); for (let i = 0; i < 10; i++) fxBolt(b.x, b.y, p.x + rand(-3, 3), p.y + rand(-3, 3), '#ffffff', 30, 0); Sfx.play('boom'); Sfx.play('zap'); shake(14); damage(p, 1e9, b, { dot: 1 }); }
+  }
+});
+Bus.on('playerDeath', () => { if (!G.prologue) return; G.deathMsg = 'Хранитель сжёг тебя дотла'; G.deathMsg2 = 'Но ты успел откусить от его души...'; });
+Bus.on('respawn', (p) => {
+  if (!G.prologue) return; G.prologue = null; resetHero(p); G.dark = undefined;
+  Menus.openDialog({ name: NARR, spr: 'hero', lines: ['...', 'Холодно. Камень под спиной. Чужие голоса где-то рядом.', 'Камень возвращает мёртвых. Но не возвращает память. И не возвращает силу.', 'Ты не помнишь, кто ты. Не помнишь, что сделал. В тебе осталась одна-единственная душа — волчья.', 'А лес вокруг пахнет пеплом.'], last: 'Открыть глаза', end() { banner('ПОСЛЕДНИЙ ОЧАГ', 'Тысячу лет спустя · поговори со Старейшиной', '#c8a850'); if (typeof saveGame === 'function') saveGame(); } });
+});
 
 // ===== 14_render.js =====
 // Рендер: низкое разрешение -> целочисленное масштабирование без сглаживания. Текст — поверх в полном разрешении.
@@ -2388,7 +2444,7 @@ function render() {
   // мрак: тьма с пятнами света вокруг героя, огня, фонарей
   if (G.me) {
     const L = G.light, lx = G.lctx; if (L.width !== V.w || L.height !== V.h) { L.width = V.w; L.height = V.h; }
-    const target = ZDARK[zoneAt(G.me.x, G.me.y)] || .5; G.dark = G.dark === undefined ? target : G.dark + (target - G.dark) * .03;
+    const target = (W.dun && W.dun.dark) || ZDARK[zoneAt(G.me.x, G.me.y)] || .5; G.dark = G.dark === undefined ? target : G.dark + (target - G.dark) * .03;
     lx.globalCompositeOperation = 'source-over'; lx.clearRect(0, 0, V.w, V.h); lx.globalAlpha = G.dark; lx.fillStyle = '#05040c'; lx.fillRect(0, 0, V.w, V.h); lx.globalAlpha = 1;
     lx.globalCompositeOperation = 'destination-out';
     const lit = (x, y, w, a) => { lx.globalAlpha = a; lx.drawImage(LIGHT, x - w / 2, y - w * .3125, w, w * .625); };
@@ -2415,7 +2471,7 @@ function render() {
 // Сохранение в localStorage (всё в try/catch — в приватном режиме может быть недоступно)
 const SAVE_KEY = 'soul_eater_save_v1';
 function saveGame() {
-  if (!G.started || !G.me) return; const p = G.me, n = G.nemesis && !G.nemesis.dead ? Object.assign({}, G.nemesis.nd, { x: G.nemesis.x, y: G.nemesis.y }) : null;
+  if (!G.started || !G.me || G.prologue) return; const p = G.me, n = G.nemesis && !G.nemesis.dead ? Object.assign({}, G.nemesis.nd, { x: G.nemesis.x, y: G.nemesis.y }) : null;
   try { localStorage.setItem(SAVE_KEY, JSON.stringify({ v: 1, name: p.name, lvl: p.lvl, xp: p.xp, gold: p.gold, potions: p.potions, souls: p.souls, slots: p.slots, J: G.J, equip: p.equip, bag: p.bag, shards: p.shards | 0, mpTrain: p.mpTrain | 0, mast: p.mast || {}, nem: n, look: p.look || {}, seen: packSeen() })); } catch (e) { }
 }
 function packSeen() { let s = ''; const a = (G.over ? G.over.W : W).seen; for (let i = 0; i < a.length; i += 6) { let v = 0; for (let k = 0; k < 6; k++) if (a[i + k]) v |= 1 << k; s += String.fromCharCode(48 + v); } return s; }
@@ -2490,6 +2546,7 @@ function startGame(o) {
   else if (typeof giveSoul === 'function' && typeof soulDef === 'function') giveSoul(p, 'wolf', 1, true);
   G.cam.x = p.x; G.cam.y = p.y; G.started = true; G.paused = false; Input.clear();
   p.mp = p.maxMp; Bus.emit('start', p);
+  if (!(o && o.save) && !(o && o.skipIntro)) startPrologue();
 }
 function boot() {
   G.canvas = document.getElementById('c'); G.ctx = G.canvas.getContext('2d'); G.buf = mkCanvas(V.w, V.h); G.bctx = G.buf.getContext('2d'); G.light = mkCanvas(V.w, V.h); G.lctx = G.light.getContext('2d');

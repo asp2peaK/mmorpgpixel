@@ -15,6 +15,7 @@ const MOBS = {
   stormmother: { name: 'Грозовая Матка', hp: 1100, atk: 17, spd: 4, fly: true, keep: 3.5, abils: [{ ab: 'tempest', el: 'storm', cdm: .6 }, { ab: 'chain', el: 'storm', cdm: .8 }, { ab: 'whirl', el: 'wind', cdm: 1 }], el: 'storm', soul: 'stormmother', boss: true, r: .6, immune: { stun: 1 }, aggro: 9, leash: 12, blood: '#ffe95a', summon: ['bat', 4, 4, 'Она зовёт выводок!'] },
   toad: { name: 'Болотная жаба', hp: 62, atk: 8, spd: 2.4, hop: true, abils: ['hook', 'bite'], el: 'poison', soul: 'toad', immune: { poison: 1 }, weak: 'storm', blood: '#5a8a2a' },
   wraith: { name: 'Призрак', hp: 44, atk: 9, spd: 3.4, fly: true, abils: ['drain'], el: 'shadow', soul: 'wraith', immune: { poison: 1, bleed: 1, root: 1 }, weak: 'fire', blood: '#8a7ab8' },
+  guardian: { name: 'Хранитель леса', hp: 32000, atk: 21, spd: 4, abils: [{ ab: 'dash', el: 'beast', cdm: .7 }, { ab: 'tempest', el: 'storm', cdm: .45 }, { ab: 'roots', el: 'nature', cdm: .7 }, { ab: 'bonecage', el: 'nature', cdm: .5 }, { ab: 'bite', el: 'beast', cdm: 1 }], el: 'nature', boss: true, r: 1, immune: { burn: 1, poison: 1, stun: 1, root: 1, slow: 1, blind: 1, bleed: 1, brittle: 1 }, aggro: 12, leash: 40, blood: '#fff8d0' },
   spirit: { name: 'Призрачный волк', spr: 'spirit', hp: 30, atk: 5, spd: 5, abils: [{ ab: 'dash', cdm: .6 }, { ab: 'bite', cdm: .7 }], el: 'beast', aggro: 9, leash: 99, blood: '#a8f0ff' },
   nemesis: { name: 'Тень', spr: 'nem', hp: 100, atk: 10, spd: 3.6, abils: [], el: 'phys', aggro: 8.5, leash: 14, heavy: .5, blood: '#8a1a2a' }
 };
